@@ -1,0 +1,30 @@
+# Local secrets. Only sanitized examples may be committed.
+.env
+.env.*
+!.env.example
+
+# Suggested local-only location: never place public deliverables here.
+/private/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local Python environments and generated caches (only relevant if used)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Installed dependencies / generated build output (only relevant if used)
+node_modules/
+dist/
+build/
+
+# Do NOT ignore all JSON/YAML/JSONL files, tests/, data/, or evals/results/.
