@@ -1,1 +1,873 @@
-미니 온톨로지
+version: 1
+metadata:
+  title: ResearchTrail 미니 도메인 온톨로지
+  status: team_review_draft
+  intended_repository_path: docs/ontology.yaml
+  source_interview:
+    uploaded_filename: interview.md
+    file_id: file_00000000f81881f592b7e55e44f5a448
+    sha256: 2a3666fe420c493496c11d38d42007411b407ab1114c649d12b1d1957500ad1f
+    line_count: 2334
+    note: 이번 요청에 첨부된 수정본만 도메인 근거로 사용한다. 같은 이름의 이전 첨부본과 구별하기 위한 식별 정보다.
+  format_basis:
+    filename: 강의02_도메인발견_온톨로지_작성지침.md
+    section: E. 미니 온톨로지
+    note: 형식과 검토 기준만 참조한다. 강의의 단골 예시나 이전 답변은 ResearchTrail 도메인 근거로 쓰지 않는다.
+  authorship:
+    draft: AI가 작성한 클래스·속성·관계 후보
+    team_review_status: 미승인
+    reviewed_by: null
+    approved_on: null
+    note: 대표어, 경계, 타입과 관계의 선택 및 근거 해석은 팀이 검토하여 확정한다.
+  reading_order: [modeling_conventions, vocabulary_decisions, classes, scope, core_job, findings_coverage, comparison_checks,
+    team_review]
+modeling_conventions:
+  evidence_format: 로그 N / PXX-QYY[-FZ]. 숫자는 interview.md 3.2절 로그, 응답 ID는 4절의 해당 질문·후속 응답을 가리킨다.
+  evidence_status: evidence는 수록 응답의 개념·구분·행동 근거다. 이 YAML의 구조가 사용자의 기존 도구에 이미 구현되었다거나 새 제품의 효과가 확인되었다는 뜻이 아니다.
+  finding_references: FND-01–FND-14는 같은 interview.md 6.1절의 분석 후보다. 원응답을 대신하지 않는다.
+  identity: 클래스는 개념 유형이다. P01–P10, 자료 A, 특정 회의·논문은 검토 근거 또는 사례이며 클래스 정의가 아니다.
+  naming: 클래스는 PascalCase, 속성과 관계는 snake_case를 사용한다. 영문 대표어와 타입은 이번 초안의 모델링 제안이다.
+  type: 'type: string은 서술형 값이다. 이 YAML은 도메인 정의이며 실행 가능한 JSON Schema가 아니다.'
+  nullable: 'nullable: true는 알 수 없는 값을 null로 둘 수 있다는 뜻이다. false는 해당 개념을 확정할 때 내용이 필요하다는 뜻이며 모든 입력 화면에 필수 칸을 만들라는
+    지시가 아니다.'
+  states: state_text·progress_text·availability_text 등은 열린 서술이다. 수록된 상태 표현으로 보편적인 enum 전체 목록을 확정하지 않는다.
+  examples: examples는 응답에서 확인되는 표현의 예시이며 허용값의 닫힌 목록이나 새 실험 데이터가 아니다.
+  cardinality: 관계의 cardinality는 출발 개념 1개에 연결 가능한 대상 개수에 대한 설계 제안이다. 1=정확히 하나, 0..1=없거나 하나, 0..*=없거나 여러 개. 인터뷰 빈도나
+    효과 크기가 아니다.
+  unknown_relations: 관계가 기록되지 않았다는 것과 실제로 없었다는 것을 구별한다. 알려진 연결만 만들고, 누락된 판단·의도·원문 위치를 추측으로 채우지 않는다.
+  scope_status: 아래 범위는 핵심 Job을 설명하기 위한 이번 미니 모델의 경계 제안이다. 최종 제품 기능·화면·연동·필수 입력·구현 방식은 확정하지 않는다.
+  technical_fields: DB id, user_id, created_at, 모델명, 토큰 예산, API 경로 등 기술 필드는 인터뷰 근거처럼 붙이지 않고 제외했다.
+  source_preservation: 원문에 남은 불명확성은 이 온톨로지로 수정하지 않는다. 과거 발화를 보완하거나 누락된 측정·확정된 의도를 생성하지 않는다.
+vocabulary_decisions:
+  noun_candidates: 각 클래스의 source_terms가 명사·표현 후보와 대표어의 대응이다. 자료·기록의 맥락에 따라 아래 구분을 적용한다.
+  kept_distinctions:
+  - terms: [논문, PDF·판본, 질문별 저장 이유]
+    mapping: [Document, DocumentArtifact, DocumentUse]
+    reason: 저작물 정체성, 특정 표현물, 과업별 사용 목적은 바뀌는 조건이 다르므로 합치지 않는다.
+    evidence: [로그 1 / P01-Q03, 로그 1 / P01-Q08, 로그 3 / P03-Q03, 로그 4 / P04-Q03]
+  - terms: [연구·학습 질문, 평가용 질문 문항, 다음 할 일]
+    mapping: [ResearchQuestion, ResearchTask.target_output_text, NextAction]
+    reason: 알고 싶은 질문과 작성해야 할 평가 문항, 그것을 작성하는 행동을 같은 엔티티로 세지 않는다.
+    evidence: [로그 4 / P04-Q04, 로그 4 / P04-Q12, 로그 4 / P04-Q14-F1, 로그 6 / P06-Q12]
+  - terms: [AI 설명, 내가 이해한 설명, 회의에서 정한 것]
+    mapping: [ResearchRecord, Decision]
+    reason: 설명은 출처·검토·채택 상태를 가진 기록으로, 사람의 실제 선택·합의는 판단으로 구분한다.
+    evidence: [로그 2 / P02-Q06, 로그 4 / P04-Q09-F1, 로그 8 / P08-Q13]
+  - terms: [원문 문장·행, 사용자의 요약·해석]
+    mapping: [EvidenceExcerpt, ResearchRecord]
+    reason: 인용 위치와 해석의 주체를 보존한다. 위치 연결 자체를 주장 검증으로 바꾸지 않는다.
+    evidence: [로그 3 / P03-Q06, 로그 7 / P07-Q06, 로그 8 / P08-Q06]
+  - terms: [원천 문헌의 버전, 기록의 교정, 다른 문서로 복사]
+    mapping: [DocumentArtifact.version_text, ResearchRecord.revises, ResearchRecord.copied_from]
+    reason: 원천 문헌 차이, 기록 내용 변경, 별도 사본의 파생은 서로 다른 관계다.
+    evidence: [로그 1 / P01-Q08, 로그 4 / P04-Q13, 로그 8 / P08-Q13-F1]
+  - terms: [읽음, 이해·질문 해결, 원문 대조, 실제 사용, 실행]
+    mapping: [DocumentUse.reading_state_text, ResearchQuestion.state_text, ResearchRecord.review_state_text, ResearchRecord.adoption_state_text,
+      NextAction.progress_text]
+    reason: 하나의 완료 체크박스로 합치면 수록 응답의 차이를 잃는다.
+    evidence: [로그 1 / P01-Q11, 로그 2 / P02-Q09, 로그 5 / P05-Q11, 로그 5 / P05-Q12]
+  verb_candidates:
+  - source_expression: 저장하고 특정 용도로 다시 봄
+    relation_paths: [ResearchTask.has_document_use, DocumentUse.uses, DocumentUse.addresses]
+    evidence: [로그 4 / P04-Q03, 로그 5 / P05-Q03, 로그 6 / P06-Q03]
+  - source_expression: 질문에서 다른 질문으로 넘어감
+    relation_paths: [ResearchQuestion.arises_from, ResearchRecord.follows]
+    evidence: [로그 2 / P02-Q04, 로그 2 / P02-Q10, 로그 6 / P06-Q04]
+  - source_expression: 원문을 다시 확인하고 설명에 사용함
+    relation_paths: [ResearchRecord.uses_excerpt, EvidenceExcerpt.located_in]
+    evidence: [로그 3 / P03-Q06, 로그 7 / P07-Q06, 로그 8 / P08-Q13]
+  - source_expression: 정한 일을 메모에서 찾아 이어 함
+    relation_paths: [Decision.documented_in, NextAction.based_on, ResumeEpisode.recovered_decision, ResumeEpisode.started]
+    evidence: [로그 4 / P04-Q09-F1, 로그 4 / P04-Q10, 로그 4 / P04-Q12]
+  - source_expression: 복사한 문장을 찾아 수정함
+    relation_paths: [ResearchRecord.copied_from, ResearchRecord.revises]
+    evidence: [로그 4 / P04-Q13, 로그 8 / P08-Q13-F1]
+  not_promoted_to_classes:
+  - candidate: Notion·Excel·Zotero·ChatGPT·종이 노트
+    disposition: ResearchRecord.container_text 또는 DocumentArtifact.access_locator_text의 열린 설명으로 남김.
+    reason: 사용 도구 자체보다 어떤 내용을 어디에 남겼는지가 핵심이다. 특정 제품의 연동 구현을 요구하지 않는다.
+    evidence: [로그 1 / P01-Q11, 로그 2 / P02-Q11, 로그 5 / P05-Q11, 로그 6 / P06-Q11]
+  - candidate: 전공별 수치·지표·백본·셀 구성·측정 단위
+    disposition: EvidenceExcerpt.context_text와 ResearchRecord.content_text에 해당 문맥을 보존.
+    reason: 서로 다른 분야의 조건을 하나의 보편적 실험·비교 스키마로 고정할 근거가 없다.
+    evidence: [로그 1 / P01-Q07, 로그 5 / P05-Q07, 로그 8 / P08-Q07, 로그 10 / P10-Q07]
+  - candidate: Comparison·ComparisonResult
+    disposition: 이번 미니 모델에서 별도 클래스·자동 판정 기능으로 확정하지 않음.
+    reason: 기존 비교의 목적·조건·근거는 기록으로 표현하되, 비교 미실시와 수치 비교가 아닌 과업을 그대로 남긴다.
+    evidence: [로그 5 / P05-Q07, 로그 6 / P06-Q07, 로그 7 / P07-Q07, 로그 9 / P09-Q07]
+  - candidate: AIAnswer·SharedDocument·Revision
+    disposition: 별도 클래스를 늘리지 않고 ResearchRecord의 출처·사용 범위·복사·변경 관계로 구분.
+    reason: 노트·대화·공유 문장에 공통으로 필요한 내용·출처·변경 추적을 보존한다.
+    evidence: [로그 2 / P02-Q11, 로그 4 / P04-Q13, 로그 6 / P06-Q13, 로그 8 / P08-Q13]
+  - candidate: 참가자 프로필·사용자 계정
+    disposition: 인터뷰 인덱스는 조사 파일에 두며, 이 도메인 모델에는 계정 엔티티를 만들지 않음.
+    reason: 판단·설명의 주체는 관련 기록의 역할 서술로 보존한다. 표본 신분을 제품의 계정 구조나 사용자 전체의 속성으로 바꾸지 않는다.
+    evidence: [로그 4 / P04-Q09-F1, 로그 6 / P06-Q12, 로그 9 / P09-Q12]
+classes:
+  ResearchTask:
+    label: 문헌 과업
+    description: 특정 과제·연구 질문·업무를 위해 문헌을 읽고 설명·판단·결과물을 만드는 하나의 과업.
+    source_terms: [과제, 프로젝트, 발표 준비, 문헌 작업]
+    evidence: [로그 4 / P04-Q01, 로그 6 / P06-Q01, 로그 9 / P09-Q01]
+    note: 한 학기 프로젝트 전체와 개별 문헌 과업을 자동으로 동일시하지 않는다. 참가자·인터뷰 로그 자체는 이 클래스의 인스턴스가 아니다.
+    attributes:
+      goal_text:
+        type: string
+        nullable: false
+        description: 이번 과업에서 이루려는 목표.
+        evidence: [로그 4 / P04-Q01, 로그 6 / P06-Q01, 로그 9 / P09-Q01]
+      scope_text:
+        type: string
+        nullable: true
+        description: 이번에 다루기로 한 범위와 미룬 범위.
+        evidence: [로그 4 / P04-Q04, 로그 6 / P06-Q12, 로그 7 / P07-Q04]
+      target_output_text:
+        type: string
+        nullable: true
+        description: 만들거나 설명해야 하는 결과물.
+        evidence: [로그 4 / P04-Q12, 로그 6 / P06-Q01, 로그 10 / P10-Q01]
+      progress_text:
+        type: string
+        nullable: true
+        description: 실제로 어디까지 진행했고 무엇이 남았는지에 대한 서술.
+        note: 발표 준비·후보 선정·실행 완료를 서로 바꾸지 않는다. 과업 완료와 모든 질문의 해결도 다르다.
+        evidence: [로그 2 / P02-Q12, 로그 4 / P04-Q12, 로그 5 / P05-Q12]
+    relations:
+    - has_question: ResearchQuestion
+      cardinality: 0..*
+      description: 과업 안에서 확인하거나 이해하려는 질문.
+      evidence: [로그 4 / P04-Q04, 로그 6 / P06-Q04, 로그 9 / P09-Q04]
+    - has_document_use: DocumentUse
+      cardinality: 0..*
+      description: 이 과업에서 문헌을 사용하는 목적별 연결.
+      evidence: [로그 4 / P04-Q03, 로그 5 / P05-Q03]
+    - has_record: ResearchRecord
+      cardinality: 0..*
+      description: 과업 중 남긴 질문·설명·회의·작업 기록.
+      evidence: [로그 4 / P04-Q11, 로그 6 / P06-Q11]
+    - has_decision: Decision
+      cardinality: 0..*
+      description: 과업 안에서 실제로 내린 선택·합의·보류 판단.
+      evidence: [로그 4 / P04-Q04, 로그 5 / P05-Q12, 로그 6 / P06-Q12]
+    - has_next_action: NextAction
+      cardinality: 0..*
+      description: 남겼거나 실제로 이어서 수행한 다음 작업.
+      evidence: [로그 4 / P04-Q12, 로그 5 / P05-Q10, 로그 6 / P06-Q12]
+  ResearchQuestion:
+    label: 연구·학습 질문
+    description: 문헌을 읽는 사람이 확인하거나 이해하려는 질문 또는 아직 설명하지 못하는 지점.
+    source_terms: [궁금한 것, 질문, 막힌 곳, 문의할 내용]
+    evidence: [로그 2 / P02-Q04, 로그 4 / P04-Q04, 로그 6 / P06-Q05, 로그 9 / P09-Q04]
+    note: P04가 결과물로 작성한 평가용 질문 10개를 모두 이 클래스의 미해결 연구 질문으로 세지 않는다. 평가 문항 자체는 과업 결과물이며, 그것을 만드는 데 생긴 이해·확인 질문과 구분한다.
+    attributes:
+      question_text:
+        type: string
+        nullable: false
+        description: 사용자가 확인하려는 질문의 내용.
+        evidence: [로그 2 / P02-Q05, 로그 4 / P04-Q04, 로그 6 / P06-Q03]
+      state_text:
+        type: string
+        nullable: true
+        description: 질문에 대해 현재 알려진 해결·미해결·보류 상태의 서술.
+        note: 상태명은 열린 표현이다. 읽음 표시, 답변 생성, 답변 저장만으로 해결로 바꾸지 않는다.
+        evidence: [로그 1 / P01-Q04, 로그 2 / P02-Q12, 로그 3 / P03-Q05]
+      unresolved_reason_text:
+        type: string
+        nullable: true
+        description: 해결하지 못했거나 미룬 이유로 실제 설명된 내용.
+        note: 수식 이해 부족, 범위 보류, 자료 미확보를 하나의 원인으로 합치지 않는다.
+        evidence: [로그 1 / P01-Q04, 로그 6 / P06-Q05, 로그 9 / P09-Q12]
+    relations:
+    - belongs_to: ResearchTask
+      cardinality: '1'
+      description: 이 질문을 다루는 과업.
+      evidence: [로그 4 / P04-Q04, 로그 6 / P06-Q04]
+    - arises_from: ResearchQuestion
+      cardinality: 0..*
+      description: 앞선 질문을 검토하다 이어진 후속 질문.
+      note: 논리적·학습상 연결이 설명된 경우만 둔다. 단순한 시간 순서는 ResearchRecord.follows와 구별한다.
+      evidence: [로그 2 / P02-Q04, 로그 4 / P04-Q04, 로그 6 / P06-Q04]
+    - documented_in: ResearchRecord
+      cardinality: 0..*
+      description: 질문이 적혀 있거나 발화로 남아 있는 기록.
+      evidence: [로그 2 / P02-Q11, 로그 6 / P06-Q04, 로그 9 / P09-Q11]
+  Document:
+    label: 원천 문헌
+    description: 논문·리뷰 논문·교재·원전·이론서 등 읽거나 근거로 참조하는 저작물의 정체성.
+    source_terms: [논문, 문헌, 리뷰, 교재, 작품, 이론서]
+    evidence: [로그 1 / P01-Q02, 로그 3 / P03-Q03, 로그 7 / P07-Q01, 로그 9 / P09-Q01]
+    note: 저장 이유는 DocumentUse에, 파일 버전과 위치는 DocumentArtifact에 둔다. 같은 문헌을 다른 과업에서 사용해도 새로운 저작물로 만들지 않는다. DOI·저자·발행연도·전역
+      중복제거 규칙은 이 자료만으로 정하지 않는다.
+    attributes:
+      title:
+        type: string
+        nullable: true
+        description: 확인된 문헌 제목. 제목을 알 수 없으면 null.
+        note: 인터뷰의 '자료 A' 같은 사례 내부 호칭을 실제 논문 제목으로 바꾸지 않는다.
+        evidence: [로그 4 / P04-Q03, 로그 4 / P04-Q07, 로그 7 / P07-Q11]
+      material_kind_text:
+        type: string
+        nullable: true
+        description: 실제로 설명된 문헌 종류.
+        examples: [논문, 교재, 비평 논문, 이론서]
+        evidence: [로그 1 / P01-Q02, 로그 7 / P07-Q01, 로그 9 / P09-Q01]
+    relations:
+    - has_artifact: DocumentArtifact
+      cardinality: 0..*
+      description: 같은 저작물의 특정 파일·판본·본문 또는 보충자료 표현물.
+      evidence: [로그 1 / P01-Q08, 로그 7 / P07-Q08, 로그 8 / P08-Q08]
+    - cites: Document
+      cardinality: 0..*
+      description: 문헌의 참고문헌·각주·방법 절이 인용한 다른 문헌.
+      note: 사용자가 함께 열어 보았다는 것만으로 인용 관계를 만들지 않는다.
+      evidence: [로그 1 / P01-Q02, 로그 7 / P07-Q02, 로그 9 / P09-Q02]
+  DocumentArtifact:
+    label: 문헌 표현물
+    description: 특정 문헌의 실제로 구별되는 파일·판본·본문·보충자료 등 접근 단위.
+    source_terms: [PDF, 파일, 버전, 판본, 본문, 보충자료]
+    evidence: [로그 1 / P01-Q08, 로그 4 / P04-Q08, 로그 7 / P07-Q08, 로그 9 / P09-Q08]
+    note: DocumentArtifact는 원천 문헌의 표현물이다. 사용자가 만든 메모·요약·공유 사본은 ResearchRecord로 구분한다. 외부 문헌의 내용 자체를 제품이 소유·수정한다는
+      의미가 아니다.
+    attributes:
+      label_text:
+        type: string
+        nullable: true
+        description: 해당 파일·판본·자료를 구별하는 확인된 표시나 파일명.
+        evidence: [로그 1 / P01-Q08, 로그 10 / P10-Q08]
+      version_text:
+        type: string
+        nullable: true
+        description: 확인된 파일 버전 또는 판본 표시.
+        note: 보충자료라는 이유만으로 다른 버전이라고 하지 않는다. 날짜·최신 버전은 추정하지 않는다.
+        evidence: [로그 1 / P01-Q08, 로그 7 / P07-Q08, 로그 10 / P10-Q08]
+      part_text:
+        type: string
+        nullable: true
+        description: 확보·열람 대상이 본문, 보충자료, 초록 페이지 중 무엇인지 등의 구분.
+        note: 본문과 보충자료는 같은 저작물의 서로 다른 표현물로 구분할 수 있다.
+        evidence: [로그 4 / P04-Q08, 로그 8 / P08-Q08, 로그 9 / P09-Q08]
+      access_locator_text:
+        type: string
+        nullable: true
+        description: 확인된 파일 위치·링크·소장 위치.
+        note: 폴더 이름이나 링크의 실제 값이 수록되지 않았다면 값을 지어내지 않는다.
+        evidence: [로그 2 / P02-Q02, 로그 3 / P03-Q02, 로그 7 / P07-Q02]
+      availability_text:
+        type: string
+        nullable: true
+        description: 해당 표현물을 확보했는지, 아직 받지 못했는지에 관한 기록.
+        note: 본문을 확보하지 못함과 확보했으나 아직 안 읽음을 구별한다. 실행에 필요한 별도 파일의 미확보는 자동으로 논문 미확보가 되지 않는다. 현재 작업에서 이 표현물에 접근했는지에 관한
+          상태이며 문헌의 전역 공개 여부를 뜻하지 않는다.
+        evidence: [로그 2 / P02-Q08, 로그 4 / P04-Q08, 로그 9 / P09-Q08]
+      extraction_issue_text:
+        type: string
+        nullable: true
+        description: 검색·복사·읽기 과정에서 실제 확인된 표현물 처리 문제.
+        note: 검색되지 않음이나 기호 깨짐은 원문에 정보가 없다는 뜻이 아니다.
+        evidence: [로그 4 / P04-Q08, 로그 6 / P06-Q08, 로그 7 / P07-Q08]
+    relations:
+    - represents: Document
+      cardinality: '1'
+      description: 이 표현물이 속한 원천 문헌.
+      evidence: [로그 1 / P01-Q08, 로그 7 / P07-Q08, 로그 8 / P08-Q08]
+  DocumentUse:
+    label: 과업별 문헌 사용 맥락
+    description: 하나의 문헌을 특정 과업·질문에서 왜 남기고 어떤 역할로 사용하는지를 나타내는 연결 개념.
+    source_terms: [저장한 이유, 용도, 참고용, 반론]
+    evidence: [로그 1 / P01-Q03, 로그 3 / P03-Q03, 로그 4 / P04-Q03, 로그 5 / P05-Q03, 로그 7 / P07-Q03]
+    note: Document와 ResearchTask의 연결에 고유한 이유·역할이 있으므로 독립 클래스로 제안한다. 같은 과업·같은 문헌에도 여러 목적이 있을 수 있다.
+    attributes:
+      purpose_text:
+        type: string
+        nullable: true
+        description: 그 문헌을 다시 보거나 남긴 구체적인 이유.
+        note: 인터뷰에서 회상된 이유가 당시 문헌 메모에 기록되어 있었다고 간주하지 않는다.
+        evidence: [로그 1 / P01-Q03, 로그 4 / P04-Q03, 로그 6 / P06-Q03]
+      role_text:
+        type: string
+        nullable: true
+        description: 현재 과업에서 맡는 역할.
+        examples: [가정 확인용, 재현 후보, 평가 구성 참고용, 반론]
+        note: 역할은 문헌 전체의 고정 속성이 아니다. 같은 문헌의 서로 다른 대목이 참고와 반론으로 각각 쓰일 수 있다.
+        evidence: [로그 3 / P03-Q03, 로그 5 / P05-Q03, 로그 7 / P07-Q03]
+      purpose_recording_text:
+        type: string
+        nullable: true
+        description: 사용 이유가 어디에 남았거나 빠져 있었는지의 상태 서술.
+        note: 아예 기록하지 않음, 다른 기록에만 남음, 당시 기록 여부를 모름을 구별한다.
+        evidence: [로그 1 / P01-Q03-F1, 로그 4 / P04-Q03, 로그 6 / P06-Q03]
+      reading_state_text:
+        type: string
+        nullable: true
+        description: 이 과업에서 어느 범위를 읽었는지에 관한 기록.
+        note: 읽음은 이해·원문 검증·실행 준비·과업 완료와 다르다.
+        evidence: [로그 1 / P01-Q11, 로그 4 / P04-Q01, 로그 5 / P05-Q11]
+    relations:
+    - uses: Document
+      cardinality: '1'
+      description: 사용 목적이 붙는 원천 문헌.
+      evidence: [로그 1 / P01-Q03, 로그 3 / P03-Q03, 로그 5 / P05-Q03]
+    - belongs_to: ResearchTask
+      cardinality: '1'
+      description: 사용 이유가 성립하는 과업.
+      evidence: [로그 3 / P03-Q03, 로그 5 / P05-Q03]
+    - addresses: ResearchQuestion
+      cardinality: 0..*
+      description: 이 문헌을 읽어 확인하려는 질문.
+      evidence: [로그 2 / P02-Q04, 로그 4 / P04-Q03-F1, 로그 6 / P06-Q03, 로그 9 / P09-Q03]
+    - documented_in: ResearchRecord
+      cardinality: 0..*
+      description: 사용 이유·역할을 적은 기록.
+      note: 당시 이유가 기록되지 않았던 사례에는 당시 기록 관계를 만들어 넣지 않는다.
+      evidence: [로그 3 / P03-Q03, 로그 5 / P05-Q03, 로그 6 / P06-Q03, 로그 7 / P07-Q03]
+    - focuses_on: EvidenceExcerpt
+      cardinality: 0..*
+      description: 그 용도로 다시 보려는 문헌의 구체적인 대목.
+      evidence: [로그 1 / P01-Q03, 로그 4 / P04-Q03-F1, 로그 7 / P07-Q03]
+  EvidenceExcerpt:
+    label: 원문 대목
+    description: 특정 문헌 표현물 안의 문장·식·표의 행·그림 등 다시 확인하려는 원문 범위.
+    source_terms: [원문, 문단, 식 번호, 표 번호, 행, 그림, 인용 첫 문장]
+    evidence: [로그 4 / P04-Q08, 로그 5 / P05-Q06, 로그 7 / P07-Q06, 로그 7 / P07-Q08, 로그 8 / P08-Q06]
+    note: 이 클래스의 존재는 해당 대목이 어떤 주장을 입증한다는 판정이 아니다. 위치 확보, 해당 대목 읽기, 주장을 뒷받침하는지의 검토를 구별한다. 온톨로지의 evidence:는 인터뷰 근거이고
+      이 클래스는 제품 도메인의 원문 대목이다.
+    attributes:
+      locator_text:
+        type: string
+        nullable: true
+        description: 문단·식·표·행·그림·장·쪽수·인용 시작 문구 등 확인된 위치 단서.
+        note: 문서 제목만으로 특정 행이 식별되었다고 보지 않는다. 실제 위치를 모르면 null.
+        evidence: [로그 1 / P01-Q08, 로그 4 / P04-Q08, 로그 5 / P05-Q06, 로그 7 / P07-Q08]
+      excerpt_text:
+        type: string
+        nullable: true
+        description: 실제로 확보한 원문 구절이나 원문 값. 없는 원문은 작성하지 않는다.
+        note: 요약·번역·해석은 ResearchRecord.content_text에 둔다. 캡처만 있고 정확한 텍스트가 없으면 null일 수 있다.
+        evidence: [로그 3 / P03-Q06, 로그 5 / P05-Q06, 로그 7 / P07-Q06]
+      context_text:
+        type: string
+        nullable: true
+        description: 그 대목의 의미를 제한하는 주변 문장·평가 설정·가정·단위 등의 확인된 맥락.
+        note: 분야별 조건을 하나의 보편적 비교 규칙으로 바꾸지 않는다. 확인하지 않은 조건은 채우지 않는다.
+        evidence: [로그 1 / P01-Q07, 로그 5 / P05-Q07, 로그 7 / P07-Q13, 로그 8 / P08-Q05]
+    relations:
+    - located_in: DocumentArtifact
+      cardinality: '1'
+      description: 위치 표기가 유효한 특정 파일·판본·자료.
+      evidence: [로그 1 / P01-Q08, 로그 7 / P07-Q08, 로그 8 / P08-Q08]
+  ResearchRecord:
+    label: 연구 기록
+    description: 과업 중 남긴 질문·설명·요약·회의 메모·표의 내용·공유 문장 등 추적 가능한 기록 단위.
+    source_terms: [노트, 메모, AI 대화, 회의 메모, 비교표, 요약, 공유 문서]
+    evidence: [로그 2 / P02-Q11, 로그 4 / P04-Q11, 로그 5 / P05-Q11, 로그 8 / P08-Q13]
+    note: 저장 매체가 아니라 내용의 추적 단위다. 원천 저작물의 버전과 연구자가 만든 기록의 수정·사본을 구별한다. 모든 연구 기록에 같은 검토·채택 상태를 강제하지 않는다.
+    attributes:
+      content_text:
+        type: string
+        nullable: false
+        description: 기록에 실제로 적힌 내용.
+        evidence: [로그 2 / P02-Q11, 로그 4 / P04-Q10, 로그 6 / P06-Q13]
+      record_kind_text:
+        type: string
+        nullable: true
+        description: 기록의 형식이나 역할.
+        examples: [회의 메모, AI 대화, 비교표, 요약]
+        note: 비교표 한 항목·AI 설명 한 구절처럼 검토 단위로 나눌 수 있다. 같은 내용의 사본은 별도 기록으로 구별한다.
+        evidence: [로그 4 / P04-Q11, 로그 5 / P05-Q11, 로그 8 / P08-Q13]
+      authorship_text:
+        type: string
+        nullable: true
+        description: 해당 내용을 쓴 사람·AI 또는 설명의 출처 주체.
+        note: 저자 보고·본인 해석·동료 수작업·AI 설명을 섞지 않는다. AI 답을 붙여 넣은 사람과 내용을 생성한 주체도 다르다.
+        evidence: [로그 3 / P03-Q06, 로그 7 / P07-Q06, 로그 8 / P08-Q13]
+      container_text:
+        type: string
+        nullable: true
+        description: 기록이 남아 있는 도구·노트·문서의 확인된 설명.
+        note: Notion·Excel·종이·ChatGPT는 예시 값이며 각각 별도 도메인 클래스나 필수 연동이 아니다.
+        evidence: [로그 2 / P02-Q11, 로그 4 / P04-Q11, 로그 6 / P06-Q11]
+      location_text:
+        type: string
+        nullable: true
+        description: 확인된 기록 링크나 문서 안의 위치 단서.
+        note: 외부 링크가 없으면 위치 설명을 보존할 수 있다. 자동으로 접근 가능한 URI라고 가정하지 않는다.
+        evidence: [로그 3 / P03-Q10, 로그 4 / P04-Q10, 로그 5 / P05-Q10]
+      review_state_text:
+        type: string
+        nullable: true
+        description: 이 기록의 어느 내용을 원문과 대조했고 무엇이 미확인인지에 관한 서술.
+        note: 미확인은 오류 확정이 아니다. 일부 구절의 검토를 전체 문헌·모든 대화의 검증 완료로 확대하지 않는다.
+        evidence: [로그 2 / P02-Q09, 로그 4 / P04-Q06, 로그 6 / P06-Q09, 로그 8 / P08-Q11]
+      adoption_state_text:
+        type: string
+        nullable: true
+        description: 이 기록을 실제로 참고·사용·보류했는지의 서술.
+        note: 저장·열람·원문 대조·실제 채택은 각각 다르다. 결정 주체가 확인되지 않은 AI 답은 Decision이 아니다.
+        evidence: [로그 1 / P01-Q09, 로그 4 / P04-Q09-F1, 로그 8 / P08-Q09]
+      audience_text:
+        type: string
+        nullable: true
+        description: 해당 기록을 실제로 누구에게 어느 범위로 보여 주거나 보냈는지.
+        note: 공유 대상 서술이지 계정 권한·접근 제어의 구현 명세가 아니다.
+        evidence: [로그 1 / P01-Q14, 로그 3 / P03-Q15-F1, 로그 4 / P04-Q14, 로그 8 / P08-Q14]
+      ai_input_scope_text:
+        type: string
+        nullable: true
+        description: AI 설명인 경우 당시 입력으로 준 원문·과업 설명의 범위.
+        note: 비AI 기록에는 적용하지 않는다. 원문 전체가 입력되었다고 추정하지 않는다.
+        evidence: [로그 4 / P04-Q09, 로그 6 / P06-Q09, 로그 8 / P08-Q09]
+      change_reason_text:
+        type: string
+        nullable: true
+        description: 수정·보완을 했다면 실제로 설명된 변경 이유.
+        note: 설명 보완, 오류 교정, 논지 수정, 자동 갱신 뒤 변화는 같은 종류가 아니다.
+        evidence: [로그 2 / P02-Q13, 로그 4 / P04-Q13, 로그 7 / P07-Q13, 로그 8 / P08-Q15]
+    relations:
+    - belongs_to: ResearchTask
+      cardinality: '1'
+      description: 기록이 작성·사용되는 과업.
+      evidence: [로그 4 / P04-Q11, 로그 9 / P09-Q11]
+    - uses_excerpt: EvidenceExcerpt
+      cardinality: 0..*
+      description: 기록이 인용하거나 검토를 위해 참조한 원문 대목.
+      note: 이 관계만으로 의미상 뒷받침이 확인되었다고 하지 않는다. review_state_text를 함께 읽는다.
+      evidence: [로그 4 / P04-Q06, 로그 5 / P05-Q06, 로그 7 / P07-Q06, 로그 8 / P08-Q13]
+    - responds_to: ResearchQuestion
+      cardinality: 0..*
+      description: 설명·답변이 다루는 질문.
+      note: 답변이 존재하는 것은 질문 해결과 다르다.
+      evidence: [로그 2 / P02-Q05, 로그 2 / P02-Q09, 로그 6 / P06-Q09]
+    - follows: ResearchRecord
+      cardinality: 0..1
+      description: 같은 대화나 작업 기록에서 순서상 앞선 기록.
+      note: 확인된 국소 순서만 표현한다. 계정 전체의 모든 대화에 하나의 순서를 부여하지 않는다.
+      evidence: [로그 2 / P02-Q10, 로그 2 / P02-Q10-F1, 로그 3 / P03-Q11]
+    - copied_from: ResearchRecord
+      cardinality: 0..*
+      description: 복사·옮김·파생 사용이 확인된 이전 기록.
+      note: 내용이 비슷하다는 이유만으로 복사 관계를 추정하지 않는다. 원본 수정이 사본에 자동 반영되는 관계가 아니다.
+      evidence: [로그 2 / P02-Q11, 로그 4 / P04-Q13, 로그 8 / P08-Q13-F1]
+    - revises: ResearchRecord
+      cardinality: 0..*
+      description: 수정·보완 전의 같은 기록 내용.
+      note: 변경 전후를 구분하기 위한 모델링 제안. 기존 도구가 수정 이력을 실제로 보존했다는 주장이 아니며, 수정 전 내용을 모르면 새로 복원하지 않는다.
+      evidence: [로그 2 / P02-Q13, 로그 6 / P06-Q13, 로그 7 / P07-Q13]
+  Decision:
+    label: 판단·합의
+    description: 사람이 실제로 내린 진행 방향·범위·후보 선택·보류에 관한 판단 또는 합의.
+    source_terms: [정하기, 고르기, 합의, 보류, 범위 줄이기]
+    evidence: [로그 4 / P04-Q04, 로그 4 / P04-Q09-F1, 로그 5 / P05-Q12, 로그 6 / P06-Q12]
+    note: 아직 판단하지 못한 상태에 가짜 Decision을 만들지 않는다. ResearchTask.progress_text 또는 ResearchQuestion.state_text에 미정 상태를
+      남긴다. 이미 내린 판단을 되찾는 것과 새 판단을 내리는 것도 구별한다.
+    attributes:
+      decision_text:
+        type: string
+        nullable: false
+        description: 실제로 정하거나 보류한 내용.
+        evidence: [로그 4 / P04-Q04, 로그 5 / P05-Q12, 로그 6 / P06-Q12]
+      made_by_text:
+        type: string
+        nullable: true
+        description: 판단한 사람 또는 합의한 사람의 확인된 역할·서술.
+        note: 정해진 사람이 불명확하면 null. AI가 정한 것으로 대체하지 않는다.
+        evidence: [로그 4 / P04-Q09-F1, 로그 6 / P06-Q12, 로그 9 / P09-Q12]
+      reason_text:
+        type: string
+        nullable: true
+        description: 판단의 이유로 실제 설명된 내용.
+        note: 말하지 않은 선정 이유나 과학적 우월성은 추가하지 않는다.
+        evidence: [로그 5 / P05-Q07-F1, 로그 5 / P05-Q12, 로그 7 / P07-Q04]
+    relations:
+    - belongs_to: ResearchTask
+      cardinality: '1'
+      description: 판단이 적용되는 과업.
+      evidence: [로그 4 / P04-Q04, 로그 5 / P05-Q12]
+    - concerns: ResearchQuestion
+      cardinality: 0..*
+      description: 판단이 다루는 질문 또는 검토 범위.
+      evidence: [로그 1 / P01-Q04, 로그 4 / P04-Q04, 로그 9 / P09-Q12]
+    - documented_in: ResearchRecord
+      cardinality: 0..*
+      description: 판단을 적어 둔 회의·작업 기록.
+      evidence: [로그 4 / P04-Q09-F1, 로그 4 / P04-Q10, 로그 5 / P05-Q04]
+  NextAction:
+    label: 다음 작업
+    description: 사용자가 다음으로 확인·작성·질문·실행하기로 했거나 실제 이어서 수행한 구체적인 행동 단위.
+    source_terms: [다음 할 일, 확인 항목, 다시 볼 식, 질문 쓰기]
+    evidence: [로그 3 / P03-Q10, 로그 4 / P04-Q12, 로그 5 / P05-Q10, 로그 6 / P06-Q12]
+    note: 연구 질문은 '무엇을 알고 싶은가', 다음 작업은 '무엇을 할 것인가'다. 한 질문에 여러 작업이 필요할 수 있고, 자료 확보나 공유처럼 새 질문 없이 필요한 작업도 있다.
+    attributes:
+      action_text:
+        type: string
+        nullable: false
+        description: 이어 할 구체적인 행동.
+        evidence: [로그 3 / P03-Q10, 로그 4 / P04-Q15, 로그 5 / P05-Q10]
+      progress_text:
+        type: string
+        nullable: true
+        description: 아직 하지 않음·일부 수행·수행 등 실제 알려진 진행 상태.
+        note: 하기로 정함, 착수, 완료를 구별한다. 완료했다고 해서 내용의 정답까지 검증된 것은 아니다.
+        evidence: [로그 4 / P04-Q12, 로그 4 / P04-Q14, 로그 5 / P05-Q12]
+      blocker_text:
+        type: string
+        nullable: true
+        description: 그 행동을 수행하는 데 남은 장애나 대기 이유.
+        note: 문헌 본문, 보충자료, 실행 파일 가운데 무엇이 없는지 구별한다.
+        evidence: [로그 5 / P05-Q08, 로그 6 / P06-Q12, 로그 9 / P09-Q12]
+      deadline_text:
+        type: string
+        nullable: true
+        description: 직접 언급된 기한이나 다음 모임 등의 시점.
+        note: 상대 표현을 근거 없이 실제 달력 날짜로 바꾸지 않는다.
+        evidence: [로그 6 / P06-Q12]
+    relations:
+    - belongs_to: ResearchTask
+      cardinality: '1'
+      description: 이 행동으로 진행시키려는 과업.
+      evidence: [로그 4 / P04-Q12, 로그 6 / P06-Q12]
+    - addresses: ResearchQuestion
+      cardinality: 0..*
+      description: 확인·이해·작성을 통해 다루려는 질문.
+      evidence: [로그 3 / P03-Q04, 로그 2 / P02-Q12, 로그 6 / P06-Q12, 로그 9 / P09-Q12]
+    - based_on: Decision
+      cardinality: 0..*
+      description: 이 작업을 하기로 한 실제 판단·합의.
+      note: 매 행동에 사전 합의가 있는 것은 아니다. 명시되지 않은 Decision은 생성하지 않는다.
+      evidence: [로그 4 / P04-Q04, 로그 4 / P04-Q12, 로그 6 / P06-Q12]
+    - targets_artifact: DocumentArtifact
+      cardinality: 0..*
+      description: 행동을 위해 다시 열어 볼 문헌 파일·판본·보충자료.
+      note: 실행 파일은 이 관계의 문헌 표현물로 억지 분류하지 않고 blocker_text나 기록에 남긴다.
+      evidence: [로그 3 / P03-Q10, 로그 2 / P02-Q15, 로그 10 / P10-Q12]
+    - targets_record: ResearchRecord
+      cardinality: 0..*
+      description: 다시 검토하거나 작성·수정하려는 기록.
+      evidence: [로그 1 / P01-Q10, 로그 4 / P04-Q15, 로그 8 / P08-Q13]
+    - documented_in: ResearchRecord
+      cardinality: 0..*
+      description: 다음 행동을 적어 둔 노트·표의 마지막 줄 등의 기록.
+      evidence: [로그 3 / P03-Q10, 로그 5 / P05-Q10, 로그 4 / P04-Q15]
+  ResumeEpisode:
+    label: 작업 재개 사건
+    description: 하나의 문헌 과업을 중단했다가 돌아와 기록·질문·판단을 확인하고 작업을 이어 간 한 사건.
+    source_terms: [쉬었다 돌아옴, 다시 시작, 재개, 기록을 다시 봄]
+    evidence: [로그 2 / P02-Q10, 로그 3 / P03-Q10, 로그 4 / P04-Q10, 로그 5 / P05-Q10, 로그 9 / P09-Q10]
+    note: 이벤트 계측 구현이나 자동 타이머의 요구가 아니다. 한 참가자의 어려웠던 재개와 이후 수월했던 재개를 서로 다른 사건으로 표현하는 도메인 개념이다.
+    attributes:
+      interruption_text:
+        type: string
+        nullable: true
+        description: 중단 사유와 길이에 대한 실제 서술.
+        note: 중단 기간과 되짚기 소요 시간을 혼동하지 않는다.
+        evidence: [로그 2 / P02-Q10, 로그 4 / P04-Q10, 로그 10 / P10-Q10]
+      recovery_process_text:
+        type: string
+        nullable: true
+        description: 돌아온 뒤 무엇을 열고 어떤 내용을 되짚었는지의 서술.
+        note: 바로 시작한 경우도 포함한다. 어려움이나 재탐색이 반드시 있었다고 가정하지 않는다.
+        evidence: [로그 2 / P02-Q10, 로그 4 / P04-Q10, 로그 9 / P09-Q10-F1]
+      first_action_text:
+        type: string
+        nullable: true
+        description: 맥락 확인 뒤 실제로 이어 한 첫 행동.
+        note: 기억해 낸 계획과 실제 착수한 행동을 구별한다.
+        evidence: [로그 3 / P03-Q10, 로그 4 / P04-Q10, 로그 9 / P09-Q10-F1]
+      elapsed_time_text:
+        type: string
+        nullable: true
+        description: 재개 사건에서 보고된 소요 시간 표현.
+        note: 약·범위·모름을 보존한다. 이 파일의 회상값을 실측값이나 제품의 절감 가능 시간으로 바꾸지 않는다.
+        evidence: [로그 1 / P01-Q10, 로그 4 / P04-Q10-F1, 로그 6 / P06-Q10, 로그 7 / P07-Q10]
+      time_basis_text:
+        type: string
+        nullable: true
+        description: 소요 시간의 출처와 정확성에 대한 설명.
+        note: 보고가 없으면 null. 시간값이 있다고 자동으로 실측이라고 하지 않는다.
+        evidence: [로그 2 / P02-Q16, 로그 4 / P04-Q10-F1, 로그 6 / P06-Q10-F1]
+      time_scope_text:
+        type: string
+        nullable: true
+        description: 시간의 시작·끝, 포함 활동, 총시간과의 포함 관계.
+        note: 독해·재학습과 구분되지 않는 시간을 임의 분할하거나 중복 합산하지 않는다.
+        evidence: [로그 1 / P01-Q10-F1, 로그 2 / P02-Q16-F1, 로그 4 / P04-Q10-F1, 로그 6 / P06-Q16]
+      outcome_text:
+        type: string
+        nullable: true
+        description: 재개 뒤 실제 진행, 남은 어려움, 차질 또는 수월했던 점.
+        note: 일정 영향의 단일 원인을 재개에 돌리지 않는다. 과업 전체 결과와 이 사건의 결과를 구별한다.
+        evidence: [로그 4 / P04-Q16-F1, 로그 6 / P06-Q10, 로그 9 / P09-Q10-F1, 로그 10 / P10-Q16]
+    relations:
+    - belongs_to: ResearchTask
+      cardinality: '1'
+      description: 이 재개 사건이 속한 과업.
+      evidence: [로그 4 / P04-Q10, 로그 6 / P06-Q10]
+    - consulted: ResearchRecord
+      cardinality: 0..*
+      description: 재개 중 실제로 확인한 기존 기록.
+      evidence: [로그 2 / P02-Q10, 로그 3 / P03-Q10, 로그 4 / P04-Q10, 로그 5 / P05-Q10]
+    - reopened: DocumentArtifact
+      cardinality: 0..*
+      description: 재개 중 다시 연 원문 표현물.
+      evidence: [로그 1 / P01-Q10, 로그 4 / P04-Q10-F1, 로그 9 / P09-Q10]
+    - recovered_question: ResearchQuestion
+      cardinality: 0..*
+      description: 기록에서 다시 확인한 질문이나 막힌 지점.
+      evidence: [로그 2 / P02-Q10-F1, 로그 6 / P06-Q10-F1]
+    - recovered_decision: Decision
+      cardinality: 0..*
+      description: 새로 정한 것이 아니라 되찾은 기존 판단.
+      evidence: [로그 4 / P04-Q09-F1, 로그 4 / P04-Q10]
+    - started: NextAction
+      cardinality: 0..*
+      description: 그 사건에서 실제로 착수한 다음 작업.
+      note: 찾았지만 시작하지 못했다면 이 관계를 넣지 않는다.
+      evidence: [로그 3 / P03-Q10, 로그 4 / P04-Q10, 로그 9 / P09-Q10-F1]
+    - follows: ResumeEpisode
+      cardinality: 0..1
+      description: 동일 과업에서 순서상 앞선 것으로 확인된 재개 사건.
+      note: 일부 사건만 수록될 수 있다. Q10에 실렸다는 이유만으로 항상 가장 최근 사건이라고 지정하지 않는다.
+      evidence: [로그 4 / P04-Q15, 로그 10 / P10-Q15, 로그 10 / P10-Q16]
+scope:
+  status: 이번 미니 모델의 경계 제안; 최종 제품 범위는 팀 검토 필요
+  primary_situation:
+    source_sections: [interview.md §1.2, interview.md §3.3, interview.md §7.1–7.2]
+    text: 낯선 AI 주제에서 출발 방향을 정하기 위해 문헌을 읽다가 중단한 학부생의 작업 재개를 중심 후보로 유지한다.
+    note: P04는 출발 방향 선정, P05는 기존 표를 이용한 재현 후보 검토, P06은 설명·기초 학습이다. 본 초안에서 이 차이를 없애거나 타깃을 자동 확대하지 않는다.
+    evidence: [로그 4 / P04-Q01, 로그 5 / P05-Q01, 로그 6 / P06-Q01]
+  managed_concept_candidates:
+  - classes: [ResearchTask, ResearchQuestion, DocumentUse, Decision, NextAction]
+    description: 현재 과업·질문·문헌 사용 이유·실제 판단·다음 작업의 연결.
+    evidence: [로그 4 / P04-Q03, 로그 4 / P04-Q10, 로그 4 / P04-Q12, 로그 6 / P06-Q03]
+  - classes: [ResearchRecord, ResumeEpisode]
+    description: 기록의 위치·내용·출처와 재개 중 실제로 사용한 연결.
+    evidence: [로그 2 / P02-Q10, 로그 4 / P04-Q11, 로그 5 / P05-Q10]
+  referenced_material_candidates:
+  - classes: [Document, DocumentArtifact, EvidenceExcerpt]
+    description: 외부 문헌의 정체성, 접근 가능한 표현물, 확인한 원문 대목.
+    note: 문헌의 소유권·원문 제공권·외부 서비스 접근 가능성을 이 모델이 정하지 않는다.
+    evidence: [로그 1 / P01-Q08, 로그 7 / P07-Q08, 로그 9 / P09-Q08]
+  out_of_scope:
+  - item: 모든 도구·Word·슬라이드·메신저 사본의 자동 갱신과 양방향 동기화
+    reason: 수정 대상의 관계를 표현하는 것과 외부 사본을 제어하는 것은 다르다.
+    evidence: [로그 4 / P04-Q13, 로그 8 / P08-Q13-F1]
+  - item: 분야를 가리지 않는 과학적 타당성 판정·논문 또는 모델의 자동 우열 확정
+    reason: 확인한 비교 조건과 전체 과학적 타당성·통계적 유의성은 다르다.
+    evidence: [로그 5 / P05-Q07-F1, 로그 8 / P08-Q07, 로그 10 / P10-Q07]
+  - item: 질문 위치를 복원했다는 이유로 수식 이해·연구 질문 해결·실행 성공을 보장
+    reason: 기록을 찾은 뒤에도 개념 이해와 실행은 남아 있을 수 있다.
+    evidence: [로그 2 / P02-Q16-F1, 로그 6 / P06-Q10, 로그 5 / P05-Q12]
+  - item: 구현 파일 실행·모델 학습·실험 수행 자체
+    reason: 남은 행동과 장애는 기록하지만 해당 실행 시스템의 내부 도메인을 정의하지 않는다.
+    evidence: [로그 5 / P05-Q12, 로그 6 / P06-Q12, 로그 8 / P08-Q12]
+  - item: 외부 문헌 확보·접근 제한을 자동 해결하는 기능
+    reason: 자료 미확보 상태와 문의·대기를 표현할 뿐, 이 인터뷰는 자동 확보 가능성을 입증하지 않는다.
+    evidence: [로그 9 / P09-Q08, 로그 9 / P09-Q12]
+  - item: 비공개 기업·병원 자료의 외부 전송과 조직 정책의 임의 확정
+    reason: 실제 공개 범위와 자료 처리 제약을 확인하지 않은 채 확대하지 않는다.
+    evidence: [로그 8 / P08-Q08, 로그 8 / P08-Q14, 로그 10 / P10-Q09, 로그 10 / P10-Q15-F1]
+  - item: 읽은 수·탭 수·대화 길이만으로 이해도·연구 진전·낭비를 자동 판정
+    reason: 읽음과 이해는 다르며, 재독과 추가 탐색이 필요한 연구 진전일 수 있다.
+    evidence: [로그 1 / P01-Q11, 로그 7 / P07-Q04, 로그 7 / P07-Q16, 로그 9 / P09-Q12]
+domain_constraints:
+- id: D01
+  rule: 같은 문헌의 정체성, 특정 파일·판본, 과업·질문별 사용 이유를 서로 대체하지 않는다.
+  applies_to: [Document, DocumentArtifact, DocumentUse]
+  evidence: [로그 1 / P01-Q03, 로그 1 / P01-Q08, 로그 3 / P03-Q03, 로그 4 / P04-Q03]
+- id: D02
+  rule: 문헌을 확보함, 일부를 읽음, 설명을 검토함, 답을 채택함, 과업을 실행·완료함을 각각 구별한다.
+  applies_to: [DocumentArtifact, DocumentUse, ResearchQuestion, ResearchRecord, NextAction]
+  evidence: [로그 1 / P01-Q11, 로그 2 / P02-Q09, 로그 5 / P05-Q11, 로그 5 / P05-Q12]
+- id: D03
+  rule: 원문 위치 연결만으로 내용의 정확성·주장 뒷받침·적용 가능성을 확정하지 않는다.
+  applies_to: [EvidenceExcerpt, ResearchRecord]
+  evidence: [로그 4 / P04-Q06, 로그 5 / P05-Q07-F1, 로그 8 / P08-Q06]
+- id: D04
+  rule: 사람의 판단·합의와 AI 설명을 구별하고, 판단이 없거나 불명확하면 Decision을 만들어 채우지 않는다.
+  applies_to: [Decision, ResearchRecord, ResearchQuestion]
+  evidence: [로그 4 / P04-Q09-F1, 로그 4 / P04-Q12, 로그 6 / P06-Q12]
+- id: D05
+  rule: 미독·미확보·추출 문제·미확인·내용이 없다는 확인을 같은 빈칸이나 '없음'으로 합치지 않는다.
+  applies_to: [DocumentArtifact, DocumentUse, ResearchQuestion, NextAction]
+  evidence: [로그 6 / P06-Q08, 로그 9 / P09-Q10, 로그 9 / P09-Q14-F1, 로그 10 / P10-Q08]
+- id: D06
+  rule: 본인 해석·동료 수작업·AI 설명의 출처를 유지하고, 설명 보완과 오류 교정을 구별한다.
+  applies_to: [ResearchRecord, EvidenceExcerpt]
+  evidence: [로그 2 / P02-Q13, 로그 7 / P07-Q06, 로그 8 / P08-Q13]
+- id: D07
+  rule: 원본 교정, 다른 기록으로의 복사, 별도 사본의 교정 여부를 구별한다. 이전 설명의 잔존만으로 실제 오사용을 단정하지 않는다.
+  applies_to: [ResearchRecord]
+  evidence: [로그 4 / P04-Q13, 로그 6 / P06-Q13, 로그 8 / P08-Q13-F1]
+- id: D08
+  rule: 한 과업 안의 서로 다른 재개 사건을 합치지 않고, 수월한 재개도 동일한 개념으로 표현한다.
+  applies_to: [ResearchTask, ResumeEpisode]
+  evidence: [로그 4 / P04-Q10, 로그 4 / P04-Q15, 로그 5 / P05-Q10, 로그 10 / P10-Q16]
+- id: D09
+  rule: 회상된 시간의 범위·약·모름·포함 관계를 보존하며, 중단 기간이나 재학습 시간을 맥락 복원 비용으로 임의 변환하지 않는다.
+  applies_to: [ResumeEpisode]
+  evidence: [로그 2 / P02-Q16-F1, 로그 4 / P04-Q10-F1, 로그 6 / P06-Q10, 로그 7 / P07-Q10]
+- id: D10
+  rule: 반복 횟수·일정 영향·시간 절감 효과는 클래스 수나 연결 수에서 추론하지 않는다.
+  applies_to: [ResearchTask, ResumeEpisode]
+  evidence: [로그 4 / P04-Q16-F1, 로그 9 / P09-Q16, 로그 10 / P10-Q16]
+core_job:
+  source: interview.md §7.1
+  status: 원문도 검토 후보이며, 다음 되쓰기는 온톨로지 연결을 점검하기 위한 후보 표현이다.
+  original_text: 낯선 연구 주제의 출발 방향을 정하려고 여러 논문과 설명을 읽다가 작업을 중단했을 때, 나는 자료를 남긴 이유와 마지막 판단, 남아 있는 확인 작업을 함께 되찾고 싶다.
+    그래야 이전 대화를 전부 다시 훑지 않고 현재 과제에 필요한 검토를 이어 갈 수 있다.
+  evidence: [로그 4 / P04-Q03, 로그 4 / P04-Q10, 로그 4 / P04-Q12, 로그 6 / P06-Q03, 로그 6 / P06-Q10]
+  ontology_restatement: |
+    ResearchTask를 중단한 뒤 ResumeEpisode가 시작되면, 해당 과업의 DocumentUse에서
+    문헌별 purpose_text·role_text를 확인하고, ResearchRecord에 남은 ResearchQuestion,
+    Decision, NextAction의 연결을 되찾아 실제 NextAction을 시작하는 흐름을 표현한다.
+    필요한 원문은 EvidenceExcerpt가 가리키는 DocumentArtifact에서 다시 확인한다.
+    Decision이 없는 과업도 허용하며, 미해결 질문이나 자료 상태는 그대로 남긴다.
+    이 흐름의 제품 구현과 추가 이득은 검증된 사실이 아니다.
+  relation_paths:
+  - [ResumeEpisode.belongs_to, ResearchTask.has_document_use, DocumentUse.uses, Document.has_artifact]
+  - [ResumeEpisode.consulted, ResearchRecord.uses_excerpt, EvidenceExcerpt.located_in]
+  - [ResumeEpisode.recovered_question, ResearchQuestion.documented_in]
+  - [ResumeEpisode.recovered_decision, Decision.documented_in]
+  - [ResumeEpisode.started, NextAction.based_on, Decision.documented_in]
+  baseline_note: P03·P05·P08의 기존 방식과 P04·P10의 짧은 종료 메모 개선을 유지한다. 모든 링크를 새로 입력해야 한다거나 별도 그래프 화면이 필수라는 뜻이 아니다.
+  baseline_evidence: [로그 3 / P03-Q10, 로그 5 / P05-Q10, 로그 8 / P08-Q10, 로그 4 / P04-Q15, 로그 10 / P10-Q15]
+findings_coverage:
+- finding: FND-01
+  classes: [Document, DocumentUse, ResearchQuestion]
+  representation_or_boundary: 문헌 정체성과 질문별 목적·역할을 분리.
+  evidence: [로그 1 / P01-Q03, 로그 4 / P04-Q03, 로그 7 / P07-Q03]
+- finding: FND-02
+  classes: [ResearchTask, ResearchRecord, Decision, NextAction, ResumeEpisode]
+  representation_or_boundary: 기존 판단·다음 작업을 재개 때 되찾는 연결.
+  evidence: [로그 1 / P01-Q10, 로그 4 / P04-Q10, 로그 10 / P10-Q10]
+- finding: FND-03
+  classes: [ResearchQuestion, ResearchRecord, ResumeEpisode]
+  representation_or_boundary: P02의 후속 질문 흐름과 대화 재검토. 파일 미확보·모델 기억 실패로 바꾸지 않음.
+  evidence: [로그 2 / P02-Q10, 로그 2 / P02-Q11, 로그 2 / P02-Q16-F1]
+- finding: FND-04
+  classes: [NextAction, ResearchRecord, ResumeEpisode]
+  representation_or_boundary: 기존 메모·링크로 수월하게 재개한 경우도 표현.
+  evidence: [로그 3 / P03-Q10, 로그 5 / P05-Q10, 로그 4 / P04-Q15, 로그 8 / P08-Q10]
+- finding: FND-05
+  classes: [ResearchRecord, DocumentUse]
+  representation_or_boundary: 필요한 내용과 외부 기록 위치를 남기되 긴 양식·중복 입력을 필수화하지 않는 경계.
+  evidence: [로그 4 / P04-Q11, 로그 6 / P06-Q11, 로그 3 / P03-Q15, 로그 5 / P05-Q15-F1]
+- finding: FND-06
+  classes: [DocumentArtifact, DocumentUse, ResearchQuestion, NextAction]
+  representation_or_boundary: 미독과 미확보의 차이, 남은 항목과 후속 행동. P09에게 비교표를 만들었다고 부여하지 않음.
+  evidence: [로그 9 / P09-Q10, 로그 9 / P09-Q10-F1, 로그 9 / P09-Q14-F1]
+- finding: FND-07
+  classes: [DocumentArtifact, EvidenceExcerpt, ResearchRecord]
+  representation_or_boundary: 버전·위치·주변 조건을 유지하고 위치 확보와 의미상 검토를 구분.
+  evidence: [로그 1 / P01-Q08, 로그 4 / P04-Q08, 로그 7 / P07-Q08, 로그 5 / P05-Q06]
+- finding: FND-08
+  classes: [EvidenceExcerpt, ResearchRecord, Decision]
+  representation_or_boundary: 비교 행·조건·선택 이유는 원문 대목과 기록으로 보존. 별도 자동 비교 클래스·판정 규칙은 미확정.
+  evidence: [로그 1 / P01-Q07, 로그 5 / P05-Q07, 로그 5 / P05-Q07-F1, 로그 10 / P10-Q07]
+- finding: FND-09
+  classes: [ResearchRecord]
+  representation_or_boundary: 수정 전 설명의 별도 사본과 수정 관계. 외부 자동 동기화는 범위 밖.
+  evidence: [로그 4 / P04-Q13, 로그 8 / P08-Q13, 로그 8 / P08-Q13-F1]
+- finding: FND-10
+  classes: [ResearchRecord, EvidenceExcerpt, Decision, ResearchQuestion]
+  representation_or_boundary: 출처·입력 범위·검토·채택을 구별. 저장한 답을 결정 또는 해결로 자동 승격하지 않음.
+  evidence: [로그 2 / P02-Q09, 로그 4 / P04-Q09-F1, 로그 6 / P06-Q09, 로그 8 / P08-Q09]
+- finding: FND-11
+  classes: [ResearchRecord, Decision, NextAction]
+  representation_or_boundary: 공유한 이유·남은 일·확인 수준을 기록. 실시간 공동 편집 요구로 확대하지 않음.
+  evidence: [로그 4 / P04-Q14-F1, 로그 7 / P07-Q14, 로그 10 / P10-Q14, 로그 5 / P05-Q14]
+- finding: FND-12
+  classes: [ResearchQuestion, DocumentArtifact, NextAction, ResumeEpisode]
+  representation_or_boundary: 기록 복원, 이해 미완료, 자료 확보 대기의 원인과 결과를 분리.
+  evidence: [로그 2 / P02-Q16-F1, 로그 6 / P06-Q10, 로그 9 / P09-Q08]
+- finding: FND-13
+  classes: [DocumentArtifact, ResearchRecord]
+  representation_or_boundary: 참조·공유 범위의 경계. 특정 조직의 공식 규정이나 계정 구조를 생성하지 않음.
+  evidence: [로그 8 / P08-Q08, 로그 8 / P08-Q14, 로그 10 / P10-Q09]
+- finding: FND-14
+  classes: [ResearchQuestion, Document, DocumentUse, ResearchRecord]
+  representation_or_boundary: 질문 분기·인용 추적·재독을 유지하며 확장 자체를 실패로 규정하지 않음.
+  evidence: [로그 7 / P07-Q04, 로그 7 / P07-Q13, 로그 9 / P09-Q12]
+comparison_checks:
+- id: CHECK-01
+  title: P04 — 새 결정과 기존 결정의 복원, 작성할 평가 문항의 구분
+  evidence: [로그 4 / P04-Q03, 로그 4 / P04-Q09-F1, 로그 4 / P04-Q10, 로그 4 / P04-Q12, 로그 4 / P04-Q15]
+  quote_source: P04-Q09-F1
+  source_quote: 기준선은 선배랑 회의하면서 정했어요.
+  model_check: 기준선 합의는 Decision, 회의 메모는 ResearchRecord, 재개는 ResumeEpisode로 구분한다. 작성할 평가용 질문 10개는 과업 결과물이며, ResearchQuestion
+    10개가 자동 생성되는 근거가 아니다. 이후 수월한 재개도 별도 사건으로 남긴다.
+- id: CHECK-02
+  title: P02 — 명확한 읽기 이유, 질문 이력 복원, 미완료 학습
+  evidence: [로그 2 / P02-Q03, 로그 2 / P02-Q10, 로그 2 / P02-Q10-F1, 로그 2 / P02-Q12, 로그 2 / P02-Q16-F1]
+  quote_source: P02-Q16-F1
+  source_quote: 전에 물어본 곳을 찾아도 식이 바로 이해되는 건 아니었어요.
+  model_check: DocumentUse의 읽기 목적은 알려져 있지만 ResearchQuestion과 ResearchRecord의 흐름을 되찾는 일이 남는다. 교수 추천 학습을 자력 문헌 선정으로
+    바꾸지 않고, 나흘을 elapsed_time_text에 넣지 않는다. 발표 완료나 새 Decision을 만들지 않는다.
+- id: CHECK-03
+  title: P05 — 기존 표의 성공과 아직 실행하지 않은 상태
+  evidence: [로그 5 / P05-Q03, 로그 5 / P05-Q07, 로그 5 / P05-Q10, 로그 5 / P05-Q11, 로그 5 / P05-Q12]
+  quote_source: P05-Q12
+  source_quote: 작은 입력을 넣어 실행해 보는 것까지 해야 하는데, 면담하는 지금은 아직 시작하지 않았습니다.
+  model_check: DocumentUse와 ResearchRecord에 목적·조건이 남아 있고 ResumeEpisode는 수월할 수 있다. 후보 선정 Decision과 실행 NextAction의
+    미착수 상태를 구별한다. PDF 접근과 실행 파일 접근을 같은 availability_text로 덮지 않는다.
+- id: CHECK-04
+  title: P06 — 목적 복원과 개념 재학습은 다름
+  evidence: [로그 6 / P06-Q03, 로그 6 / P06-Q07, 로그 6 / P06-Q10, 로그 6 / P06-Q10-F1, 로그 6 / P06-Q12]
+  quote_source: P06-Q10-F1
+  source_quote: 그걸 찾은 뒤에도 그 가정이 뭔지 다시 읽었어요.
+  model_check: 질문을 되찾은 ResumeEpisode가 있어도 ResearchQuestion은 미해결일 수 있다. 15–20분 전체를 순수 위치 복원 비용으로 처리하지 않는다. 비교 의도에서
+    Comparison 수행·결과를 생성하지 않는다.
+- id: CHECK-05
+  title: P08 — 개인 재개의 성공과 동료 요약의 사본 수정
+  evidence: [로그 8 / P08-Q10, 로그 8 / P08-Q13, 로그 8 / P08-Q13-F1, 로그 8 / P08-Q15, 로그 8 / P08-Q16]
+  quote_source: P08-Q13
+  source_quote: 팀원이 손으로 정리한 요약에 내부 평가 점수가 외부 평가 설명에 붙어 있었어요.
+  model_check: 최초 오류의 주체를 AI로 바꾸지 않는다. ResearchRecord.copied_from으로 사본 관계를 표현하되 자동 동기화를 의미하지 않는다. 사본 수정 90분을 개인
+    재개 5분과 같은 사건 비용으로 만들지 않고, 포함된 표 수정 20분도 다시 더하지 않는다.
+- id: CHECK-06
+  title: P09 — 미독·미확보 빈칸과 방법 항목 기록
+  evidence: [로그 9 / P09-Q03, 로그 9 / P09-Q07, 로그 9 / P09-Q10, 로그 9 / P09-Q14-F1, 로그 9 / P09-Q16]
+  quote_source: P09-Q14-F1
+  source_quote: 하나는 보충자료가 올 때까지 대기였고, 옆 칸은 제가 본문을 아직 안 읽은 거였어요.
+  model_check: DocumentUse.reading_state_text, DocumentArtifact.availability_text, ResearchQuestion의 미해결 이유를 구별한다.
+    Word 항목 메모를 논문별 비교표로 바꾸지 않는다. 과업 3건을 모르는 재개 횟수의 대체값으로 쓰지 않는다.
+- id: CHECK-07
+  title: P07 — 원전·비평·본인 해석과 유익한 재독
+  evidence: [로그 7 / P07-Q03, 로그 7 / P07-Q04, 로그 7 / P07-Q06, 로그 7 / P07-Q08, 로그 7 / P07-Q10, 로그 7 / P07-Q13]
+  quote_source: P07-Q06
+  source_quote: 작품 문장이랑 비평가의 설명이 섞이지 않게 쓰려고요.
+  model_check: Document, 특정 판본의 DocumentArtifact, EvidenceExcerpt, 해석을 적은 ResearchRecord를 구별한다. 역할은 DocumentUse에
+    둔다. 30–40분에 섞인 새 해석을 전부 낭비로 분류하지 않는다.
+- id: CHECK-08
+  title: P10 — 첫 과업과 다음 작업 메모 뒤의 변화
+  evidence: [로그 10 / P10-Q01, 로그 10 / P10-Q10, 로그 10 / P10-Q15, 로그 10 / P10-Q15-F1, 로그 10 / P10-Q16]
+  quote_source: P10-Q16
+  source_quote: 처음엔 헤맸는데 할 일을 적어 둔 다음엔 수월했어요.
+  model_check: 동일 ResearchTask의 어려운 재개와 이후 수월한 재개를 분리한다. 첫 다량 문헌 과업을 장기간 반복 문제로 확대하지 않는다. 개인 클라우드 도입을 고려한 것만으로 사용
+    후 이탈 기록을 만들지 않는다.
+team_review:
+  status: 검토 전
+  note: 아래 질문과 comparison_checks는 팀의 문서 대조를 돕는 항목이다. 테스트 통과·사용자 효과 검증·팀 승인 기록이 아니다.
+  questions:
+  - 대표어 10개와 분리 경계가 팀이 이해한 도메인과 일치하는가? 특히 Document / DocumentArtifact / DocumentUse를 구분할 것인가?
+  - 원문의 출발 방향 선정 중심 Job과 P06의 설명·학습 과업 사이 범위를 어떻게 확정할 것인가? 이 파일이 타깃을 대신 바꾸지는 않았다.
+  - 각 속성과 관계의 evidence가 연결의 의미를 직접 뒷받침하는가? 타입·nullable·cardinality를 현재 제안대로 채택할 것인가?
+  - ResearchRecord의 검토 단위를 문장·메모·표의 행 가운데 어디까지 구체화할 것인가? 서로 다른 출처·검토 상태를 한 덩어리로 묶지 않는가?
+  - 비교 조건·결과를 별도 클래스 없이 원문 대목과 기록으로 두는 범위가 충분한가? 별도 자동 비교를 채택한다면 추가 사양과 근거가 필요한가?
+  - 기록 수집은 사용자의 수동 입력, 기존 기록 연결, 파싱 가운데 무엇을 사용할 것인가? 인터뷰에 없는 수집 인터페이스를 이미 확정된 요구로 취급하지 않는가?
+  - 재개 사건과 시간 정보를 제품에서 실제 저장·계측할 것인가, 우선 도메인 설명용으로만 사용할 것인가?
+  - 기존 한 줄 메모·표·링크와 비교할 때 추가 입력과 검토 부담을 늘리지 않는가?
+  downstream_handoff:
+    ontology_owner: 도메인 대표어·개념 경계·관계
+    next_schema_step: 실제로 파싱할 입력과 해당 도메인 구조를 먼저 정한다. 모든 클래스를 한 JSON에 평탄화하거나 인터뷰에 없는 요청 명령을 만들어 넣지 않는다.
+    request_context_status: 별도의 RequestContext/ResumeContext 클래스는 이 초안에서 확정하지 않았다. 이 인터뷰만으로 제품 입력 인터페이스가 정해지지는 않는다.
+    spec_step: 최종 타깃·제품 범위·필수 입력·자동화·성능 수치·수용 기준은 별도 사람 검토로 확정한다.
+    review_outcome: null
+
+# 범위 밖(이번 모델): 외부 사본 전체 자동 동기화 / 보편적인 과학적 우열 판정 /
+# 수식 이해·실행 성공 보장 / 실제 모델·실험 실행 / 외부 자료 접근의 자동 해결.
+# 핵심 흐름(되찾기):
+# ResumeEpisode --(belongs_to)--> ResearchTask --(has_document_use)--> DocumentUse --(uses)--> Document
+# ResumeEpisode --(consulted)--> ResearchRecord --(uses_excerpt)--> EvidenceExcerpt --(located_in)--> DocumentArtifact
+# ResumeEpisode --(recovered_decision)--> Decision
+# ResumeEpisode --(started)--> NextAction --(based_on)--> Decision
+# 실제 Decision이 없는 경우 해당 가지는 생략하고 미해결 질문·현재 상태를 그대로 보존한다.
