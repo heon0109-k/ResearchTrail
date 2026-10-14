@@ -6,8 +6,6 @@
 | 짝이 되는 출력 스키마 | `src/researchtrail/schemas/next_action.schema.json` — 아래 계약으로 생성·검토할 파일 |
 | 기준 도메인 클래스 | `docs/ontology.yaml` → `classes.NextAction` |
 | 읽는 코드 | `src/researchtrail/parser.py` — 구현 위치 제안이며 구현 완료를 뜻하지 않음 |
-| 기준 자료 | 현재 첨부 `interview.md`, `ontology.yaml`; 강의 3 작성 지침 |
-| 사람 검토자 / 승인일 | 미정 / 미승인 |
 
 `researchtrail`은 이 초안의 패키지명 제안이다. 저장소에 이미 다른 패키지명이 있으면 모든 관련 경로를 함께 바꾼다. 인터뷰 파일의 표준 저장 위치는 `docs/research/interviews.md`로 제안하지만, 원본 응답이나 근거 ID는 바꾸지 않는다.
 
@@ -166,7 +164,3 @@
 OpenAI strict Structured Outputs는 모든 프로퍼티를 required로 두도록 요구한다. 이를 채택할 때에는 네 키 모두 required + 모르는 값 null이라는 전송 계약으로 프롬프트·예시·검증을 함께 버전 변경하거나, 명시적으로 검토한 전송 어댑터를 둔다. 스키마만 바꾸고 이 파일의 생략 규칙을 그대로 두지 않는다.
 
 Codex로 스키마 파일을 작성하는 것과 제품 런타임에서 어느 LLM/API를 호출할지는 서로 다른 결정이다. 이 초안에는 런타임 모델, API 키, 토큰 상한이나 단가를 확정해 두지 않았다.
-
-## 9. 변경 이력
-
-- v1: 현재 온톨로지의 `NextAction` 속성 네 개를 대상으로 한 단일 작업 메모 추출 후보. 원문 구절 보존, 미상 값 처리, 부분 후보와 확정 객체의 구분, 함수 매핑, 실패 처리 및 미실행 실험 기록을 제안. 팀 승인 전.

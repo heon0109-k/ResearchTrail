@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NextAction",
+  "description": "사용자가 직접 남긴 다음 작업 메모에서 추출한 정보 수집 단계의 미완성 후보이며, 바로 저장할 수 있는 확정된 NextAction 도메인 객체가 아니다. action_text가 null이면 재질문이 필요하다. 저장 전에는 구체적인 행동, 확인된 과업 연결, 사용자 확인을 별도로 검사한다. 미상 선택 속성은 표준 출력에서 생략하며, null이나 생략을 기존 저장값 삭제로 해석하지 않는다.",
+  "type": "object",
+  "properties": {
+    "action_text": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "description": "사용자가 하기로 명시하거나 짧은 할 일 메모로 직접 지정한 구체적인 행동 한 건을 원문 구절로 보존한다. 항상 키를 출력하며, 입력만으로 행동과 대상을 구체화할 수 없거나 여러 독립 행동 중 한 건이 선택되지 않으면 null로 둔다. null이면 다른 속성은 출력하지 않는다. 확정된 NextAction의 action_text에는 구체적인 내용이 필요하다."
+    },
+    "progress_text": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "description": "해당 행동의 실제로 언급된 진행 상태를 원문 구절로 보존한다. 하기로 정함, 착수, 완료를 구별하며, 완료를 내용의 정답 검증으로 바꾸지 않는다. 모르면 표준 출력에서 키를 생략한다."
+    },
+    "blocker_text": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "description": "해당 행동을 수행하는 데 남은 장애나 대기 이유를 실제로 언급된 원문 구절로 보존한다. 문헌 본문, 보충자료, 실행 파일 가운데 무엇이 없는지 구별한다. 장애가 없다고 명시한 경우에는 그 구절을 보존하고, 모르면 표준 출력에서 키를 생략한다."
+    },
+    "deadline_text": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "description": "해당 행동에 대해 직접 언급된 기한이나 다음 모임 등의 시점을 원문 구절로 보존한다. 상대 표현을 실제 달력 날짜로 변환하지 않는다. 모르면 표준 출력에서 키를 생략한다."
+    }
+  },
+  "required": ["action_text"],
+  "additionalProperties": false
+}
