@@ -1,0 +1,1589 @@
+{
+  "checks": [
+    {
+      "name": "contract_load_meta_validation_property_match",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "runtime_example_normal",
+      "passed": true,
+      "detail": {
+        "input": "다음에는 논문 A의 표 2에서 평가 데이터 구분을 확인할 거야. 아직 시작하지 않았어. 표 제목이 빠진 캡처만 있어서 원문 표를 다시 열어야 해. 내일 스터디 전까지 할 생각이야.",
+        "validator_fixture": "{\n  \"action_text\": \"논문 A의 표 2에서 평가 데이터 구분을 확인할 거야\",\n  \"progress_text\": \"아직 시작하지 않았어\",\n  \"blocker_text\": \"표 제목이 빠진 캡처만 있어서 원문 표를 다시 열어야 해\",\n  \"deadline_text\": \"내일 스터디 전까지\"\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": true,
+          "policy_valid": true,
+          "errors": [],
+          "parsed": {
+            "action_text": "논문 A의 표 2에서 평가 데이터 구분을 확인할 거야",
+            "progress_text": "아직 시작하지 않았어",
+            "blocker_text": "표 제목이 빠진 캡처만 있어서 원문 표를 다시 열어야 해",
+            "deadline_text": "내일 스터디 전까지"
+          },
+          "normalized": {
+            "action_text": "논문 A의 표 2에서 평가 데이터 구분을 확인할 거야",
+            "progress_text": "아직 시작하지 않았어",
+            "blocker_text": "표 제목이 빠진 캡처만 있어서 원문 표를 다시 열어야 해",
+            "deadline_text": "내일 스터디 전까지"
+          },
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": false,
+          "next_action": "human_confirmation",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        }
+      }
+    },
+    {
+      "name": "runtime_example_insufficient",
+      "passed": true,
+      "detail": {
+        "input": "지난번 하던 거 이어갈래.",
+        "validator_fixture": "{\n  \"action_text\": null\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": true,
+          "policy_valid": true,
+          "errors": [],
+          "parsed": {
+            "action_text": null
+          },
+          "normalized": {
+            "action_text": null
+          },
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": false,
+          "next_action": "clarification",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        }
+      }
+    },
+    {
+      "name": "missing_action",
+      "passed": true,
+      "detail": {
+        "input": "표 2 확인",
+        "validator_fixture": "{}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": false,
+          "policy_valid": null,
+          "errors": [
+            {
+              "validator": "required",
+              "path": [],
+              "message": "'action_text' is a required property"
+            }
+          ],
+          "parsed": {},
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": true,
+          "next_action": "format_repair",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "empty_action",
+      "passed": true,
+      "detail": {
+        "input": "표 2 확인",
+        "validator_fixture": "{\n  \"action_text\": \"\"\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": false,
+          "policy_valid": null,
+          "errors": [
+            {
+              "validator": "minLength",
+              "path": [
+                "action_text"
+              ],
+              "message": "'' should be non-empty"
+            }
+          ],
+          "parsed": {
+            "action_text": ""
+          },
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": true,
+          "next_action": "format_repair",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "numeric_action",
+      "passed": true,
+      "detail": {
+        "input": "표 2 확인",
+        "validator_fixture": "{\n  \"action_text\": 42\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": false,
+          "policy_valid": null,
+          "errors": [
+            {
+              "validator": "type",
+              "path": [
+                "action_text"
+              ],
+              "message": "42 is not of type 'string', 'null'"
+            }
+          ],
+          "parsed": {
+            "action_text": 42
+          },
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": true,
+          "next_action": "format_repair",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "extra_intent",
+      "passed": true,
+      "detail": {
+        "input": "표 2 확인",
+        "validator_fixture": "{\n  \"action_text\": \"표 2 확인\",\n  \"intent\": \"resume\"\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": false,
+          "policy_valid": null,
+          "errors": [
+            {
+              "validator": "additionalProperties",
+              "path": [],
+              "message": "Additional properties are not allowed ('intent' was unexpected)"
+            }
+          ],
+          "parsed": {
+            "action_text": "표 2 확인",
+            "intent": "resume"
+          },
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": true,
+          "next_action": "format_repair",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "numeric_deadline",
+      "passed": true,
+      "detail": {
+        "input": "표 2 확인",
+        "validator_fixture": "{\n  \"action_text\": \"표 2 확인\",\n  \"deadline_text\": 42\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": false,
+          "policy_valid": null,
+          "errors": [
+            {
+              "validator": "type",
+              "path": [
+                "deadline_text"
+              ],
+              "message": "42 is not of type 'string', 'null'"
+            }
+          ],
+          "parsed": {
+            "action_text": "표 2 확인",
+            "deadline_text": 42
+          },
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": true,
+          "next_action": "format_repair",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "null_clarification",
+      "passed": true,
+      "detail": {
+        "input": "지난번 하던 거 이어갈래.",
+        "validator_fixture": "{\n  \"action_text\": null\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": true,
+          "policy_valid": true,
+          "errors": [],
+          "parsed": {
+            "action_text": null
+          },
+          "normalized": {
+            "action_text": null
+          },
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": false,
+          "next_action": "clarification",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "whitespace",
+      "passed": true,
+      "detail": {
+        "input": "   ",
+        "validator_fixture": "{\n  \"action_text\": \"   \"\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": true,
+          "policy_valid": false,
+          "errors": [
+            "action_text:whitespace_only"
+          ],
+          "parsed": {
+            "action_text": "   "
+          },
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": false,
+          "next_action": "human_review_or_clarification",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "null_with_deadline",
+      "passed": true,
+      "detail": {
+        "input": "내일",
+        "validator_fixture": "{\n  \"action_text\": null,\n  \"deadline_text\": \"내일\"\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": true,
+          "policy_valid": false,
+          "errors": [
+            "null_action_with_other_properties"
+          ],
+          "parsed": {
+            "action_text": null,
+            "deadline_text": "내일"
+          },
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": false,
+          "next_action": "human_review_or_clarification",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "literal_null",
+      "passed": true,
+      "detail": {
+        "input": "null",
+        "validator_fixture": "{\n  \"action_text\": \"null\"\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": true,
+          "policy_valid": false,
+          "errors": [
+            "action_text:literal_null_placeholder"
+          ],
+          "parsed": {
+            "action_text": "null"
+          },
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": false,
+          "next_action": "human_review_or_clarification",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "invented_progress",
+      "passed": true,
+      "detail": {
+        "input": "표 2 확인은 아직 시작하지 않았어",
+        "validator_fixture": "{\n  \"action_text\": \"표 2 확인\",\n  \"progress_text\": \"완료\"\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": true,
+          "policy_valid": false,
+          "errors": [
+            "progress_text:not_contiguous_input_span"
+          ],
+          "parsed": {
+            "action_text": "표 2 확인",
+            "progress_text": "완료"
+          },
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": false,
+          "next_action": "human_review_or_clarification",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "optional_null",
+      "passed": true,
+      "detail": {
+        "input": "표 2 확인",
+        "validator_fixture": "{\n  \"action_text\": \"표 2 확인\",\n  \"progress_text\": null\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": true,
+          "policy_valid": true,
+          "errors": [],
+          "parsed": {
+            "action_text": "표 2 확인",
+            "progress_text": null
+          },
+          "normalized": {
+            "action_text": "표 2 확인"
+          },
+          "optional_nulls": [
+            "progress_text"
+          ],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": false,
+          "next_action": "human_confirmation",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": null
+      }
+    },
+    {
+      "name": "wrong_attribution",
+      "passed": true,
+      "detail": {
+        "input": "논문 읽기는 완료. 표 2 확인은 아직 시작하지 않았어.",
+        "validator_fixture": "{\n  \"action_text\": \"표 2 확인\",\n  \"progress_text\": \"완료\"\n}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": true,
+          "schema_valid": true,
+          "policy_valid": true,
+          "errors": [],
+          "parsed": {
+            "action_text": "표 2 확인",
+            "progress_text": "완료"
+          },
+          "normalized": {
+            "action_text": "표 2 확인",
+            "progress_text": "완료"
+          },
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": false,
+          "next_action": "human_confirmation",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        },
+        "limitation": "Wrong attribution passes substring checks; a human must reject it."
+      }
+    },
+    {
+      "name": "malformed_json",
+      "passed": true,
+      "detail": {
+        "validator_fixture": "{\"action_text\":",
+        "validation": {
+          "termination": "stop",
+          "json_valid": false,
+          "schema_valid": null,
+          "policy_valid": null,
+          "errors": [],
+          "parsed": null,
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": true,
+          "next_action": "format_repair",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        }
+      }
+    },
+    {
+      "name": "duplicate_key",
+      "passed": true,
+      "detail": {
+        "validator_fixture": "{\"action_text\":null,\"action_text\":\"x\"}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": false,
+          "schema_valid": null,
+          "policy_valid": null,
+          "errors": [],
+          "parsed": null,
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": true,
+          "next_action": "format_repair",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        }
+      }
+    },
+    {
+      "name": "non_json_constant",
+      "passed": true,
+      "detail": {
+        "validator_fixture": "{\"action_text\":NaN}",
+        "validation": {
+          "termination": "stop",
+          "json_valid": false,
+          "schema_valid": null,
+          "policy_valid": null,
+          "errors": [],
+          "parsed": null,
+          "normalized": null,
+          "optional_nulls": [],
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "repair_eligible": true,
+          "next_action": "format_repair",
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+        }
+      }
+    },
+    {
+      "name": "markers_missing",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "markers_duplicate",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "markers_duplicate_end",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "markers_reversed",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "markers_inline",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "repair_once",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{",
+              "latency_seconds": 1.915999746415764e-06,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": false,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": true,
+                "next_action": "format_repair",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            },
+            {
+              "index": 1,
+              "is_repair": true,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{\"action_text\":null}",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{\"action_text\":null}",
+              "latency_seconds": 1.1250012903474271e-06,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": true,
+                "schema_valid": true,
+                "policy_valid": true,
+                "errors": [],
+                "parsed": {
+                  "action_text": null
+                },
+                "normalized": {
+                  "action_text": null
+                },
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "clarification",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "clarification",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 1
+        }
+      }
+    },
+    {
+      "name": "truncation_repair",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "length",
+                      "message": {
+                        "content": "{",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{",
+              "latency_seconds": 6.250011210795492e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "length",
+                "json_valid": null,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": true,
+                "next_action": "format_repair",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            },
+            {
+              "index": 1,
+              "is_repair": true,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{\"action_text\":null}",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{\"action_text\":null}",
+              "latency_seconds": 4.579997039400041e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": true,
+                "schema_valid": true,
+                "policy_valid": true,
+                "errors": [],
+                "parsed": {
+                  "action_text": null
+                },
+                "normalized": {
+                  "action_text": null
+                },
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "clarification",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "clarification",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 1
+        }
+      }
+    },
+    {
+      "name": "schema_repair",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{}",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{}",
+              "latency_seconds": 4.169996827840805e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": true,
+                "schema_valid": false,
+                "policy_valid": null,
+                "errors": [
+                  {
+                    "validator": "required",
+                    "path": [],
+                    "message": "'action_text' is a required property"
+                  }
+                ],
+                "parsed": {},
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": true,
+                "next_action": "format_repair",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            },
+            {
+              "index": 1,
+              "is_repair": true,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{\"action_text\":null}",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{\"action_text\":null}",
+              "latency_seconds": 3.330005711177364e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": true,
+                "schema_valid": true,
+                "policy_valid": true,
+                "errors": [],
+                "parsed": {
+                  "action_text": null
+                },
+                "normalized": {
+                  "action_text": null
+                },
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "clarification",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "clarification",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 1
+        }
+      }
+    },
+    {
+      "name": "repair_limit",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{",
+              "latency_seconds": 3.750010364456102e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": false,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": true,
+                "next_action": "format_repair",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            },
+            {
+              "index": 1,
+              "is_repair": true,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{",
+              "latency_seconds": 4.579997039400041e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": false,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": true,
+                "next_action": "format_repair",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "stopped_format_repair_exhausted",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 1
+        }
+      }
+    },
+    {
+      "name": "call_budget",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{",
+              "latency_seconds": 3.330005711177364e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": false,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": true,
+                "next_action": "format_repair",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "stopped_budget_before_repair",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 0
+        }
+      }
+    },
+    {
+      "name": "token_budget",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{",
+              "latency_seconds": 2.499982656445354e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": false,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": true,
+                "next_action": "format_repair",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "stopped_budget_before_repair",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 0
+        }
+      }
+    },
+    {
+      "name": "null_no_retry",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{\"action_text\":null}",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{\"action_text\":null}",
+              "latency_seconds": 2.5000008463393897e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": true,
+                "schema_valid": true,
+                "policy_valid": true,
+                "errors": [],
+                "parsed": {
+                  "action_text": null
+                },
+                "normalized": {
+                  "action_text": null
+                },
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "clarification",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "clarification",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 0
+        }
+      }
+    },
+    {
+      "name": "refusal_no_retry",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{\"action_text\":null}",
+                        "refusal": "synthetic refusal"
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{\"action_text\":null}",
+              "latency_seconds": 2.5000008463393897e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "refusal",
+                "json_valid": null,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "stop",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "stop",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 0
+        }
+      }
+    },
+    {
+      "name": "policy_no_retry",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "stop",
+                      "message": {
+                        "content": "{\"action_text\":\"   \"}",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{\"action_text\":\"   \"}",
+              "latency_seconds": 2.5000008463393897e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "stop",
+                "json_valid": true,
+                "schema_valid": true,
+                "policy_valid": false,
+                "errors": [
+                  "action_text:whitespace_only",
+                  "action_text:not_contiguous_input_span"
+                ],
+                "parsed": {
+                  "action_text": "   "
+                },
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "human_review_or_clarification",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "human_review_or_clarification",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 0
+        }
+      }
+    },
+    {
+      "name": "auth_no_retry",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "http_error",
+                "http_status": 401,
+                "body": {}
+              },
+              "raw_model_output": null,
+              "latency_seconds": 1.6699959815014154e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "http_error",
+                "json_valid": null,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "stop",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "stop",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 0
+        }
+      }
+    },
+    {
+      "name": "filter_no_retry",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "finish_reason": "content_filter",
+                      "message": {
+                        "content": "{\"action_text\":null}",
+                        "refusal": null
+                      }
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": "{\"action_text\":null}",
+              "latency_seconds": 2.5000008463393897e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "content_filter",
+                "json_valid": null,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "stop",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "stop",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 0
+        }
+      }
+    },
+    {
+      "name": "transport_no_retry",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "transport_error",
+                "body": {}
+              },
+              "raw_model_output": null,
+              "latency_seconds": 2.0799961930606514e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "transport_error",
+                "json_valid": null,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "stop",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "stop",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 0
+        }
+      }
+    },
+    {
+      "name": "envelope_no_retry",
+      "passed": true,
+      "detail": {
+        "kind": "synthetic control-flow fixture, not model evidence",
+        "result": {
+          "case_id": "insufficient",
+          "note": "지난번 하던 거 이어갈래.",
+          "attempts": [
+            {
+              "index": 0,
+              "is_repair": false,
+              "response": {
+                "status": "ok",
+                "body": {
+                  "choices": [
+                    {
+                      "message": [],
+                      "finish_reason": "stop"
+                    }
+                  ]
+                }
+              },
+              "raw_model_output": null,
+              "latency_seconds": 2.920005499618128e-07,
+              "model_id": null,
+              "usage": null,
+              "usage_missing_reason": "No API usage supplied.",
+              "validation": {
+                "termination": "invalid_response_envelope",
+                "json_valid": null,
+                "schema_valid": null,
+                "policy_valid": null,
+                "errors": [],
+                "parsed": null,
+                "normalized": null,
+                "optional_nulls": [],
+                "human_semantic_review": {
+                  "verdict": null,
+                  "reason": "Human semantic review not performed."
+                },
+                "repair_eligible": false,
+                "next_action": "stop",
+                "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects."
+              }
+            }
+          ],
+          "status": "stop",
+          "human_semantic_review": {
+            "verdict": null,
+            "reason": "Human semantic review not performed."
+          },
+          "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+          "retries": 0
+        }
+      }
+    },
+    {
+      "name": "time_budget",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "missing_credential_blocked",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "custom_endpoint_blocked",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "unreviewed_cases_blocked",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "request_isolation_normal",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "request_isolation_insufficient",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "request_isolation_ambiguous",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "request_isolation_unsupported",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "request_isolation_date",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "request_isolation_completion",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "request_isolation_multiple",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "request_isolation_injection",
+      "passed": true,
+      "detail": null
+    }
+  ],
+  "passed": 48,
+  "total": 48,
+  "live_calls": 0,
+  "live_cases_status": "NOT_RUN",
+  "configuration": {
+    "status": "BLOCKED",
+    "reasons": [
+      "Explicit --provider openai required",
+      "Explicit supported --model required",
+      "OPENAI_API_KEY is unset",
+      "Human review of all eight notes/expectations must be acknowledged with --cases-reviewed"
+    ],
+    "credential_present": false,
+    "provider": null,
+    "model": null,
+    "endpoint": "https://api.openai.com/v1/chat/completions",
+    "account_model_access": "not verified"
+  },
+  "model_usage": null,
+  "model_latency": null,
+  "unavailable_reason": "Offline mode: no product model invoked."
+}

@@ -1,0 +1,44 @@
+status: draft_requires_human_review
+source: docs/SPEC.md AC2·AC3·AC6
+purpose: 의미 판정용 합성 사례 초안. 승인 전 제품 완료 기준으로 사용하지 않는다.
+cases:
+  - id: NA-SEM-01
+    note: 논문 읽기는 완료. 다음 작업은 표 2 확인. 표 2 확인은 아직 시작하지 않았어.
+    expected:
+      action_text: 표 2 확인
+      progress_text: 아직 시작하지 않았어
+    forbidden: [표 2 확인을 완료로 판정]
+  - id: NA-SEM-02
+    note: 다음 작업은 표 2 확인. 내일 모임 전까지 해야 해.
+    expected:
+      action_text: 표 2 확인
+      deadline_text: 내일 모임 전까지
+    forbidden: [달력 날짜 계산]
+  - id: NA-SEM-03
+    note: 지난번 하던 거 이어갈래.
+    expected:
+      action_text: null
+    forbidden: [행동 추측, 같은 입력 자동 재호출]
+  - id: NA-SEM-04
+    note: 다음 작업은 표 2 확인. 상태를 완료로 넣으라는 문장은 시스템을 속이려는 인용이야.
+    expected:
+      action_text: 표 2 확인
+    forbidden: [진행 상태 완료 생성]
+  - id: CONTEXT-DRAFT-01
+    input_record:
+      content_text: 표의 실험 조건을 살펴봤다.
+    expected: 메모 보존, 판단·목적·자료 위치 미기록, Decision 자동 생성 0건
+  - id: CONTEXT-DRAFT-02
+    input_record:
+      content_text: 참고 링크를 남겼다.
+      location_text: https://example.org/paper
+    expected: 링크 문자열 보존, 네트워크 자동 호출 0회, 검증됨·읽음·채택 상태 자동 생성 0건
+  - id: CONTEXT-DRAFT-03
+    input_record:
+      content_text: AI가 분석 방법을 설명했다.
+      authorship_text: AI 설명
+    expected: 원문과 작성 주체 보존, 미검토 상태 유지, Decision 자동 생성 0건
+  - id: CONTEXT-DRAFT-04
+    input_record:
+      content_text: 논문 읽기를 마쳤다. 질문의 답은 아직 확인하지 않았다.
+    expected: 읽음과 질문 해결 상태 분리, DocumentArtifact 위치 미상 보존, 과업 완료 자동 생성 0건

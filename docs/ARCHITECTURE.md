@@ -18,7 +18,7 @@
 | `src/researchtrail/schemas/next_action.schema.json` | `NextAction` 후보 네 필드 출력 스키마 | 강의 3 산출물 | 있음 |
 | `scripts/check_next_action_parser.py` | 파서 실험 러너. 오프라인 48개 검사. 제품 코드 아님 | 강의 3 실험 | 있음 |
 | `src/researchtrail/parser.py` (미생성) | 메모 한 건으로 LLM 호출, 형식 복구 1회, 시간 제한 | 강의 6 구현 대상 (SPEC 5.3, AC7) | 만들 예정 |
-| `src/researchtrail/policy.py` (미생성) | 스키마 검사 뒤 정책 검사, 후속 처리 코드 계산 | 강의 6 구현 대상 (SPEC 5.3, AC1) | 만들 예정 |
+| `src/researchtrail/policy.py` | 스키마 검사 뒤 정책 검사, 후속 처리 코드 계산 | 강의 6 구현 대상 (SPEC 5.3, AC1) | 구조·원문 구절 검사 구현, 의미 판정은 미검증 |
 | `src/researchtrail/store.py` (미생성) | 과업·기록·맥락·확정 작업 저장, 과업별 조회 | 강의 6 구현 대상 (SPEC 5.1~5.5, AC4~AC6) | 만들 예정 |
 | API | SPEC 5.1절 경로 여섯 개 | SPEC 5.1 | 프레임워크 (미정) |
 | 화면 | 메모 입력, 후보 확인, 재개 화면 | SPEC 3.1 | (미정) |
@@ -137,3 +137,8 @@ SPEC 4.2절, `ontology.yaml`의 `scope.out_of_scope`와 같다.
 - 전역 지식 그래프, 모든 관계의 자동 추론. 그래프 DB나 모든 관계의 구현을 요구하지 않는다 (SPEC 4.2)
 - 조직 단위 협업·권한 관리
 - `ResumeEpisode` 자동 추적·타이머
+
+
+## 10. 2026-11-07 구현 현황
+
+web/은 기존 HTML 앱의 시연 진입점이며 서버 API와 연결되기 전이다. localStorage·IndexedDB 저장을 사용하고 Python policy.py는 기존 실험 러너에서도 재사용한다. Python 프레임워크·DB·배포 방식은 미정이다. 자세한 기능 경계와 검사 결과는 research/midterm_followup_2026-11-07.md를 따른다.

@@ -631,8 +631,8 @@ scope:
   status: 이번 미니 모델의 경계 제안; 최종 제품 범위는 팀 검토 필요
   primary_situation:
     source_sections: [interview.md §1.2, interview.md §3.3, interview.md §7.1–7.2]
-    text: 낯선 AI 주제에서 출발 방향을 정하기 위해 문헌을 읽다가 중단한 학부생의 작업 재개를 중심 후보로 유지한다.
-    note: P04는 출발 방향 선정, P05는 기존 표를 이용한 재현 후보 검토, P06은 설명·기초 학습이다. 본 초안에서 이 차이를 없애거나 타깃을 자동 확대하지 않는다.
+    text: 프로젝트나 스터디 발표를 위해 낯선 AI 문헌을 읽다가 중단한 컴퓨터공학 학부생의 문헌 과업 재개를 중심 상황으로 삼는다.
+    note: 2026-11-07 사용자 확인에 따라 PROBLEM.md의 과업 재개 범위와 통일했다. P04의 출발 방향 선정은 하위 상황이고 P05의 원활한 재개는 반례다. 추가 설문은 대상 조건과 중복 확인 후 편입한다.
     evidence: [로그 4 / P04-Q01, 로그 5 / P05-Q01, 로그 6 / P06-Q01]
   managed_concept_candidates:
   - classes: [ResearchTask, ResearchQuestion, DocumentUse, Decision, NextAction]
@@ -715,6 +715,7 @@ core_job:
   original_text: 낯선 연구 주제의 출발 방향을 정하려고 여러 논문과 설명을 읽다가 작업을 중단했을 때, 나는 자료를 남긴 이유와 마지막 판단, 남아 있는 확인 작업을 함께 되찾고 싶다.
     그래야 이전 대화를 전부 다시 훑지 않고 현재 과제에 필요한 검토를 이어 갈 수 있다.
   evidence: [로그 4 / P04-Q03, 로그 4 / P04-Q10, 로그 4 / P04-Q12, 로그 6 / P06-Q03, 로그 6 / P06-Q10]
+  agreed_job_text: 프로젝트나 스터디 발표를 위한 문헌 과업을 중단했다가 재개할 때, 기록된 자료 사용 이유·판단 또는 질문·확인된 다음 작업을 함께 되찾아 검토를 이어 간다.
   ontology_restatement: |
     ResearchTask를 중단한 뒤 ResumeEpisode가 시작되면, 해당 과업의 DocumentUse에서
     문헌별 purpose_text·role_text를 확인하고, ResearchRecord에 남은 ResearchQuestion,
@@ -849,7 +850,7 @@ team_review:
   note: 아래 질문과 comparison_checks는 팀의 문서 대조를 돕는 항목이다. 테스트 통과·사용자 효과 검증·팀 승인 기록이 아니다.
   questions:
   - 대표어 10개와 분리 경계가 팀이 이해한 도메인과 일치하는가? 특히 Document / DocumentArtifact / DocumentUse를 구분할 것인가?
-  - 원문의 출발 방향 선정 중심 Job과 P06의 설명·학습 과업 사이 범위를 어떻게 확정할 것인가? 이 파일이 타깃을 대신 바꾸지는 않았다.
+  - 2026-11-07에 과업 재개로 통일한 범위에서, 추가 설문이 대상 조건을 충족하는지 확인했는가?
   - 각 속성과 관계의 evidence가 연결의 의미를 직접 뒷받침하는가? 타입·nullable·cardinality를 현재 제안대로 채택할 것인가?
   - ResearchRecord의 검토 단위를 문장·메모·표의 행 가운데 어디까지 구체화할 것인가? 서로 다른 출처·검토 상태를 한 덩어리로 묶지 않는가?
   - 비교 조건·결과를 별도 클래스 없이 원문 대목과 기록으로 두는 범위가 충분한가? 별도 자동 비교를 채택한다면 추가 사양과 근거가 필요한가?
