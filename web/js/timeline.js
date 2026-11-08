@@ -125,7 +125,7 @@ function renderCards(){
     var mark=(rp&&rp.id===p.id)?'이어 읽을 논문':((lp&&lp.id===p.id)?'마지막으로 읽던 논문':'');
     var st=readingState(p.state);
     var inc=S.links.filter(function(l){return l.to===p.id});
-    var why=(S.why&&inc.length)?'<div class="cwhy">↩ '+esc(inc[0].reason||'이유 없음')+(inc.length>1?' 외 '+(inc.length-1):'')+'</div>':'';
+    var why=(S.why&&inc.length)?'<div class="cwhy">↩ '+esc(inc[0].reason||'미기록/확인 필요')+(inc.length>1?' 외 '+(inc.length-1):'')+'</div>':'';
     cardsHtml+='<div class="'+cls+'" data-id="'+p.id+'" tabindex="0" role="button" aria-label="'+esc(p.title+' · '+st.t+' · '+p.date+(mark?' · '+mark:''))+'" style="left:'+ps.x+'px;top:'+ps.y+'px;width:'+ps.w+'px;height:'+ps.h+'px;--tc:'+t.color+'">'+
       (mark?'<div class="cmk">'+mark+'</div>':'')+'<div class="ct1"><span class="tx">'+esc(p.title)+'</span></div><div class="cmemo">'+esc(p.memo)+'</div>'+
       '<div class="cfoot"><span class="ctitle">'+sg(p.state)+' '+esc(p.title)+'</span><span class="cdt">'+p.date.slice(5)+'</span></div></div>';
@@ -135,21 +135,21 @@ function renderCards(){
   if(S.bubble){
     var bp=paperBy(S.bubble),bs=bp&&L.pos[bp.id];
     if(bs){
-      var incB=S.links.filter(function(l){return l.to===bp.id&&l.reason}),whyTxt=(S.judge&&bp.id===curPaper().id)?S.judge:(incB.length?incB[0].reason:'');
-      var whyLab=(S.judge&&bp.id===curPaper().id)?'마지막 판단':'읽는 이유';
+      var context=paperResumeContext(bp),whyTxt=context.reasonText,whyLab=context.reasonLabel;
+      var legacyJudge=bp.id===curPaper().id?S.judge:'';
       var todoTxt=bp.todo||'';
       var legacyNext=bp.id===curPaper().id&&S.next&&S.next!==bp.todo?S.next:'';
-      var BW=310,BH=172+(legacyNext?52+Math.ceil(legacyNext.length/22)*19:0)+(todoTxt?52+Math.ceil(todoTxt.length/22)*19:0)+(whyTxt?34+Math.ceil(whyTxt.length/24)*19:0),bx=Math.max(LABELW+4,Math.min(W-BW-12,bs.x-20)),below=true,by=bs.y+bs.h+16;
+      var BW=310,BH=172+(legacyJudge?52+Math.ceil(legacyJudge.length/22)*19:0)+(legacyNext?52+Math.ceil(legacyNext.length/22)*19:0)+(todoTxt?52+Math.ceil(todoTxt.length/22)*19:0)+(whyTxt?34+Math.ceil(whyTxt.length/24)*19:0),bx=Math.max(LABELW+4,Math.min(W-BW-12,bs.x-20)),below=true,by=bs.y+bs.h+16;
       if(by+BH>H&&bs.y-BH-16>AXISH){below=false;by=bs.y-BH-16-((curChar().rows.length*2)-1)}
       var tail=Math.max(24,Math.min(BW-40,bs.x+bs.w/2-bx-7));
       var gap=S.bubbleGap,msg=gap>=864e5?(Math.floor(gap/864e5)+'일 만이에요'):(gap>=36e5?(Math.floor(gap/36e5)+'시간 만이에요'):'');
       var head='다시 오셨네요'+(msg?' · '+msg:'');
-      var big=bp.page?('p.'+bp.page+'에서 멈췄어요'):'여기까지 읽었어요';
+      var big=context.pageText;
       var sub=(bp.page&&bp.total?bp.total+'쪽 중 '+bp.page+'쪽 · ':'')+readingState(bp.state).t;
       cardsHtml+='<div class="rbub'+(below?'':' up')+'" id="rbub" role="dialog" aria-label="이어 읽기 안내" style="left:'+bx+'px;top:'+by+'px;width:'+BW+'px;--tl:'+tail+'px">'+
         '<div class="h"><span>'+head+'</span><button type="button" class="x" id="rbX" aria-label="닫기">×</button></div>'+
         '<div class="m">'+esc(big)+'</div><div class="pg">'+esc(sub)+'</div>'+
-        (bp.page&&bp.total?'<div class="bar"><i style="width:'+Math.max(3,Math.min(100,Math.round(bp.page/bp.total*100)))+'%"></i></div>':'')+(whyTxt?'<div class="q"><div class="k">'+whyLab+'</div><div class="t">'+esc(whyTxt)+'</div></div>':'')+(todoTxt?'<div class="nx td"><div class="k">다음 할 일</div><div class="t">'+esc(todoTxt)+'</div></div>':'')+(legacyNext?'<div class="nx td"><div class="k">이전 전체 메모 · 논문 연결 미확인</div><div class="t">'+esc(legacyNext)+'</div></div>':'')+
+        (bp.page&&bp.total?'<div class="bar"><i style="width:'+Math.max(3,Math.min(100,Math.round(bp.page/bp.total*100)))+'%"></i></div>':'')+(whyTxt?'<div class="q"><div class="k">'+whyLab+'</div><div class="t">'+esc(whyTxt)+'</div></div>':'')+(todoTxt?'<div class="nx td"><div class="k">다음 할 일</div><div class="t">'+esc(todoTxt)+'</div></div>':'')+(legacyJudge?'<div class="q"><div class="k">전체 타임라인 메모 · 논문 연결 미확인</div><div class="t">'+esc(legacyJudge)+'</div></div>':'')+(legacyNext?'<div class="nx td"><div class="k">이전 전체 메모 · 논문 연결 미확인</div><div class="t">'+esc(legacyNext)+'</div></div>':'')+
         '<button type="button" class="go" id="rbGo">이어 읽기</button></div>';
     }
   }

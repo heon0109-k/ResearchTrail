@@ -16,12 +16,20 @@ function curPaper(){
   return ps.filter(function(p){return p.state==='reading'})[0]||ps[0];
 }
 function ago(ms){var m=Math.floor(ms/6e4);if(m<60)return m+'분';var h=Math.floor(m/60);if(h<24)return h+'시간';return Math.floor(h/24)+'일'}
+function paperResumeContext(p){
+  var inc=S.links.filter(function(l){return l.to===p.id})[0];
+  var reason=inc?inc.reason:p.memo;
+  var page=Number(p.page),knownPage=Number.isSafeInteger(page)&&page>0;
+  return {pageText:knownPage?'p.'+page+'에서 멈췄어요':'읽은 위치 미기록/확인 필요',
+    reasonLabel:inc?'넘어온 이유':'저장 이유',
+    reasonText:typeof reason==='string'&&reason.trim()?reason:'미기록/확인 필요'};
+}
 function renderResume(){
   var el=$('#resume');if(!el)return;
   var p=curPaper();if(!p){el.hidden=true;return}
   preparePaperHistory(p);
   el.hidden=false;
-  var st=readingState(p.state);
+  var st=readingState(p.state),context=paperResumeContext(p);
   var inc=S.links.filter(function(l){return l.to===p.id})[0];
   var from=inc?paperBy(inc.from):null;
   var nr=S.papers.filter(function(x){return x.state==='reading'}).length;
@@ -32,8 +40,8 @@ function renderResume(){
     '<div class="rs-c"><h5>'+(p.state==='reading'?'이어 읽을 논문':'마지막으로 읽은 논문')+'</h5>'+
       '<button type="button" class="rs-go" data-go="'+p.id+'">'+esc(p.title)+'</button>'+
       '<span class="st">'+sg(p.state)+' '+st.t+' · '+p.date+'</span>'+
-      '<div class="rs-sub">'+(inc?'<b>넘어온 이유</b> '+esc(inc.reason||'미기록/확인 필요'):'<b>저장 이유</b> '+esc(p.memo))+'</div></div>'+
-    '<div class="rs-c"><h5>마지막 판단 · 남은 질문</h5><textarea id="rsJudge" aria-label="마지막 판단 또는 남은 질문" placeholder="미기록/확인 필요 — 마지막으로 내린 판단이나 아직 남은 질문을 남겨요">'+esc(S.judge)+'</textarea></div>'+
+      '<div class="rs-sub">'+'<b>'+context.reasonLabel+'</b> '+esc(context.reasonText)+'</div></div>'+
+    '<div class="rs-c"><h5>전체 타임라인 메모 · 논문 연결 미확인</h5><textarea id="rsJudge" aria-label="전체 타임라인 메모" placeholder="미기록/확인 필요 — 이 칸은 특정 논문에 연결되지 않은 전체 메모예요">'+esc(S.judge)+'</textarea></div>'+
     '<div class="rs-c"><h5>다음 할 일 (한 가지)</h5><textarea id="rsNext" aria-label="다음 할 일" placeholder="미기록/확인 필요 — 돌아오면 가장 먼저 할 일 하나">'+esc(p.todo||'')+'</textarea>'+((S.next&&S.next!==p.todo)?'<div class="rs-sub"><b>이전 전체 메모 · 논문 연결 미확인</b> '+esc(S.next)+'</div>':'')+'</div></div>';
   }
   el.innerHTML=h;

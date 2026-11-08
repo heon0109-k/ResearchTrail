@@ -9,7 +9,7 @@ function renderPanel(){
   var t=tagBy(p.tag);
   var tagOpts='<option value=""'+(!p.tag?' selected':'')+'>태그 없음</option>'+S.tags.map(function(x){return '<option value="'+x.id+'"'+(x.id===p.tag?' selected':'')+'>'+esc(x.name)+'</option>'}).join('');
   var outs=S.links.filter(function(l){return l.from===p.id}),ins=S.links.filter(function(l){return l.to===p.id});
-  function li(l,dir){var o=paperBy(dir==='out'?l.to:l.from);if(!o)return '';return '<li><span class="arr">'+(dir==='out'?'→':'←')+'</span><button type="button" class="go" data-go="'+o.id+'">'+esc(o.title.length>48?o.title.slice(0,48)+'…':o.title)+'</button><button type="button" class="x" data-del="'+l.id+'" aria-label="연결 삭제">삭제</button><span class="why">'+esc(l.reason||'이유 없음')+'</span></li>'}
+  function li(l,dir){var o=paperBy(dir==='out'?l.to:l.from);if(!o)return '';return '<li><span class="arr">'+(dir==='out'?'→':'←')+'</span><button type="button" class="go" data-go="'+o.id+'">'+esc(o.title.length>48?o.title.slice(0,48)+'…':o.title)+'</button><button type="button" class="x" data-del="'+l.id+'" aria-label="연결 삭제">삭제</button><span class="why">'+esc(l.reason||'미기록/확인 필요')+'</span></li>'}
   var linkArea='';
   if(S.linking&&S.linking.from===p.id){
     var to=S.linking.to?paperBy(S.linking.to):null;
