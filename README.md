@@ -151,7 +151,7 @@ python3 -m http.server 5500 --directory web
 - [문제 정의·사용자 검증 계획 초안](docs/PROBLEM.md)
 - [기능 명세와 AC](docs/SPEC.md)
 - [추가 설문 분석](docs/research/survey_2026-11-05.md)
-- [AI 귀속 검증 계획 초안](docs/spikes/2026-11-07_next_action_attribution.md)
+- [AI 귀속 검증 계획 초안](docs/spikes/next_action_attribution.md)
 
 검사 명령 (Python 검사에는 `pip install pyyaml jsonschema` 필요):
 
