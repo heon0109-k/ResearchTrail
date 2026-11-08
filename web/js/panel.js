@@ -1,6 +1,14 @@
 'use strict';
 /* ---------- panel ---------- */
-function persistPaperLink(p,value){p.link=value.trim();return save()}
+function persistPaperLink(p,value,report){
+  var ref=parseRef(value),input=$('#pLink');
+  if(ref.type==='invalid'){
+    if(input){input.setCustomValidity('http 또는 https 링크를 입력해 주세요.');if(report)input.reportValidity()}
+    return false;
+  }
+  if(input)input.setCustomValidity('');
+  p.link=ref.type==='url'?ref.url:ref.link;return save();
+}
 function renderPanel(){
   var panel=$('#panel'),pin=$('#pin');
   var open=S.panel!=='none';panel.classList.toggle('open',open);
@@ -34,7 +42,7 @@ function renderPanel(){
   $('#pMemo').addEventListener('change',function(e){p.memo=e.target.value;renderAll()});
   $('#pTitle').addEventListener('change',function(e){p.title=e.target.value.trim()||p.title;renderAll()});
   var linkInput=$('#pLink');
-  ['input','change'].forEach(function(type){linkInput.addEventListener(type,function(e){persistPaperLink(p,e.target.value)})});
+  ['input','change'].forEach(function(type){linkInput.addEventListener(type,function(e){persistPaperLink(p,e.target.value,type==='change')})});
   $('#pDate').addEventListener('change',function(e){if(e.target.value){p.date=e.target.value;renderAll();ensureVisible(p.id)}});
   $$('[data-go]',pin).forEach(function(b){b.addEventListener('click',function(){select(b.dataset.go)})});
   $$('[data-del]',pin).forEach(function(b){b.addEventListener('click',function(){ask('이 연결을 삭제할까요?','연결 이유도 함께 사라져요.','삭제',function(){S.links=S.links.filter(function(l){return l.id!==b.dataset.del});renderAll()},true)})});
@@ -82,6 +90,7 @@ function renderAddPanel(pin){
   var doFetch=function(){
     var v=$('#aSrc').value.trim();if(!v){msg('링크를 붙여넣어 주세요.',true);return}
     var ref=parseRef(v);
+    if(ref.type==='invalid'){msg('올바른 http 또는 https 링크를 입력해 주세요.',true);return}
     if(ref.type==='url'){msg('arXiv·DOI가 아니라서 제목은 직접 적어 주세요. 링크는 저장돼요.');return}
     $('#aSrc').value=ref.link;msg('불러오는 중…');
     fetchMeta(ref).then(function(m){
@@ -99,14 +108,24 @@ function renderAddPanel(pin){
     if(!$('#aTitle').value.trim())$('#aTitle').value=f.name.replace(/\.pdf$/i,'').replace(/[_]+/g,' ');
     msg('PDF를 읽기 화면에서 열 수 있게 이 브라우저에 저장해요.');
   });
-  $('#addForm').addEventListener('submit',function(e){
+  var adding=false;
+  $('#addForm').addEventListener('submit',async function(e){
     e.preventDefault();
+    if(adding)return;
     var title=$('#aTitle').value.trim(),dt=$('#aDate').value,memo=$('#aMemo').value.trim(),tv=$('#aTag').value;
     var miss=[];if(!title)miss.push('논문 제목');if(!dt)miss.push('읽은 날짜');if(!memo)miss.push('저장 이유');
     var er=$('#aErr');if(miss.length){er.hidden=false;er.textContent=miss.join(', ')+'을(를) 입력해 주세요.';return}
+    var ref=parseRef($('#aSrc').value);
+    if(ref.type==='invalid'){er.hidden=false;er.textContent='올바른 http 또는 https 링크를 입력해 주세요.';return}
     var tag=tagBy(tv);
     var id=nid('p');var m=S.draftMeta||{};var np={id:id,tag:tag.id,date:dt,title:title,memo:memo,link:(function(){var v=$('#aSrc').value.trim();if(!v)return '';var r=parseRef(v);return r.type==='url'?r.url:r.link})(),state:$('#aState').value||null,abs:m.abs||'',authors:m.authors||'',year:m.year||''};
-    if(S.draftFile){np.pdf=true;np.fname=S.draftFile.name;idbPut(id,S.draftFile)}
+    if(S.draftFile){
+      adding=true;
+      try{await attachPaperPdf(np,S.draftFile)}
+      catch(error){er.hidden=false;er.textContent='PDF를 저장하지 못했어요. 입력 내용은 유지했으니 다시 추가해 주세요.';adding=false;return}
+      adding=false;
+      if(S.panel!=='add'||$('#aErr')!==er){idbDel(id);return}
+    }
     S.papers=S.papers.filter(function(x){return !x.tut});
     S.papers.push(np);S.draftMeta=null;S.draftFile=null;
     S.hidden.delete(tag.id);S.draft=null;S.sel=id;S.panel='detail';renderAll();ensureVisible(id);

@@ -116,9 +116,9 @@ function renderCards(){
     lks+='<g class="lk'+(on?' on':'')+'" data-id="'+l.id+'" data-mx="'+rt.mx+'" data-my="'+rt.my+'" data-t="'+esc(txt)+'"><path class="h" d="'+rt.d+'"/><path class="v" d="'+rt.d+'"/><rect class="mid" x="'+(rt.mx-3)+'" y="'+(rt.my-3)+'" width="6" height="6"/></g>';
   });
   // cards
-  var rp=S.papers.filter(function(p){return p.state==='reading'}).sort(function(a,b){return dnum(b.date)-dnum(a.date)})[0];
-  var lp=S.papers.slice().sort(function(a,b){return dnum(b.date)-dnum(a.date)})[0];
-  if(lp&&rp&&lp.id===rp.id)lp=null;
+  var resumePaper=curPaper();
+  var rp=resumePaper&&resumePaper.state==='reading'?resumePaper:null;
+  var lp=rp?null:resumePaper;
   S.papers.forEach(function(p){
     var ps=L.pos[p.id];if(!ps)return;var t=tagBy(p.tag);
     var cls='card st-'+readingStateKey(p.state)+(compact?' cmp':'')+(S.sel===p.id?' sel':'')+(S.linking&&S.linking.from===p.id?' src':'')+(S.linking&&S.linking.to===p.id?' tgt':'')+(matches(p)?'':' dim')+(rp&&rp.id===p.id?' go':'')+(lp&&lp.id===p.id?' last':'');
@@ -130,8 +130,8 @@ function renderCards(){
       (mark?'<div class="cmk">'+mark+'</div>':'')+'<div class="ct1"><span class="tx">'+esc(p.title)+'</span></div><div class="cmemo">'+esc(p.memo)+'</div>'+
       '<div class="cfoot"><span class="ctitle">'+sg(p.state)+' '+esc(p.title)+'</span><span class="cdt">'+p.date.slice(5)+'</span></div></div>';
   });
-  var who=rp||lp||S.papers.slice().sort(function(a,b){return dnum(b.date)-dnum(a.date)})[0];
-  if(who&&L.pos[who.id]){var wp=L.pos[who.id];cardsHtml+='<div class="who" style="left:'+(wp.x+wp.w-34)+'px;top:'+(wp.y-(curChar().rows.length*2-1))+'px">'+spr(curChar().rows,2,'bob')+'</div>'}
+  var who=resumePaper;
+  if(who&&L.pos[who.id]){var wp=L.pos[who.id];cardsHtml+='<div class="who" data-paper-id="'+esc(who.id)+'" style="left:'+(wp.x+wp.w-34)+'px;top:'+(wp.y-(curChar().rows.length*2-1))+'px">'+spr(curChar().rows,2,'bob')+'</div>'}
   if(S.bubble){
     var bp=paperBy(S.bubble),bs=bp&&L.pos[bp.id];
     if(bs){
@@ -144,8 +144,9 @@ function renderCards(){
       var tail=Math.max(24,Math.min(BW-40,bs.x+bs.w/2-bx-7));
       var gap=S.bubbleGap,msg=gap>=864e5?(Math.floor(gap/864e5)+'일 만이에요'):(gap>=36e5?(Math.floor(gap/36e5)+'시간 만이에요'):'');
       var head='다시 오셨네요'+(msg?' · '+msg:'');
-      var big=context.pageText;
-      var sub=(bp.page&&bp.total?bp.total+'쪽 중 '+bp.page+'쪽 · ':'')+readingState(bp.state).t;
+      var hasPage=Number.isSafeInteger(Number(bp.page))&&Number(bp.page)>0;
+      var big=hasPage?context.pageText:'이어서 읽어볼까요?';
+      var sub=(hasPage&&bp.total?bp.total+'쪽 중 '+bp.page+'쪽 · ':'')+(hasPage?'':'읽은 위치 미기록/확인 필요 · ')+readingState(bp.state).t;
       cardsHtml+='<div class="rbub'+(below?'':' up')+'" id="rbub" role="dialog" aria-label="이어 읽기 안내" style="left:'+bx+'px;top:'+by+'px;width:'+BW+'px;--tl:'+tail+'px">'+
         '<div class="h"><span>'+head+'</span><button type="button" class="x" id="rbX" aria-label="닫기">×</button></div>'+
         '<div class="m">'+esc(big)+'</div><div class="pg">'+esc(sub)+'</div>'+

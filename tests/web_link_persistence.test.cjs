@@ -1,11 +1,11 @@
 // AC4/AC7 browser link persistence regression. Acceptance review pending.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const nodes=new Map(),stored=new Map();let fail=false;
-function node(){return {handlers:{},value:'',querySelectorAll:()=>[],classList:{toggle(){},remove(){}},addEventListener(k,f){this.handlers[k]=f},setAttribute(){},remove(){nodes.delete('#'+this.id)}}}
+function node(){return {handlers:{},value:'',querySelectorAll:()=>[],classList:{toggle(){},remove(){}},addEventListener(k,f){this.handlers[k]=f},setAttribute(){},setCustomValidity(){},reportValidity(){},remove(){nodes.delete('#'+this.id)}}}
 for(const id of ['panel','pin','pClose','pRead','pTag','pState','pMemo','pTitle','pLink','pDate','pDel','lkStart','saved'])nodes.set('#'+id,node());
-const c={document:{getElementById:()=>null,querySelector:s=>nodes.get(s)||null,querySelectorAll:()=>[],createElement:node,body:{appendChild:e=>nodes.set('#'+e.id,e)}},localStorage:{getItem:k=>stored.get(k)||null,setItem:(k,v)=>{if(fail)throw Error('quota');stored.set(k,v)}},D:{pos:new Map(),inited:false}};
+const c={URL,document:{getElementById:()=>null,querySelector:s=>nodes.get(s)||null,querySelectorAll:()=>[],createElement:node,body:{appendChild:e=>nodes.set('#'+e.id,e)}},localStorage:{getItem:k=>stored.get(k)||null,setItem:(k,v)=>{if(fail)throw Error('quota');stored.set(k,v)}},D:{pos:new Map(),inited:false}};
 vm.createContext(c);
-for(const file of ['core.js','helpers.js','panel.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../web/js',file),'utf8'),c);
+for(const file of ['core.js','helpers.js','import.js','panel.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../web/js',file),'utf8'),c);
 c.showMain=()=>{};
 c.S.papers=[{id:'a',title:'논문 A',date:'2026-11-08',link:'https://example.org/old',memo:'저장 이유',state:'reading'},{id:'b',title:'논문 B',date:'2026-11-07',link:'https://example.org/b'}];
 c.S.sel='a';c.S.panel='detail';assert.equal(c.save(),true);c.renderPanel();

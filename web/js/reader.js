@@ -38,16 +38,21 @@ function readerSrc(p,page){
     return;
   }
   if(p.link){
-    box.innerHTML='<div class="rdempty"><b>이 링크는 여기서 바로 열 수 없어요.</b><span>'+esc(short(p.link,70))+'</span><a class="btn pri" href="'+esc(p.link)+'" target="_blank" rel="noopener">새 탭에서 읽기</a><span>읽다가 돌아와서 메모를 적으면 돼요. PDF를 올리면 여기서 바로 읽을 수 있어요.</span>'+pickHtml()+'</div>';wirePick(p);return}
+    var safeLink=safeExternalUrl(p.link);
+    if(!safeLink){box.innerHTML='<div class="rdempty"><b>안전하지 않거나 올바르지 않은 링크예요.</b><span>논문 상세 화면에서 http 또는 https 링크로 수정해 주세요.</span>'+pickHtml()+'</div>';wirePick(p);return}
+    box.innerHTML='<div class="rdempty"><b>이 링크는 여기서 바로 열 수 없어요.</b><span>'+esc(short(p.link,70))+'</span><a class="btn pri" href="'+esc(safeLink)+'" target="_blank" rel="noopener">새 탭에서 읽기</a><span>읽다가 돌아와서 메모를 적으면 돼요. PDF를 올리면 여기서 바로 읽을 수 있어요.</span>'+pickHtml()+'</div>';wirePick(p);return}
   box.innerHTML='<div class="rdempty"><b>아직 원문이 없어요.</b><span>링크를 붙이거나 PDF를 올리면 여기서 바로 읽어요.</span><div class="srcrow"><input type="text" id="rdLk" placeholder="arXiv·DOI 링크"><button type="button" class="btn" id="rdLkOk">저장</button></div>'+pickHtml()+'</div>';
   wirePick(p);
-  var ok=$('#rdLkOk');if(ok)ok.addEventListener('click',function(){var v=$('#rdLk').value.trim();if(!v)return;var r=parseRef(v);p.link=r.type==='url'?r.url:r.link;if(r.type!=='url'&&!p.title)fetchMeta(r).then(function(m){p.title=m.title}).catch(function(){});save();readerSrc(p,p.page);renderRNotes()});
+  var ok=$('#rdLkOk');if(ok)ok.addEventListener('click',function(){var input=$('#rdLk'),v=input.value.trim();if(!v)return;var r=parseRef(v);if(r.type==='invalid'){input.setCustomValidity('올바른 http 또는 https 링크를 입력해 주세요.');input.reportValidity();return}input.setCustomValidity('');p.link=r.type==='url'?r.url:r.link;if(r.type!=='url'&&!p.title)fetchMeta(r).then(function(m){p.title=m.title}).catch(function(){});save();readerSrc(p,p.page);renderRNotes()});
 }
 function pickHtml(){return '<label class="filebtn"><input type="file" id="rdFile" accept="application/pdf,.pdf" hidden><span class="btn">PDF 파일 올리기</span></label>'}
 function wirePick(p){
   var f=$('#rdFile');if(!f)return;
   f.addEventListener('change',function(e){var file=e.target.files[0];if(!file)return;
-    p.pdf=true;p.fname=file.name;idbPut(p.id,file).then(function(){save();readerSrc(p,p.page);renderRNotes()})});
+    f.disabled=true;
+    attachPaperPdf(p,file).then(function(){save();if(S.reader===p.id){readerSrc(p,p.page);renderRNotes()}}).catch(function(){
+      var box=$('#rdsrc');if(S.reader===p.id&&box){var error=document.createElement('p');error.setAttribute('role','alert');error.textContent='PDF를 저장하지 못했어요. 기존 첨부와 메모는 유지했으니 다시 선택해 주세요.';box.appendChild(error)}
+    }).finally(function(){f.disabled=false;f.value=''})});
 }
 function renderReader(){
   var p=paperBy(S.reader),el=$('#reader');
@@ -66,7 +71,7 @@ function renderRNotes(){
   var p=paperBy(S.reader),el=$('#rdnotes');if(!p||!el)return;
   preparePaperHistory(p);
   $('#rdTitle').textContent=p.title;
-  var op=$('#rdOpen');var ou=p.pdf?'':(pdfUrlOf(p.link)||p.link);op.hidden=!ou;if(ou)op.href=ou;
+  var op=$('#rdOpen');var ou=p.pdf?'':(pdfUrlOf(p.link)||safeExternalUrl(p.link));op.hidden=!ou;if(ou)op.href=ou;else op.removeAttribute('href');
   var outs=S.links.filter(function(l){return l.from===p.id}),ins=S.links.filter(function(l){return l.to===p.id});
   function li(l,dir){var o=paperBy(dir==='out'?l.to:l.from);if(!o)return '';return '<li><span class="arr">'+(dir==='out'?'→':'←')+'</span><button type="button" class="go" data-go="'+o.id+'">'+esc(short(o.title,44))+'</button>'+(l.reason?'<span class="why">'+esc(l.reason)+'</span>':'')+'<button type="button" class="x" data-del="'+l.id+'" aria-label="연결 삭제">×</button></li>'}
   var others=S.papers.filter(function(x){return x.id!==p.id}).sort(function(a,b){return dnum(b.date)-dnum(a.date)});

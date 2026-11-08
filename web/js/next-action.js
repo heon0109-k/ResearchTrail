@@ -2,6 +2,7 @@
 /* ---------- 다음 작업 후보 (메모 → 후보 → 수정/확인/취소) ----------
    규칙: 후보는 사용자가 "확인"을 눌러야만 p.todo로 저장된다. 취소하면 메모만 남는다. */
 var NA={pid:null,st:'idle',cand:'',src:'',saveError:'',requestId:null,noteText:null,recordId:null,originalCandidate:null,candidateId:null,confirmationId:null};
+// This flag only remembers the demo notice; it is not consent to future external AI processing.
 function naConsent(){try{return localStorage.getItem('researchtrail.consent')==='1'}catch(e){return false}}
 function naInit(p){
   if(NA.pid!==p.id){NA.pid=p.id;NA.st='idle';NA.cand='';NA.src='';NA.saveError='';NA.requestId=null;NA.noteText=null;NA.recordId=null;NA.originalCandidate=null;NA.candidateId=null;NA.confirmationId=null}
@@ -16,7 +17,7 @@ function naRender(p,keep){
     var cur=p.todo?('<div class="na-cur"><span class="k">'+(S.saved?'저장된 다음 할 일':'현재 다음 할 일')+'</span> '+esc(p.todo)+(p.todoSrc?' <em>'+(!S.saved?'· 저장 상태 확인 필요':(p.todoSrc==='confirmed'?'· 후보를 확인해 저장함':'· 직접 입력'))+'</em>':'')+'</div>'):'<div class="na-cur none"><span class="k">저장된 다음 할 일</span> 아직 기록 없음</div>';
     h+=cur+'<p class="na-s">위의 "읽으면서 메모"에서 다음 할 일 한 가지를 찾아 제안해요. 확인하기 전에는 저장되지 않아요.</p><button type="button" class="btn" id="naMake">메모로 후보 만들기</button>';
   }else if(NA.st==='consent'){
-    h+='<p class="na-s"><b>이 메모를 AI에 보내도 될까요?</b><br>지금은 저장된 예시 응답을 쓰기 때문에 실제로 밖으로 나가지 않아요. 동의하지 않으면 직접 적을 수 있어요.</p><div class="na-row"><button type="button" class="btn pri" id="naYes">동의하고 만들기</button><button type="button" class="btn" id="naNo">직접 입력할게요</button></div>';
+    h+='<p class="na-s"><b>예시 후보를 만들어 볼까요?</b><br>규칙 기반 예시 기능이며 메모는 외부로 전송되지 않아요. 후보를 확인한 뒤 저장하거나 직접 입력할 수 있어요.</p><div class="na-row"><button type="button" class="btn pri" id="naYes">예시 후보 만들기</button><button type="button" class="btn" id="naNo">직접 입력할게요</button></div>';
   }else if(NA.st==='loading'){
     h+='<p class="na-s" role="status">후보를 만드는 중…</p>';
   }else if(NA.st==='cand'){

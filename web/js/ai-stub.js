@@ -23,6 +23,12 @@ var NA_ACT=/(확인|읽어|읽기|비교|정리|찾아|살펴|해보|해 보|해
 var NA_DONE=/(봤|했|읽었|끝냈|끝냄|끝났|끝남|완료|마쳤|마침|마무리)/;
 var NA_DONE_END=/(확인함|정리함|비교함|읽음|다 ?봄|살펴봄)\s*$/;
 var NA_PICK=/(먼저|우선|부터)/;
+function naExcluded(c){return /취소|하지\s*않|안\s*하|않기로|(?:참고용|예시|예문|인용|제안).*?(?:뿐|일\s*뿐)/.test(c)}
+function naSelected(c){
+  // A starting date is not a choice between actions. Keep the returned span intact.
+  var withoutDates=c.replace(/(?:오늘|내일|모레|[월화수목금토일]요일|이번\s*주|다음\s*주|\d+\s*(?:년|월|일|시|분))\s*부터/g,'');
+  return NA_PICK.test(withoutDates);
+}
 var NA_SPLIT=/(?<=는데|지만|고서|하고|었고|았고|했고|,)\s+/;
 function naIsDone(c){return NA_DONE.test(c)||NA_DONE_END.test(c)}
 // Recognize only narrow context forms; uncertain independent actions still require clarification.
@@ -46,6 +52,7 @@ function pickAction(memo){
       var reference=naPendingReference(c);
       if(reference){references.push(reference);hasContext=true;return}
       if(naDeadlineContext(c)){hasContext=true;return}
+      if(naExcluded(c)){hasContext=true;return}
       if(c&&NA_ACT.test(c)&&!naIsDone(c))cands.push({clause:naActionSpan(c),sentence:s});
     });
   });
@@ -54,7 +61,7 @@ function pickAction(memo){
   var pick=null;
   if(cands.length===1)pick=cands[0];
   else if(cands.length>1){
-    var chosen=cands.filter(function(x){return NA_PICK.test(x.clause)});
+    var chosen=cands.filter(function(x){return naSelected(x.clause)});
     if(chosen.length===1)pick=chosen[0];
   }
   if(!pick)return {action:null,source:''};

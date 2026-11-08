@@ -9,7 +9,7 @@ function element() {
     value: '', handlers: {}, childIds: [],
     querySelector: selector => nodes.get(selector) || null,
     querySelectorAll: () => [],
-    setAttribute() {}, focus() {},
+    setAttribute() {}, removeAttribute() {}, focus() {},
     addEventListener(type, fn) { (this.handlers[type] ||= []).push(fn); },
     emit(type) { for (const fn of this.handlers[type] || []) fn({ target: this }); },
     remove() { nodes.delete('#' + this.id); },
@@ -31,6 +31,7 @@ for (const id of ['rdnotes', 'rdTitle', 'rdOpen']) nodes.set('#' + id, element()
 const stored = new Map();
 let fail = false;
 const c = {
+  URL,
   document: {
     getElementById: () => null,
     querySelector: selector => nodes.get(selector) || null,
@@ -45,7 +46,7 @@ const c = {
   D: { pos: new Map(), inited: false }, pdfUrlOf: () => '', drawHlList() {},
 };
 vm.createContext(c);
-for (const name of ['core.js', 'helpers.js', 'next-action.js', 'reader.js']) {
+for (const name of ['core.js', 'helpers.js', 'import.js', 'next-action.js', 'reader.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/js', name), 'utf8'), c);
 }
 c.showMain = () => {};
