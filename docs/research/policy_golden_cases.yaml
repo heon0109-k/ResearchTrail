@@ -1,0 +1,189 @@
+status: draft_pending_team_review
+target: researchtrail.policy.validate_output
+loader_rules:
+  default_status: stop
+  validator: src/researchtrail/schemas/next_action.schema.json
+scope: 고정 응답의 결정적 검사. 실제 모델 품질·재시도 횟수·저장 동작은 평가하지 않는다.
+cases:
+- id: NA-STRUCT-01
+  ac:
+  - AC1
+  input:
+    memo: 표 2 확인하기
+    raw: '{"action_text":"표 2 확인하기"}'
+    status: stop
+  expect_next_action: human_confirmation
+  expect_normalized:
+    action_text: 표 2 확인하기
+  expect_optional_nulls: []
+  expect_repair_eligible: false
+  note: 'SPEC 5.3 / AC1: 스키마·원문 구절 통과 시 사람 확인'
+- id: NA-CLARIFY-01
+  ac:
+  - AC2
+  input:
+    memo: 지난번 하던 거 이어갈래
+    raw: '{"action_text":null}'
+    status: stop
+  expect_next_action: clarification
+  expect_normalized:
+    action_text: null
+  expect_optional_nulls: []
+  expect_repair_eligible: false
+  note: 'SPEC 5.3 / AC2: 유효한 null 행동은 재질문'
+- id: NA-STRUCT-02
+  ac:
+  - AC1
+  input:
+    memo: 표 2 확인하기
+    raw: '{"action_text":'
+    status: stop
+  expect_next_action: format_repair
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: true
+  note: 'SPEC 5.3 / AC1: 잘못된 JSON 거부'
+- id: NA-STRUCT-03
+  ac:
+  - AC1
+  input:
+    memo: 표 2 확인하기
+    raw: '{}'
+    status: stop
+  expect_next_action: format_repair
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: true
+  note: 'SPEC 5.3 / AC1: 필수 action_text 누락 거부'
+- id: NA-STRUCT-04
+  ac:
+  - AC1
+  input:
+    memo: 표 2 확인하기
+    raw: '{"action_text":"표 2 확인하기","intent":"resume"}'
+    status: stop
+  expect_next_action: format_repair
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: true
+  note: 'SPEC 5.3 / AC1: 미정의 키 거부'
+- id: NA-STRUCT-05
+  ac:
+  - AC1
+  input:
+    memo: 표 2 확인하기
+    raw: '{"action_text":"   "}'
+    status: stop
+  expect_next_action: human_review_or_clarification
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: false
+  note: 'SPEC 5.3 / AC1: 공백뿐인 행동 거부'
+  expect_errors_include:
+  - action_text:whitespace_only
+- id: NA-STRUCT-06
+  ac:
+  - AC1
+  input:
+    memo: 'null'
+    raw: '{"action_text":"null"}'
+    status: stop
+  expect_next_action: human_review_or_clarification
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: false
+  note: 'SPEC 5.3 / AC1: 문자열 null 대용 값 거부'
+  expect_errors_include:
+  - action_text:literal_null_placeholder
+- id: NA-STRUCT-07
+  ac:
+  - AC3
+  input:
+    memo: 표 2 확인하기. 아직 시작하지 않았어.
+    raw: '{"action_text":"표 2 확인하기","progress_text":"완료"}'
+    status: stop
+  expect_next_action: human_review_or_clarification
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: false
+  note: 'SPEC 5.3 / AC3: 원문에 없는 진행 상태 거부. 의미 귀속 전체 검증은 아님'
+  expect_errors_include:
+  - progress_text:not_contiguous_input_span
+- id: NA-STRUCT-08
+  ac:
+  - AC1
+  input:
+    memo: 표 2 확인하기
+    raw: '{"action_text":"표 2 확인하기","progress_text":null}'
+    status: stop
+  expect_next_action: human_confirmation
+  expect_normalized:
+    action_text: 표 2 확인하기
+  expect_optional_nulls:
+  - progress_text
+  expect_repair_eligible: false
+  note: 'SPEC 5.3 / AC1: 선택 필드 null을 정규화에서 생략'
+- id: NA-STRUCT-09
+  ac:
+  - AC1
+  input:
+    memo: 내일
+    raw: '{"action_text":null,"deadline_text":"내일"}'
+    status: stop
+  expect_next_action: human_review_or_clarification
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: false
+  note: 'SPEC 5.3 / AC1: 행동 null과 다른 필드의 동시 출력 거부'
+  expect_errors_include:
+  - null_action_with_other_properties
+- id: NA-STRUCT-10
+  ac:
+  - AC3
+  input:
+    memo: 표 2 확인하기
+    raw: '{"action_text":"부록 확인하기"}'
+    status: stop
+  expect_next_action: human_review_or_clarification
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: false
+  note: 'SPEC 5.3 / AC3: 원문에 없는 행동 거부'
+  expect_errors_include:
+  - action_text:not_contiguous_input_span
+- id: NA-STRUCT-11
+  ac:
+  - AC7
+  input:
+    memo: 표 2 확인하기
+    raw: '{"action_text":"표 2'
+    status: length
+  expect_next_action: format_repair
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: true
+  note: 'SPEC 5.3 / AC7: 길이 제한 출력의 형식 복구 분류. 재시도 상한은 별도 흐름 검사'
+- id: NA-STRUCT-12
+  ac:
+  - AC7
+  input:
+    memo: 표 2 확인하기
+    raw: '{"action_text":"표 2 확인하기"}'
+    status: content_filter
+  expect_next_action: stop
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: false
+  note: 'SPEC 5.3 / AC7: 차단된 응답은 후보 없이 중단'
+- id: NA-STRUCT-13
+  ac:
+  - AC1
+  input:
+    memo: 표 2 확인하기
+    raw: '{"action_text":"표 2 확인하기","action_text":"부록 확인하기"}'
+    status: stop
+  expect_next_action: format_repair
+  expect_normalized: null
+  expect_optional_nulls: []
+  expect_repair_eligible: true
+  note: 'SPEC 5.3 / AC1: 중복 JSON 키 거부'
