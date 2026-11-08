@@ -22,7 +22,11 @@ function focusStart(){
   if(S.view!=='card')return;
   var sc=$('#scroller');if(!sc)return;
   var sv=S.scroll;
-  if(sv&&sv.z===S.zoom){sc.scrollLeft=sv.l;sc.scrollTop=sv.t;updateMinimapWin();return}
+  if(sv&&sv.z===S.zoom){
+    sc.scrollLeft=sv.l;sc.scrollTop=sv.t;
+    var current=curPaper();if(current)ensureVisible(current.id);
+    updateMinimapWin();return;
+  }
   if(sc.scrollWidth<=sc.clientWidth+4&&sc.scrollHeight<=sc.clientHeight+4)return;
   var p=curPaper();if(!p)return;var q=L.pos[p.id];if(!q)return;
   sc.scrollLeft=Math.max(0,q.x-LABELW-(sc.clientWidth-LABELW-q.w)/2);
@@ -133,8 +137,9 @@ function renderCards(){
     if(bs){
       var incB=S.links.filter(function(l){return l.to===bp.id&&l.reason}),whyTxt=(S.judge&&bp.id===curPaper().id)?S.judge:(incB.length?incB[0].reason:'');
       var whyLab=(S.judge&&bp.id===curPaper().id)?'마지막 판단':'읽는 이유';
-      var todoTxt=bp.todo||((S.next&&bp.id===curPaper().id)?S.next:'');
-      var BW=310,BH=172+(todoTxt?52+Math.ceil(todoTxt.length/22)*19:0)+(whyTxt?34+Math.ceil(whyTxt.length/24)*19:0),bx=Math.max(LABELW+4,Math.min(W-BW-12,bs.x-20)),below=true,by=bs.y+bs.h+16;
+      var todoTxt=bp.todo||'';
+      var legacyNext=bp.id===curPaper().id&&S.next&&S.next!==bp.todo?S.next:'';
+      var BW=310,BH=172+(legacyNext?52+Math.ceil(legacyNext.length/22)*19:0)+(todoTxt?52+Math.ceil(todoTxt.length/22)*19:0)+(whyTxt?34+Math.ceil(whyTxt.length/24)*19:0),bx=Math.max(LABELW+4,Math.min(W-BW-12,bs.x-20)),below=true,by=bs.y+bs.h+16;
       if(by+BH>H&&bs.y-BH-16>AXISH){below=false;by=bs.y-BH-16-((curChar().rows.length*2)-1)}
       var tail=Math.max(24,Math.min(BW-40,bs.x+bs.w/2-bx-7));
       var gap=S.bubbleGap,msg=gap>=864e5?(Math.floor(gap/864e5)+'일 만이에요'):(gap>=36e5?(Math.floor(gap/36e5)+'시간 만이에요'):'');
@@ -144,7 +149,7 @@ function renderCards(){
       cardsHtml+='<div class="rbub'+(below?'':' up')+'" id="rbub" role="dialog" aria-label="이어 읽기 안내" style="left:'+bx+'px;top:'+by+'px;width:'+BW+'px;--tl:'+tail+'px">'+
         '<div class="h"><span>'+head+'</span><button type="button" class="x" id="rbX" aria-label="닫기">×</button></div>'+
         '<div class="m">'+esc(big)+'</div><div class="pg">'+esc(sub)+'</div>'+
-        (bp.page&&bp.total?'<div class="bar"><i style="width:'+Math.max(3,Math.min(100,Math.round(bp.page/bp.total*100)))+'%"></i></div>':'')+(whyTxt?'<div class="q"><div class="k">'+whyLab+'</div><div class="t">'+esc(whyTxt)+'</div></div>':'')+(todoTxt?'<div class="nx td"><div class="k">다음 할 일</div><div class="t">'+esc(todoTxt)+'</div></div>':'')+
+        (bp.page&&bp.total?'<div class="bar"><i style="width:'+Math.max(3,Math.min(100,Math.round(bp.page/bp.total*100)))+'%"></i></div>':'')+(whyTxt?'<div class="q"><div class="k">'+whyLab+'</div><div class="t">'+esc(whyTxt)+'</div></div>':'')+(todoTxt?'<div class="nx td"><div class="k">다음 할 일</div><div class="t">'+esc(todoTxt)+'</div></div>':'')+(legacyNext?'<div class="nx td"><div class="k">이전 전체 메모 · 논문 연결 미확인</div><div class="t">'+esc(legacyNext)+'</div></div>':'')+
         '<button type="button" class="go" id="rbGo">이어 읽기</button></div>';
     }
   }

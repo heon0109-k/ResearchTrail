@@ -67,7 +67,7 @@ function loadSample(){
   var stt={s1:'done',s2:'done',s3:'done',s4:'done',s5:'skim',s6:'reading',s7:'done',s8:'reading',s9:'done'};
   S.papers.forEach(function(p){p.state=stt[p.id]||'skim'});
   S.judge='검색을 항상 하지 않는 Self-RAG 방식이 우리 요약 기능에 더 맞아 보임. Almanac의 평가 방법은 아직 확인 못 함.';
-  S.next='Almanac 논문에서 임상 질문 평가 방법만 먼저 읽고 메모하기';
+  S.papers.forEach(function(p){if(p.id==='s9')p.todo='Almanac 논문에서 임상 질문 평가 방법만 먼저 읽고 메모하기'});
   S.papers.forEach(function(p){if(p.id==='s8'){p.page=7;p.total=26;p.todo='Table 2에서 비용·성능 비교 확인하기'}});
   S.papers.forEach(function(p){if(p.id==='s8'){p.hl=[{id:'h_ex1',page:4,text:'global sensemaking questions over entire text corpora',kind:'개념·방법',mine:'코퍼스 전체를 보고 답해야 하는 큰 질문',rects:[[.12,.22,.55,.03]]},{id:'h_ex2',page:4,text:'community detection with the Leiden algorithm',kind:'개념·방법',mine:'',stuck:'term',unsure:'왜 하필 커뮤니티로 나누는지',solved:false,rects:[[.12,.34,.5,.03]]}]}});
   showMain();

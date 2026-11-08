@@ -11,6 +11,7 @@ function applyNotes(){var r=$('#reader');if(!r)return;r.classList.toggle('notes-
 function openReader(id){S.bubble=null;
   var p=paperBy(id);if(!p)return;
   if(p.state==='skim')p.state='reading';
+  p.lastReadOrder=S.papers.reduce(function(order,item){return Number.isSafeInteger(item.lastReadOrder)&&item.lastReadOrder>order?item.lastReadOrder:order},0)+1;
   S.reader=id;S.sel=id;S.panel='none';S.linking=null;renderAll();if(typeof renderRbar==='function')renderRbar();
 }
 function closeReader(){S.reader=null;renderAll();if(S.sel)ensureVisible(S.sel)}
@@ -63,6 +64,7 @@ function renderReader(){
 }
 function renderRNotes(){
   var p=paperBy(S.reader),el=$('#rdnotes');if(!p||!el)return;
+  preparePaperHistory(p);
   $('#rdTitle').textContent=p.title;
   var op=$('#rdOpen');var ou=p.pdf?'':(pdfUrlOf(p.link)||p.link);op.hidden=!ou;if(ou)op.href=ou;
   var outs=S.links.filter(function(l){return l.from===p.id}),ins=S.links.filter(function(l){return l.to===p.id});
@@ -76,7 +78,7 @@ function renderRNotes(){
    '<label class="field"><span>다음에 할 일 <em class="opt">(다시 오면 알려줘요)</em></span><input type="text" id="rTodo" value="'+esc(p.todo||'')+'" placeholder="예: Table 2에서 비용·성능 비교 확인하기"></label>'+
    '<label class="field"><span>저장 이유</span><textarea id="rMemo" rows="2">'+esc(p.memo)+'</textarea></label>'+
    '<label class="field"><span>읽으면서 메모</span><textarea id="rNote" class="big" rows="7" placeholder="핵심 주장, 헷갈린 부분, 다음에 확인할 것…">'+esc(p.note||'')+'</textarea></label>'+
-   '<div class="na" id="naBox"></div>'+
+   '<div class="na" id="naBox"></div><section id="rHistory" aria-label="기록 이력"></section>'+
    '<div><h4>하이라이트</h4><div id="rHl"></div></div>'+
    (p.abs?'<details class="rabs"><summary>초록 보기</summary><p>'+esc(p.abs)+'</p></details>':'')+
    '<div><h4>이어진 논문</h4>'+((outs.length||ins.length)?'<ul class="lklist">'+outs.map(function(l){return li(l,'out')}).join('')+ins.map(function(l){return li(l,'in')}).join('')+'</ul>':'<p class="empty">아직 없어요. 읽다가 이어서 본 논문을 연결해 두세요.</p>')+
@@ -87,9 +89,18 @@ function renderRNotes(){
   $('#rGo').addEventListener('click',function(){p.page=$('#rPage').value;save();if(PV)pvGo(+p.page,true);else readerSrc(p,p.page)});
   drawHlList();
   $('#rMemo').addEventListener('input',function(e){p.memo=e.target.value;save()});
-  $('#rTodo').addEventListener('input',function(e){p.todo=e.target.value;save()});
-  $('#rNote').addEventListener('input',function(e){p.note=e.target.value;save()});
-  naInit(p);
+  $('#rTodo').addEventListener('input',function(e){p.todo=e.target.value;p.todoSrc='manual';save()});
+  var editingNote=false;
+  $('#rNote').addEventListener('input',function(e){
+    if(!editingNote){rememberNote(p,p.note||'');editingNote=true}
+    p.note=e.target.value;save();
+  });
+  $('#rNote').addEventListener('change',function(){
+    rememberNote(p,p.note||'');editingNote=false;save();renderHistory(p);
+    if(NA.pid===p.id&&NA.st==='cand')naRender(p,true);
+  });
+  $('#rTodo').addEventListener('change',function(){rememberManualTodo(p);save();renderHistory(p)});
+  naInit(p);renderHistory(p);
   $$('[data-go]',el).forEach(function(b){b.addEventListener('click',function(){openReader(b.dataset.go)})});
   $$('[data-del]',el).forEach(function(b){b.addEventListener('click',function(){ask('이 연결을 삭제할까요?','연결 이유도 함께 사라져요.','삭제',function(){S.links=S.links.filter(function(l){return l.id!==b.dataset.del});save();renderRNotes()},true)})});
   var ok=$('#rLkOk');if(ok)ok.addEventListener('click',function(){
