@@ -161,6 +161,7 @@ PYTHONPATH=src python3 -m unittest discover -s tests -p test_state_contract.py -
 PYTHONPATH=src python3 -m unittest discover -s tests -p test_policy_golden.py -v
 node tests/web_add_date.test.cjs
 node tests/web_ai_stub.test.cjs
+node tests/web_candidate_context.test.cjs
 node tests/web_return_visit.test.cjs
 node tests/web_storage_failure.test.cjs
 node tests/web_last_read.test.cjs
