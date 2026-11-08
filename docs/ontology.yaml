@@ -4,15 +4,14 @@ metadata:
   status: team_review_draft
   intended_repository_path: docs/ontology.yaml
   source_interview:
-    uploaded_filename: interview.md
-    file_id: file_00000000f81881f592b7e55e44f5a448
-    sha256: 2a3666fe420c493496c11d38d42007411b407ab1114c649d12b1d1957500ad1f
-    line_count: 2334
-    note: 이번 요청에 첨부된 수정본만 도메인 근거로 사용한다. 같은 이름의 이전 첨부본과 구별하기 위한 식별 정보다.
+    path: docs/research/interview.md
+    sha256: 9a63f9f7af0e6dd7382bbca34c39f69d3f812828b8ce626abfdcb764f4cb3e5b
+    line_count: 2345
+    note: evidence는 이 파일의 로그 번호와 응답 ID를 참조한다. 원문 응답과 분석 내용을 구분한다.
   format_basis:
     filename: 강의02_도메인발견_온톨로지_작성지침.md
     section: E. 미니 온톨로지
-    note: 형식과 검토 기준만 참조한다. 강의의 단골 예시나 이전 답변은 ResearchTrail 도메인 근거로 쓰지 않는다.
+    note: 형식과 검토 기준만 참조한다. 도메인 근거는 source_interview의 실제 응답에서 확인한다.
   authorship:
     draft: AI가 작성한 클래스·속성·관계 후보
     team_review_status: 미승인
