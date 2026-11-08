@@ -108,8 +108,8 @@ function renderTagbar(){
   if(TAGEDIT)h+='<input class="tnew" id="tagNew" maxlength="20" placeholder="새 태그 이름" aria-label="새 태그 이름">';
   $('#chips').innerHTML=h;
   var ti=$('#tagNew');if(ti){ti.focus();ti.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();commitTag()}else if(e.key==='Escape'){TAGEDIT=false;renderTagbar()}});ti.addEventListener('blur',function(){setTimeout(function(){if(TAGEDIT)commitTag()},120)})}
-  var cnt={done:0,reading:0,skim:0};S.papers.forEach(function(p){cnt[p.state||'skim']++});
-  var sl=$('#stl');if(sl)sl.innerHTML=['done','reading','skim'].map(function(k){return '<div class="stl st-'+k+'"><i></i>'+STATES[k].t+'<em>'+cnt[k]+'</em></div>'}).join('');
+  var cnt={done:0,reading:0,skim:0,unknown:0};S.papers.forEach(function(p){cnt[readingStateKey(p.state)]++});
+  var sl=$('#stl');if(sl)sl.innerHTML=['done','reading','skim'].concat(cnt.unknown?['unknown']:[]).map(function(k){return '<div class="stl st-'+k+'"><i></i>'+readingState(k).t+'<em>'+cnt[k]+'</em></div>'}).join('');
 }
 
 

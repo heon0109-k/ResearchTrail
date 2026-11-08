@@ -14,8 +14,11 @@ function chPick(sel,sc){return CHARS.map(function(c,i){return '<button type="but
 function spr(rows,sc,cls){var out='';rows.forEach(function(r,y){for(var x=0;x<r.length;x++){var c=r[x];if(c!=='.'&&PX[c])out+='<rect x="'+x+'" y="'+y+'" width="1.02" height="1.02" fill="'+PX[c]+'"/>'}});return '<svg class="spr '+(cls||'')+'" width="'+rows[0].length*sc+'" height="'+rows.length*sc+'" viewBox="0 0 '+rows[0].length+' '+rows.length+'" shape-rendering="crispEdges" aria-hidden="true">'+out+'</svg>'}
 var NOTAG={id:'',name:'태그 없음',color:'#8b8b96'};
 var STATES={skim:{g:'○',t:'읽을 것'},reading:{g:'◐',t:'읽는 중'},done:{g:'●',t:'다 읽음'}};
-function stateOpts(sel){return ['skim','reading','done'].map(function(k){return '<option value="'+k+'"'+(k===sel?' selected':'')+'>'+STATES[k].t+'</option>'}).join('')}
-function sg(k){k=STATES[k]?k:'skim';return '<i class="sg sg-'+k+'" aria-hidden="true"></i>'}
+var UNKNOWN_READING_STATE={g:'?',t:'미기록/확인 필요'};
+function readingStateKey(value){return typeof value==='string'&&Object.prototype.hasOwnProperty.call(STATES,value)?value:'unknown'}
+function readingState(value){var key=readingStateKey(value);return key==='unknown'?UNKNOWN_READING_STATE:STATES[key]}
+function stateOpts(sel){return '<option value=""'+(readingStateKey(sel)==='unknown'?' selected':'')+'>미기록/확인 필요</option>'+['skim','reading','done'].map(function(k){return '<option value="'+k+'"'+(k===sel?' selected':'')+'>'+STATES[k].t+'</option>'}).join('')}
+function sg(k){return '<i class="sg sg-'+readingStateKey(k)+'" aria-hidden="true"></i>'}
 function short(s,n){s=String(s||'');return s.length>n?s.slice(0,n)+'…':s}
 var app=document.getElementById('app');
 function $(s,r){return (r||document).querySelector(s)}

@@ -782,3 +782,7 @@ a.btn[hidden]{display:none}
 .save-error{pointer-events:none;position:fixed;z-index:10000;left:50%;bottom:24px;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);padding:12px 16px;border:1px solid #e6a19b;border-radius:10px;background:#fff2f0;color:#8c2720;font-size:13px;line-height:1.5;box-shadow:0 3px 12px #0001}
 
 .history-list{margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:8px}.history-list summary{cursor:pointer;font-size:13px;font-weight:600}.history-entry{padding:9px 0;border-top:1px solid var(--line);margin-top:8px}.history-label{font-size:12px;color:var(--mute);margin-top:8px}.history-text{font:inherit;font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--soft);padding:8px;border-radius:6px;margin:4px 0}
+
+/* Unknown reading state is separate from the three explicit selections. */
+.sg-unknown{border-style:dashed;opacity:.65;background:none}
+.stl.st-unknown i{border:1px dashed var(--mute);background:none}

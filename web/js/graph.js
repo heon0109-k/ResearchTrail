@@ -24,7 +24,7 @@ function renderDots(){
   S.papers.forEach(function(p){
     if(!visible(p))return;var t=tagBy(p.tag);
     var dim=(nb&&!nb.has(p.id))||!matches(p);
-    var cls='dn st-'+(p.state||'skim')+(S.sel===p.id?' on':'')+(dim?' dim':'')+(S.linking&&S.linking.from===p.id?' on':'')+(S.linking&&S.linking.to===p.id?' on':'');
+    var cls='dn st-'+readingStateKey(p.state)+(S.sel===p.id?' on':'')+(dim?' dim':'')+(S.linking&&S.linking.from===p.id?' on':'')+(S.linking&&S.linking.to===p.id?' on':'');
     nh+='<g class="'+cls+'" data-id="'+p.id+'" tabindex="0" role="button" aria-label="'+esc(p.title)+'"><circle class="ring"/><circle class="dot" fill="'+t.color+'"/><text class="dt">'+esc(p.title.length>26?p.title.slice(0,26)+'…':p.title)+'</text></g>';
   });
   svg.innerHTML=defs+'<g id="vp">'+eh+nh+'</g>';

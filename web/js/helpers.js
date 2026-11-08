@@ -21,7 +21,7 @@ function renderResume(){
   var p=curPaper();if(!p){el.hidden=true;return}
   preparePaperHistory(p);
   el.hidden=false;
-  var st=STATES[p.state||'skim'];
+  var st=readingState(p.state);
   var inc=S.links.filter(function(l){return l.to===p.id})[0];
   var from=inc?paperBy(inc.from):null;
   var nr=S.papers.filter(function(x){return x.state==='reading'}).length;
@@ -47,7 +47,7 @@ var KEY='researchtrail.v5';
 function save(){
   if(S.example){S.saved=false;var se=$('#saved');if(se)se.hidden=true;return false}
   try{
-    var o={v:3,name:S.name,tags:S.tags,papers:S.papers.map(function(p){return {id:p.id,tag:p.tag,date:p.date,title:p.title,memo:p.memo,link:p.link,state:p.state||'skim',note:p.note||'',noteHistory:Array.isArray(p.noteHistory)?p.noteHistory:[],actionHistory:Array.isArray(p.actionHistory)?p.actionHistory:[],page:p.page||'',hl:p.hl||[],todo:p.todo||'',todoSrc:p.todoSrc||'',lastReadOrder:Number.isSafeInteger(p.lastReadOrder)&&p.lastReadOrder>0?p.lastReadOrder:0,total:p.total||'',abs:p.abs||'',authors:p.authors||'',year:p.year||'',pdf:!!p.pdf,fname:p.fname||'',tut:p.tut?true:undefined}}),links:S.links,view:S.view,bands:S.bands,zoom:S.zoom,why:S.why,judge:S.judge,next:S.next,resumeOpen:S.resumeOpen,scroll:S.scroll||null,bubbleDay:S.bubbleDay||'',example:S.example,reader:S.reader||null,uid:uid,seen:Date.now()};
+    var o={v:3,name:S.name,tags:S.tags,papers:S.papers.map(function(p){return {id:p.id,tag:p.tag,date:p.date,title:p.title,memo:p.memo,link:p.link,state:p.state==null?null:p.state,note:p.note||'',noteHistory:Array.isArray(p.noteHistory)?p.noteHistory:[],actionHistory:Array.isArray(p.actionHistory)?p.actionHistory:[],page:p.page||'',hl:p.hl||[],todo:p.todo||'',todoSrc:p.todoSrc||'',lastReadOrder:Number.isSafeInteger(p.lastReadOrder)&&p.lastReadOrder>0?p.lastReadOrder:0,total:p.total||'',abs:p.abs||'',authors:p.authors||'',year:p.year||'',pdf:!!p.pdf,fname:p.fname||'',tut:p.tut?true:undefined}}),links:S.links,view:S.view,bands:S.bands,zoom:S.zoom,why:S.why,judge:S.judge,next:S.next,resumeOpen:S.resumeOpen,scroll:S.scroll||null,bubbleDay:S.bubbleDay||'',example:S.example,reader:S.reader||null,uid:uid,seen:Date.now()};
     localStorage.setItem(KEY,JSON.stringify(o));S.saved=true;
   }catch(e){S.saved=false}
   var el=$('#saved');if(el)el.hidden=!S.saved;
@@ -124,7 +124,7 @@ function load(options){
     reset();
     uid=Math.max(uid,+o.uid||0);
     S.name=o.name||'';S.tags=o.tags||[];
-    S.papers=o.papers.map(function(p){p.state=STATES[p.state]?p.state:'skim';p.tag=p.tag||'';p.link=p.link||'';preparePaperHistory(p);return p});
+    S.papers=o.papers.map(function(p){p.state=p.state==null?null:p.state;p.tag=p.tag||'';p.link=p.link||'';preparePaperHistory(p);return p});
     S.links=o.links||[];S.view=o.view==='dot'?'dot':'card';S.bands=o.bands!==false;
     S.zoom=['week','month','quarter','all'].indexOf(o.zoom)>-1?o.zoom:'month';
     S.why=o.why===true;S.judge=o.judge||'';S.next=o.next||'';S.resumeOpen=o.resumeOpen!==false;S.example=!!o.example;S.scroll=o.scroll||null;S.bubbleDay=o.bubbleDay||'';S.reader=(o.reader&&paperBy(o.reader))?o.reader:null;

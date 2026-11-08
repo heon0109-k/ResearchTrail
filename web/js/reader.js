@@ -73,7 +73,7 @@ function renderRNotes(){
   var meta=[p.authors?esc(short(p.authors,60)):'',p.year||''].filter(Boolean).join(' · ');
   el.innerHTML=
    (meta?'<div class="rmeta">'+meta+'</div>':'')+
-   '<label class="field"><span>읽은 정도</span><select id="rState">'+stateOpts(p.state||'skim')+'</select></label>'+
+   '<label class="field"><span>읽은 정도</span><select id="rState">'+stateOpts(p.state)+'</select></label>'+
    '<div class="two"><label class="field"><span>읽던 쪽 (자동 기록)</span><input type="number" min="1" id="rPage" value="'+esc(p.page)+'" placeholder="예: 7"></label><div class="field"><span>&nbsp;</span><button type="button" class="btn" id="rGo">이 쪽으로 이동</button></div></div>'+
    '<label class="field"><span>다음에 할 일 <em class="opt">(다시 오면 알려줘요)</em></span><input type="text" id="rTodo" value="'+esc(p.todo||'')+'" placeholder="예: Table 2에서 비용·성능 비교 확인하기"></label>'+
    '<label class="field"><span>저장 이유</span><textarea id="rMemo" rows="2">'+esc(p.memo)+'</textarea></label>'+
@@ -84,7 +84,7 @@ function renderRNotes(){
    '<div><h4>이어진 논문</h4>'+((outs.length||ins.length)?'<ul class="lklist">'+outs.map(function(l){return li(l,'out')}).join('')+ins.map(function(l){return li(l,'in')}).join('')+'</ul>':'<p class="empty">아직 없어요. 읽다가 이어서 본 논문을 연결해 두세요.</p>')+
      (others.length?'<div class="rlk"><select id="rLkTo" aria-label="이어진 논문"><option value="">이 논문에서 이어서 본 논문…</option>'+others.map(function(o){return '<option value="'+o.id+'">'+esc(short(o.title,46))+'</option>'}).join('')+'</select><input type="text" id="rLkWhy" placeholder="왜 이어서 봤나요?"><button type="button" class="btn" id="rLkOk">연결</button><p class="empty" id="rLkErr" style="color:var(--c3)" hidden></p></div>':'')+'</div>'+
    '<div class="rfoot"><button type="button" class="btn pri" id="rDone">다 읽었어요</button></div>';
-  $('#rState').addEventListener('change',function(e){p.state=e.target.value;save()});
+  $('#rState').addEventListener('change',function(e){p.state=e.target.value||null;save()});
   $('#rPage').addEventListener('change',function(e){p.page=e.target.value;save()});
   $('#rGo').addEventListener('click',function(){p.page=$('#rPage').value;save();if(PV)pvGo(+p.page,true);else readerSrc(p,p.page)});
   drawHlList();

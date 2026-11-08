@@ -19,7 +19,7 @@ function renderPanel(){
   pin.innerHTML='<div class="ph"><span>논문</span><button type="button" class="btn sm ghost" id="pClose">닫기</button></div><div class="pb">'+
   '<button type="button" class="btn pri" id="pRead">'+(p.state==='reading'?'이어 읽기':'읽기 화면 열기')+'</button>'+
   '<div class="tagrow"><i style="background:'+t.color+'"></i><select id="pTag" aria-label="태그">'+tagOpts+'</select></div>'+
-  '<label class="field"><span>읽은 정도</span><select id="pState">'+stateOpts(p.state||'skim')+'</select></label>'+
+  '<label class="field"><span>읽은 정도</span><select id="pState">'+stateOpts(p.state)+'</select></label>'+
   '<label class="field"><span>저장 이유</span><textarea id="pMemo" class="big" rows="4">'+esc(p.memo)+'</textarea></label>'+
   '<label class="field"><span>논문 제목</span><textarea id="pTitle" rows="2" class="mono" style="font-size:12px">'+esc(p.title)+'</textarea></label>'+
   '<div class="two"><label class="field"><span>읽은 날짜</span><input type="date" id="pDate" value="'+esc(p.date)+'"></label><label class="field"><span>링크</span><input type="text" id="pLink" value="'+esc(p.link)+'" placeholder="https://"></label></div>'+
@@ -29,7 +29,7 @@ function renderPanel(){
   $('#pClose').addEventListener('click',function(){S.sel=null;S.panel='none';S.linking=null;renderAll()});
   $('#pRead').addEventListener('click',function(){openReader(p.id)});
   $('#pTag').addEventListener('change',function(e){p.tag=e.target.value;renderAll()});
-  $('#pState').addEventListener('change',function(e){p.state=e.target.value;renderAll()});
+  $('#pState').addEventListener('change',function(e){p.state=e.target.value||null;renderAll()});
   $('#pMemo').addEventListener('change',function(e){p.memo=e.target.value;renderAll()});
   $('#pTitle').addEventListener('change',function(e){p.title=e.target.value.trim()||p.title;renderAll()});
   $('#pLink').addEventListener('change',function(e){p.link=e.target.value.trim()});
@@ -103,7 +103,7 @@ function renderAddPanel(pin){
     var miss=[];if(!title)miss.push('논문 제목');if(!dt)miss.push('읽은 날짜');if(!memo)miss.push('저장 이유');
     var er=$('#aErr');if(miss.length){er.hidden=false;er.textContent=miss.join(', ')+'을(를) 입력해 주세요.';return}
     var tag=tagBy(tv);
-    var id=nid('p');var m=S.draftMeta||{};var np={id:id,tag:tag.id,date:dt,title:title,memo:memo,link:(function(){var v=$('#aSrc').value.trim();if(!v)return '';var r=parseRef(v);return r.type==='url'?r.url:r.link})(),state:$('#aState').value,abs:m.abs||'',authors:m.authors||'',year:m.year||''};
+    var id=nid('p');var m=S.draftMeta||{};var np={id:id,tag:tag.id,date:dt,title:title,memo:memo,link:(function(){var v=$('#aSrc').value.trim();if(!v)return '';var r=parseRef(v);return r.type==='url'?r.url:r.link})(),state:$('#aState').value||null,abs:m.abs||'',authors:m.authors||'',year:m.year||''};
     if(S.draftFile){np.pdf=true;np.fname=S.draftFile.name;idbPut(id,S.draftFile)}
     S.papers=S.papers.filter(function(x){return !x.tut});
     S.papers.push(np);S.draftMeta=null;S.draftFile=null;

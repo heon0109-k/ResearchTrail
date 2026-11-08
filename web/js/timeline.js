@@ -121,9 +121,9 @@ function renderCards(){
   if(lp&&rp&&lp.id===rp.id)lp=null;
   S.papers.forEach(function(p){
     var ps=L.pos[p.id];if(!ps)return;var t=tagBy(p.tag);
-    var cls='card st-'+(p.state||'skim')+(compact?' cmp':'')+(S.sel===p.id?' sel':'')+(S.linking&&S.linking.from===p.id?' src':'')+(S.linking&&S.linking.to===p.id?' tgt':'')+(matches(p)?'':' dim')+(rp&&rp.id===p.id?' go':'')+(lp&&lp.id===p.id?' last':'');
+    var cls='card st-'+readingStateKey(p.state)+(compact?' cmp':'')+(S.sel===p.id?' sel':'')+(S.linking&&S.linking.from===p.id?' src':'')+(S.linking&&S.linking.to===p.id?' tgt':'')+(matches(p)?'':' dim')+(rp&&rp.id===p.id?' go':'')+(lp&&lp.id===p.id?' last':'');
     var mark=(rp&&rp.id===p.id)?'이어 읽을 논문':((lp&&lp.id===p.id)?'마지막으로 읽던 논문':'');
-    var st=STATES[p.state||'skim'];
+    var st=readingState(p.state);
     var inc=S.links.filter(function(l){return l.to===p.id});
     var why=(S.why&&inc.length)?'<div class="cwhy">↩ '+esc(inc[0].reason||'이유 없음')+(inc.length>1?' 외 '+(inc.length-1):'')+'</div>':'';
     cardsHtml+='<div class="'+cls+'" data-id="'+p.id+'" tabindex="0" role="button" aria-label="'+esc(p.title+' · '+st.t+' · '+p.date+(mark?' · '+mark:''))+'" style="left:'+ps.x+'px;top:'+ps.y+'px;width:'+ps.w+'px;height:'+ps.h+'px;--tc:'+t.color+'">'+
@@ -145,7 +145,7 @@ function renderCards(){
       var gap=S.bubbleGap,msg=gap>=864e5?(Math.floor(gap/864e5)+'일 만이에요'):(gap>=36e5?(Math.floor(gap/36e5)+'시간 만이에요'):'');
       var head='다시 오셨네요'+(msg?' · '+msg:'');
       var big=bp.page?('p.'+bp.page+'에서 멈췄어요'):'여기까지 읽었어요';
-      var sub=(bp.page&&bp.total?bp.total+'쪽 중 '+bp.page+'쪽 · ':'')+STATES[bp.state||'skim'].t;
+      var sub=(bp.page&&bp.total?bp.total+'쪽 중 '+bp.page+'쪽 · ':'')+readingState(bp.state).t;
       cardsHtml+='<div class="rbub'+(below?'':' up')+'" id="rbub" role="dialog" aria-label="이어 읽기 안내" style="left:'+bx+'px;top:'+by+'px;width:'+BW+'px;--tl:'+tail+'px">'+
         '<div class="h"><span>'+head+'</span><button type="button" class="x" id="rbX" aria-label="닫기">×</button></div>'+
         '<div class="m">'+esc(big)+'</div><div class="pg">'+esc(sub)+'</div>'+
@@ -223,7 +223,7 @@ function wireScroller(){
   function showTip(card){
     var p=paperBy(card.dataset.id);if(!p){return}
     var inc=S.links.filter(function(l){return l.to===p.id}),out=S.links.filter(function(l){return l.from===p.id});
-    var h='<div class="tt">'+esc(p.title)+'</div><div class="ts">'+sg(p.state)+' '+STATES[p.state||'skim'].t+' · '+p.date+'</div><div class="tm">'+esc(p.memo)+'</div>';
+    var h='<div class="tt">'+esc(p.title)+'</div><div class="ts">'+sg(p.state)+' '+readingState(p.state).t+' · '+p.date+'</div><div class="tm">'+esc(p.memo)+'</div>';
     h+='<div class="tc">누르면 옆에 자세히 열려요</div>';
     tip.innerHTML=h;tip.hidden=false;
     var r=card.getBoundingClientRect(),tw=tip.offsetWidth,th=tip.offsetHeight;
