@@ -1,0 +1,64 @@
+{
+  "run_id": "20261107T092900433090Z-offline-ebe84708",
+  "mode": "offline",
+  "command": "python3 -B scripts/check_next_action_parser.py --offline",
+  "python": "3.14.6",
+  "platform": "macOS-26.2-arm64-arm-64bit-Mach-O",
+  "validators": {
+    "jsonschema": "4.26.0",
+    "PyYAML": "6.0.3"
+  },
+  "prompt_version": "sha256:a57d22df03bcc7020afb4062009fca685f6ddaeb838e29c62458da23b2f3b257",
+  "file_hashes": {
+    "src/researchtrail/prompts/parse_query.md": "93cefb9a48ce8bbb266e261a340e746172ec2e5c642735355c203dd9d01afee0",
+    "src/researchtrail/schemas/next_action.schema.json": "5b5a2f74f49aec0307a930f0440301fae5e3bd5a9535233295ff837e7b02844e",
+    "docs/ontology.yaml": "71c43bb02cf95d1d84845cb817c593d7328f60842fde64dd5f1a9e30a88d6e63",
+    "scripts/check_next_action_parser.py": "24f5269e21a323cd1f3234e379a910f376a96151749b5904de97be7b54103cd4"
+  },
+  "schema_git_commit": "4db9608b5383646068046c6a34d734aafd3760d5",
+  "schema_commit_note": "Last commit touching this path, if tracked; hashes identify actual working files.",
+  "git_head": "35d5cb54a572e3b6c2efb09d4a1d5a6bcdae2759",
+  "dirty_file_status": " M docs/PROBLEM.md\n M docs/SPEC.md\n M docs/ontology.yaml\n M scripts/check_next_action_parser.py\n?? docs/research/semantic_cases_draft.yaml\n?? docs/research/survey_2026-11-05.md\n?? docs/spikes/2026-11-07_next_action_attribution.md\n?? evals/results/next_action_parser/\n?? src/researchtrail/policy.py\n?? tests/test_next_action_contract.py",
+  "configuration": {
+    "status": "BLOCKED",
+    "reasons": [
+      "Explicit --provider openai required",
+      "Explicit supported --model required",
+      "OPENAI_API_KEY is unset",
+      "Human review of all eight notes/expectations must be acknowledged with --cases-reviewed"
+    ],
+    "credential_present": false,
+    "provider": null,
+    "model": null,
+    "endpoint": "https://api.openai.com/v1/chat/completions",
+    "account_model_access": "not verified"
+  },
+  "settings": {
+    "offline": true,
+    "live": false,
+    "provider": null,
+    "model": null,
+    "cases_reviewed": false,
+    "max_calls": 16,
+    "max_output_tokens": 512,
+    "max_total_output_tokens": 8192,
+    "max_seconds": 180,
+    "request_timeout": 20
+  },
+  "scope": "This experiment only records proposed tasks; it does not perform research, send mail, set reminders, or save established NextAction objects.",
+  "model_cost": null,
+  "model_cost_reason": "Not measured; no pricing calculation.",
+  "human_semantic_review": {
+    "verdict": null,
+    "reason": "Human semantic review not performed."
+  },
+  "cases_review_acknowledged_by_operator": false,
+  "approval_record": null,
+  "approval_record_reason": "No external approval record supplied.",
+  "sdk_retries": 0,
+  "transport_retries": 0,
+  "token_budget_scope": "Generated tokens only; full per-call cap reserved before every dispatch, including repairs/errors.",
+  "input_token_count": null,
+  "input_token_count_reason": "No tokenizer installed; exact fixed request bodies recorded, not estimated token counts.",
+  "maximum_request_body_bytes": 8613
+}
