@@ -21,7 +21,7 @@
 | `src/researchtrail/policy.py` | 스키마 검사 뒤 정책 검사, 후속 처리 코드 계산 | 강의 6 구현 대상 (SPEC 5.3, AC1) | 구조·원문 구절 검사 구현, 의미 판정은 미검증 |
 | `src/researchtrail/store.py` (미생성) | 과업·기록·맥락·확정 작업 저장, 과업별 조회 | 강의 6 구현 대상 (SPEC 5.1~5.5, AC4~AC6) | 만들 예정 |
 | API | SPEC 5.1절 경로 여섯 개 | SPEC 5.1 | 프레임워크 (미정) |
-| 화면 | 메모 입력, 후보 확인, 재개 화면 | SPEC 3.1 | (미정) |
+| 화면 | 메모 입력, 후보 확인, 재개 화면·기록 이력 | SPEC 3.1 | 브라우저 시연 구현. 서버 연동 미구현 |
 
 `parser.py`, `policy.py`, `store.py`의 이름과 나누는 단위는 프레임워크가 정해지면 바뀔 수 있다. 러너의 검사 코드를 가져다 쓸지도 (미정).
 
@@ -141,4 +141,9 @@ SPEC 4.2절, `ontology.yaml`의 `scope.out_of_scope`와 같다.
 
 ## 10. 2026-11-07 구현 현황
 
-web/은 기존 HTML 앱의 시연 진입점이며 서버 API와 연결되기 전이다. localStorage·IndexedDB 저장을 사용하고 Python policy.py는 기존 실험 러너에서도 재사용한다. Python 프레임워크·DB·배포 방식은 미정이다. 자세한 기능 경계와 검사 결과는 research/midterm_followup_2026-11-07.md를 따른다.
+web/은 기존 HTML 앱의 시연 진입점이며 서버 API와 연결되기 전이다. localStorage·IndexedDB 저장을 사용하고 Python policy.py는 기존 실험 러너에서도 재사용한다. Python 프레임워크·DB·배포 방식은 미정이다. 기능 경계와 검사 현황은 [SPEC](SPEC.md) 7.5절과 SPEC 6.2절을 따른다.
+
+
+## 11. 브라우저 이력 저장
+
+web/js/helpers.js가 논문별 noteHistory·actionHistory를 기존 저장 객체에 직렬화한다. reader.js는 편집 전 원문과 편집 종료 버전을 기록하고, next-action.js는 요청 당시 원문·최초 후보·확인한 최종값을 각각 보관한다. 확인 저장 실패는 작업과 확인 이력을 함께 되돌린다. 기술 식별자는 모델에 전달하지 않는다. 이는 브라우저 시연의 이력이며 store.py와 과업별 서버 API 구현을 대체하지 않는다.
