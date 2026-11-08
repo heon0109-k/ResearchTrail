@@ -172,6 +172,7 @@ node tests/web_record_history.test.cjs
 node tests/web_timeline_visibility.test.cjs
 node tests/web_unknown_state.test.cjs
 node tests/web_missing_context.test.cjs
+node tests/web_link_persistence.test.cjs
 ```
 
 숫자 기준과 새 의미 사례는 실행 전 팀 검토가 필요한 계획값입니다. 오프라인 검사 통과는 실제 모델 의미 정확도·사용자 효과·제품 완성을 뜻하지 않습니다.

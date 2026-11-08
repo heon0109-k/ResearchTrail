@@ -1,5 +1,6 @@
 'use strict';
 /* ---------- panel ---------- */
+function persistPaperLink(p,value){p.link=value.trim();return save()}
 function renderPanel(){
   var panel=$('#panel'),pin=$('#pin');
   var open=S.panel!=='none';panel.classList.toggle('open',open);
@@ -32,7 +33,8 @@ function renderPanel(){
   $('#pState').addEventListener('change',function(e){p.state=e.target.value||null;renderAll()});
   $('#pMemo').addEventListener('change',function(e){p.memo=e.target.value;renderAll()});
   $('#pTitle').addEventListener('change',function(e){p.title=e.target.value.trim()||p.title;renderAll()});
-  $('#pLink').addEventListener('change',function(e){p.link=e.target.value.trim()});
+  var linkInput=$('#pLink');
+  ['input','change'].forEach(function(type){linkInput.addEventListener(type,function(e){persistPaperLink(p,e.target.value)})});
   $('#pDate').addEventListener('change',function(e){if(e.target.value){p.date=e.target.value;renderAll();ensureVisible(p.id)}});
   $$('[data-go]',pin).forEach(function(b){b.addEventListener('click',function(){select(b.dataset.go)})});
   $$('[data-del]',pin).forEach(function(b){b.addEventListener('click',function(){ask('이 연결을 삭제할까요?','연결 이유도 함께 사라져요.','삭제',function(){S.links=S.links.filter(function(l){return l.id!==b.dataset.del});renderAll()},true)})});
