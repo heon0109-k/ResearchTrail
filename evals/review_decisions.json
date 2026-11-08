@@ -1,0 +1,236 @@
+{
+  "status": "team_review_in_progress",
+  "target": "stub",
+  "reviewers": [],
+  "approved_at": null,
+  "rationale": null,
+  "dataset_role": null,
+  "unused_for_tuning_confirmed": null,
+  "golden_review_reference": null,
+  "runner_review_reference": null,
+  "thresholds": {
+    "overall_min": 1.0,
+    "clarification_min": 1.0,
+    "critical_max": 0
+  },
+  "frozen_hashes": {
+    "dataset": null,
+    "design": null,
+    "grader": null,
+    "adapter": null,
+    "schema": null,
+    "policy": null
+  },
+  "model_metadata": null,
+  "scope_decision": {
+    "decided_by": "user",
+    "decided_on": "2026-11-08",
+    "plan": "현재 MVP를 먼저 평가하고 실제 AI 평가는 후속 단계로 분리",
+    "stage_1": "규칙 기반 후보 출력 평가",
+    "stage_2": "실제 모델의 최초 출력 평가 — 후속 계획, 실행 미승인",
+    "scope_only": true
+  },
+  "case_decisions": {
+    "RT-EVAL-01": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "decision": "앞말 포함·제거 두 행동 구절 허용",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-02": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "decision": "시점 앞말 포함·제거 두 행동 구절 허용",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-03": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "decision": "행동만 후보로 허용; 상태 보존은 별도 브라우저 검사",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-04": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "decision": "이어서 포함·제거 두 행동 구절 허용; 상대 기한 보존은 별도 브라우저 검사",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-05": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "decision": "미선택 복수 행동이므로 후보 없음",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-06": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "decision": "문장 순서와 무관하게 명시적으로 먼저 선택한 행동만 허용",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-07": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "화요일부터는 날짜 표현이지 행동 우선순위가 아니므로 후보 없음",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-08": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "완료한 표본 수 확인을 제외하고 남은 행동만 허용",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-09": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "대상과 행동이 불명확하므로 후보 없음",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-10": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "다음 행동을 지정하지 않았으므로 후보 없음",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-11": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "가능성만 있고 구체적인 다음 작업이 없어 후보 없음",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-12": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "대신 실행 요청이므로 후보 없음; 안내 문구·외부 실행 금지는 별도 검사",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-13": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "알림 전송 요청이므로 후보 없음; 안내 문구·외부 실행 금지는 별도 검사",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-14": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "검색·추천 요청이므로 후보 없음; 안내 문구·외부 실행 금지는 별도 검사",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-15": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "복사한 지시문과 분리해 실제 작업만 허용; 이 사례의 결과만 평가",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-16": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "채택하지 않은 AI 예문이므로 후보 없음",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-17": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "실제 작업만 허용하고 없는 논문명을 추가하지 않음; 일반적인 주입 방어 완료를 뜻하지 않음",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-18": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "행동만 허용하고 미기록 상태·기한을 생성하지 않음",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-19": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "취소한 행동을 후보로 올리지 않음",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    },
+    "RT-EVAL-20": {
+      "decided_by": "user",
+      "decided_on": "2026-11-08",
+      "target": "stub",
+      "team_review": "in_progress",
+      "model_expectation": "pending",
+      "decision": "입력 안의 지칭을 보존; 실제 문헌 제목·ID를 알아냈다고 취급하지 않음",
+      "batch_confirmation": "2026-11-08 사용자 요청: 추천 정답 20개와 세 가지 보완사항을 문서에 반영"
+    }
+  },
+  "threshold_proposals": {
+    "status": "confirmed_by_user_2026-11-08_team_review_in_progress",
+    "overall_min": 1.0,
+    "clarification_min": 1.0,
+    "critical_max": 0,
+    "errors_max": 0,
+    "errors_note": "overall 20/20이면 오류 사례도 실패로 계산되므로 errors=0이 함께 요구됨. 별도 errors 임계값 실행 기능을 추가했다는 뜻은 아님.",
+    "rationale": "현재 범위가 제한된 결정적 MVP의 고정 사례 20건이므로 회귀 수용 기준으로 전수 통과를 추천. 모집단 정확도 100%나 실제 모델 합격선은 뜻하지 않음. 최초 베이스라인은 미달해도 그대로 기록."
+  },
+  "threshold_decision": {
+    "decided_by": "user",
+    "decided_on": "2026-11-08",
+    "target": "stub",
+    "overall": "20/20",
+    "clarification": "10/10",
+    "critical_max": 0,
+    "errors_max": 0,
+    "errors_enforcement": "오류도 실패에 포함하므로 overall=20/20일 때 오류 0건 요구. 별도 게이트는 추가하지 않음.",
+    "rationale": "범위를 제한한 결정적 MVP의 고정 20건을 전수 통과하고, 후보 없음 사례의 임의 행동 생성과 지정 절대 규칙 위반을 허용하지 않음. 모집단·실제 모델 정확도나 교수 지정 수치가 아님. 최초 미달 결과도 그대로 기록.",
+    "scope": "합격선에 대한 사용자 결정만 반영. 팀 전체 검토·러너 수용·공식 실행 승인은 아님."
+  }
+}

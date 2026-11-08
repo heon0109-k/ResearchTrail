@@ -150,6 +150,8 @@ python3 -m http.server 5500 --directory web
 
 ## 문서와 검증
 
+- [Evals 설계서](evals/EVAL_DESIGN.md): 평가 기준·데이터셋·러너와 실행 준비 상태를 확인합니다.
+
 - [문제 정의·사용자 검증 계획 초안](docs/PROBLEM.md)
 - [기능 명세와 AC](docs/SPEC.md)
 - [추가 설문 분석](docs/research/survey_2026-11-05.md)
