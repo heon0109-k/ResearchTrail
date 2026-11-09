@@ -70,7 +70,7 @@ function renderPage(p,n){
 }
 function drawHl(p,n){
   var pg=PV&&PV.pages[n];if(!pg||!pg.el)return;var l=pg.el.querySelector('.hlayer');if(!l)return;
-  l.innerHTML=(p.hl||[]).filter(function(h){return h.page===n}).map(function(h){return h.rects.map(function(r){return '<i'+(h.stuck&&!h.solved?' class="stk"':'')+' style="left:'+r[0]*100+'%;top:'+r[1]*100+'%;width:'+r[2]*100+'%;height:'+r[3]*100+'%"></i>'}).join('')}).join('');
+  l.innerHTML=(p.hl||[]).filter(function(h){return h.page===n}).map(function(h){return h.rects.map(function(r){return '<i'+(highlightBlocked(h)?' class="stk"':'')+' style="left:'+r[0]*100+'%;top:'+r[1]*100+'%;width:'+r[2]*100+'%;height:'+r[3]*100+'%"></i>'}).join('')}).join('');
 }
 function pvGo(n,quiet){
   if(!PV)return;n=Math.max(1,Math.min(PV.doc.numPages,Math.round(n)||1));
@@ -133,31 +133,23 @@ function onSel(p,e){
   rects=fitInk(box,rects);
   var last=r.getClientRects();var lr=last[last.length-1];
   var bar=document.createElement('div');bar.id='hlbar';bar.className='hlbar';
-  bar.innerHTML='<button type="button" data-a="hl">형광펜</button><button type="button" data-a="q">메모에 인용</button><button type="button" data-a="stuck" class="stk">막혔어요</button>';
+  bar.innerHTML='<button type="button" data-a="hl">형광펜</button>';
   document.body.appendChild(bar);
   var bw=bar.offsetWidth;bar.style.left=Math.max(8,Math.min(window.innerWidth-bw-8,lr.right-bw/2))+'px';bar.style.top=Math.min(window.innerHeight-48,lr.bottom+8)+'px';
   bar.addEventListener('mousedown',function(ev){ev.preventDefault();ev.stopPropagation()});
   bar.addEventListener('click',function(ev){
-    var a=ev.target.getAttribute&&ev.target.getAttribute('data-a'),rs=ev.target.getAttribute&&ev.target.getAttribute('data-r');
+    var a=ev.target.getAttribute&&ev.target.getAttribute('data-a');
     function fin(extra){
       p.hl=p.hl||[];var h={id:nid('h'),page:page,text:text,kind:guessKind(text),rects:rects};
       if(extra)for(var k in extra)h[k]=extra[k];
       p.hl.push(h);return h}
-    if(a==='stuck'){
-      bar.innerHTML='<span class="hlq">어디서 막혔나요?</span>'+STUCK.map(function(s){return '<button type="button" data-r="'+s.id+'">'+s.t+'</button>'}).join('')+'<button type="button" data-a="back" class="mute">취소</button>';
-      var bw2=bar.offsetWidth;bar.style.left=Math.max(8,Math.min(window.innerWidth-bw2-8,lr.right-bw2/2))+'px';return}
-    if(a==='back'){bar.remove();sel.removeAllRanges();return}
-    if(rs){
-      var s=STUCK.filter(function(x){return x.id===rs})[0];
-      var h=fin({stuck:rs,unsure:'',solved:false});if(rs==='eq'&&!h.kind)h.kind='수식';
-      save();drawHl(p,page);drawHlList();bar.remove();sel.removeAllRanges();toast('막힌 곳으로 저장했어요. 오른쪽 목록에서 질문을 복사해 챗봇에 붙여넣을 수 있어요.');return}
-    if(!a)return;
+    if(a==='stuck'){fin({blocked:true});save();drawHl(p,page);drawHlList();bar.remove();sel.removeAllRanges();toast('막힌 곳으로 표시했어요. 오른쪽에서 메모를 남기거나 질문을 복사하세요.');return}
+    if(a!=='hl')return;
     fin();
-    if(a==='q'){p.note=(p.note?p.note.replace(/\s*$/,'')+'\n\n':'')+'> “'+text+'” (p.'+page+')\n';var t=$('#rNote');if(t)t.value=p.note}
     save();drawHl(p,page);drawHlList();bar.remove();sel.removeAllRanges();
   });
 }
-/* ---------- 막혔어요: 이유를 고르면 그 이유에 맞는 질문문을 만들어 준다 (앱이 직접 설명을 생성하지는 않는다) ---------- */
+/* Legacy reason labels remain for previously saved records. New marks need no category. */
 var STUCK=[
   {id:'term',t:'낯선 용어',long:'용어가 낯설어요',ask:'이 문맥에서 낯선 용어의 뜻과 간단한 예시를 알려 주세요.'},
   {id:'why',t:'왜 하는 말인지',long:'왜 이런 말을 하는지 모르겠어요',ask:'이 문장을 왜 하는지, 논문이 풀려는 문제와 주장에 어떻게 연결되는지 설명해 주세요.'},
@@ -165,36 +157,71 @@ var STUCK=[
   {id:'eq',t:'수식이 안 읽힘',long:'수식이 안 읽혀요',ask:'각 기호의 의미, 입력과 출력, 이 식이 하는 일을 설명해 주세요.'}
 ];
 function stuckBy(id){return STUCK.filter(function(s){return s.id===id})[0]}
+function setHighlightStuck(h,reason){
+  if(reason&&!stuckBy(reason))return false;
+  if((h.stuck||'')!==reason){h.stuck=reason;h.solved=false}
+  return true;
+}
+function highlightBlocked(h){return typeof h.blocked==='boolean'?h.blocked:!!(h.stuck&&!h.solved)}
+function setHighlightBlocked(h,blocked){h.blocked=!!blocked}
 function stuckPrompt(p,h){
-  var s=stuckBy(h.stuck)||STUCK[0];
-  return '저는 [내 전공/배경을 여기에 적어 주세요] 분야이고, 다른 분야 논문을 읽다가 막혔어요.\n\n'+
-    '논문: '+p.title+'\n쪽: p.'+h.page+'\n막힌 문장:\n“'+(h.text||'(영역 캡처한 그림·수식)')+'”\n\n'+
-    '막힌 이유: '+s.long+'\n'+(h.mine?'지금까지 이해한 것: '+h.mine+'\n':'')+(h.unsure?'아직 헷갈리는 것: '+h.unsure+'\n':'')+
-    '\n'+s.ask+'\n설명은 "직관 → 예시 → 원문 표현으로 돌아오기" 순서로 해 주시고, 비유가 실제 개념과 달라지는 부분도 알려 주세요. 확실하지 않은 내용은 모른다고 말해 주세요.';
+  var previous=stuckBy(h.stuck);
+  return '논문의 다음 부분을 이해하는 데 도움을 주세요.\n\n'+
+    '논문: '+p.title+'\n쪽: p.'+h.page+'\n'+(h.type==='note'?'논문을 읽으며 남긴 메모':h.img?'선택한 부분: 영역 캡처한 그림·수식 (캡처 이미지를 이 질문과 함께 첨부합니다)':'선택한 문장:\n“'+h.text+'”')+'\n\n'+
+    (h.mine?'내 메모: '+h.mine+'\n':'')+(h.unsure?'이전에 남긴 질문: '+h.unsure+'\n':'')+
+    (previous?'이전에 기록한 막힌 이유: '+previous.long+'\n':'')+
+    '\n'+(previous?previous.ask:'위 내용과 내 메모를 바탕으로 핵심 의미와 이해에 필요한 배경을 쉽게 설명해 주세요.')+
+    '\n원문에서 확인할 수 있는 내용과 추가 설명을 구분하고, 확실하지 않은 내용은 모른다고 말해 주세요.';
+}
+function highlightQuestion(p,h){
+  return '논문의 다음 부분을 이해하는 데 도움을 주세요.\n\n논문: '+p.title+'\n쪽: '+(h.page?'p.'+h.page:'미기록')+'\n'+
+    (h.type==='note'?'논문을 읽으며 남긴 메모':h.img?'선택한 부분: 영역 캡처한 그림·수식 (캡처 이미지를 이 질문과 함께 첨부합니다)':'선택한 문장:\n“'+h.text+'”')+'\n\n'+
+    (h.mine?'내 메모: '+h.mine+'\n':'')+
+    '\n선택한 내용과 내 메모를 바탕으로 핵심 의미와 이해에 필요한 배경을 쉽게 설명해 주세요. 원문에서 확인할 수 있는 내용과 추가 설명을 구분하고, 확실하지 않은 내용은 모른다고 말해 주세요.';
 }
 function copyText(t,done){
   function fb(){var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();var ok=false;try{ok=document.execCommand('copy')}catch(e){}a.remove();done(ok)}
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){done(true)},fb);else fb();
 }
+var KIND_OUTSIDE_BOUND=false;
+function highlightKindMenu(h){
+  var kinds=typeof KINDS==='undefined'?['수식','그래프·표','개념·방법','기타']:KINDS;
+  return '<details class="kind-picker"><summary aria-label="기록 종류: '+esc(h.kind||'미분류')+'"><span class="kind-label">'+esc(h.kind||'종류')+'</span><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></summary><div class="kind-menu" role="group" aria-label="종류 선택">'+kinds.map(function(k){return '<button type="button" data-hk="'+esc(h.id)+'" data-kind="'+esc(k)+'" aria-pressed="'+(h.kind===k)+'"><span>'+esc(k)+'</span><span class="kind-check" aria-hidden="true">✓</span></button>'}).join('')+'</div></details>';
+}
 function drawHlList(){
   var p=paperBy(S.reader),el=$('#rHl');if(!p||!el)return;
-  var hs=(p.hl||[]).slice().sort(function(a,b){return a.page-b.page});
+  var hs=(p.hl||[]).slice().sort(function(a,b){return (a.page||Infinity)-(b.page||Infinity)});
   el.innerHTML=hs.length?'<ul class="hllist">'+hs.map(function(h){
-    return '<li'+(h.stuck?' class="stuck'+(h.solved?' done':'')+'"':'')+'><div class="hl-top"><button type="button" class="hgo" data-pg="'+h.page+'"><b>p.'+h.page+'</b> '+(h.img?'캡처한 부분':esc(short(h.text,80)))+'</button><button type="button" class="x" data-hd="'+h.id+'" aria-label="하이라이트 삭제">×</button></div>'+
+    var selected=typeof RR!=='undefined'&&RR.pid===p.id&&RR.selected===h.id;
+    return '<li class="reading-card'+(selected?' is-selected':'')+'" data-rid="'+esc(h.id)+'" tabindex="0" aria-label="읽기 기록 선택"><span class="record-selected">선택한 기록</span><div class="hl-top"><button type="button" class="hgo" '+(h.page?'data-pg="'+h.page+'"':'disabled')+'><b>'+(h.page?'p.'+h.page:'쪽 미기록')+'</b> '+(h.type==='note'?'메모':h.img?'캡처한 부분':esc(short(h.text,80)))+'</button><div class="hl-tools"><button type="button" class="hl-copy" data-hq="'+h.id+'" aria-label="AI에게 물어볼 질문 복사" title="AI에게 물어볼 질문 복사"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 4V3a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v7a1 1 0 0 0 1 1h1"/></svg></button><button type="button" class="x" data-hd="'+h.id+'" aria-label="하이라이트 삭제">×</button></div></div>'+
       (h.img?'<img class="hl-img" title="눌러서 크게 보기" src="'+h.img+'" alt="캡처한 부분">':'')+
-      '<div class="hl-meta"><select data-hk="'+h.id+'" aria-label="종류"><option value="">종류</option>'+KINDS.map(function(k){return '<option'+(h.kind===k?' selected':'')+'>'+k+'</option>'}).join('')+'</select><input type="text" data-hm="'+h.id+'" value="'+esc(h.mine||'')+'" placeholder="내가 이해한 것 (예: PSD = 주파수별 에너지)" aria-label="내가 이해한 것"></div>'+
-      (h.stuck?'<div class="stk-box"><span class="stk-b">막힘 · '+esc((stuckBy(h.stuck)||{t:''}).t)+'</span><input type="text" data-hu="'+h.id+'" value="'+esc(h.unsure||'')+'" placeholder="아직 헷갈리는 것 (예: 왜 음성 샘플이 필요한지)" aria-label="아직 헷갈리는 것"><div class="stk-act"><button type="button" class="btn sm" data-hq="'+h.id+'">질문 복사</button><button type="button" class="btn sm ghost" data-hs="'+h.id+'">'+(h.solved?'다시 막힘':'이해했어요')+'</button></div></div>':'')+'</li>';
-  }).join('')+'</ul>':'<p class="empty">PDF에서 문장을 드래그하면 형광펜, 메모에 인용, 막혔어요 버튼이 나와요. 수식이 깨지면 위쪽 "영역 캡처"로 이미지로 저장하세요.</p>';
+      '<div class="hl-meta">'+highlightKindMenu(h)+'<textarea rows="2" data-hm="'+h.id+'" placeholder="메모를 남겨 보세요" aria-label="하이라이트 메모">'+esc(h.mine||'')+'</textarea></div><button type="button" class="record-candidate" data-record-candidate="'+esc(h.id)+'">다음 할 일 찾기 →</button></li>';
+  }).join('')+'</ul>':'<p class="empty">PDF에서 형광펜·영역 캡처를 남기거나 위의 "+ 메모 추가"로 짧게 기록해 보세요.</p>';
   function hb(id){return (p.hl||[]).filter(function(x){return x.id===id})[0]}
+  $$('textarea[data-hm]',el).forEach(function(i){
+    function fit(){i.style.height='auto';i.style.height=Math.max(58,i.scrollHeight+2)+'px'}
+    fit();i.addEventListener('input',fit);
+  });
   $$('[data-pg]',el).forEach(function(b){b.addEventListener('click',function(){pvGo(+b.dataset.pg)})});
-  $$('[data-hk]',el).forEach(function(s){s.addEventListener('change',function(){var h=hb(s.dataset.hk);if(h){h.kind=s.value;save()}})});
-  $$('[data-hu]',el).forEach(function(i){i.addEventListener('input',function(){var h=hb(i.dataset.hu);if(h){h.unsure=i.value;save()}})});
-  $$('[data-hq]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hq);if(!h)return;copyText(stuckPrompt(p,h),function(ok){toast(ok?'질문을 복사했어요. 챗봇에 붙여넣고, [내 전공/배경] 부분만 고쳐 주세요.':'복사하지 못했어요. 브라우저 권한을 확인해 주세요.')})})});
-  $$('[data-hs]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hs);if(!h)return;h.solved=!h.solved;save();drawHl(p,h.page);drawHlList()})});
-  $$('[data-hm]',el).forEach(function(i){i.addEventListener('input',function(){var h=hb(i.dataset.hm);if(h){h.mine=i.value;save()}})});
+  $$('[data-hk]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hk);if(!h)return;h.kind=b.dataset.kind;save();var menu=b.closest('.kind-picker');$('.kind-label',menu).textContent=h.kind;$('summary',menu).setAttribute('aria-label','기록 종류: '+h.kind);$$('[data-hk]',menu).forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});menu.open=false;$('summary',menu).focus()})});
+  $$('.kind-picker',el).forEach(function(menu){
+    menu.addEventListener('toggle',function(){if(!menu.open)return;$$('.kind-picker',el).forEach(function(other){if(other!==menu)other.open=false});var panel=$('.kind-menu',menu),notes=$('#rdnotes'),r=menu.getBoundingClientRect(),nr=notes?notes.getBoundingClientRect():{top:0,bottom:window.innerHeight};menu.classList.toggle('opens-up',r.bottom+panel.offsetHeight+8>nr.bottom&&r.top-panel.offsetHeight-8>nr.top)});
+    menu.addEventListener('keydown',function(e){var options=$$('[data-hk]',menu),index=options.indexOf(document.activeElement);if(e.key==='Escape'){e.preventDefault();e.stopPropagation();menu.open=false;$('summary',menu).focus()}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();menu.open=true;var n=e.key==='ArrowDown'?index+1:index<0?options.length-1:index-1;options[(n+options.length)%options.length].focus()}});
+  });
+  if(!KIND_OUTSIDE_BOUND&&typeof document!=='undefined'&&document.addEventListener){KIND_OUTSIDE_BOUND=true;document.addEventListener('click',function(e){$$('.kind-picker[open]').forEach(function(menu){if(!menu.contains(e.target))menu.open=false})})}
+
+  $$('[data-hq]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hq);if(!h)return;copyText(highlightQuestion(p,h),function(ok){toast(ok?(h.img?'질문을 복사했어요. 챗봇에 붙여넣고 캡처 이미지도 함께 첨부해 주세요.':'질문을 복사했어요. 원하는 챗봇에 붙여넣어 주세요.'):'복사하지 못했어요. 브라우저 권한을 확인해 주세요.')})})});
+  $$('[data-hm]',el).forEach(function(i){
+    var editing=false;
+    i.addEventListener('input',function(){var h=hb(i.dataset.hm);if(!h)return;
+      if(!editing&&typeof rememberReadingMemo==='function'){rememberReadingMemo(p,h.id,h.mine||'');editing=true}
+      h.mine=i.value;save();if(typeof NA!=='undefined'&&NA.pid===p.id&&NA.sourceId===h.id&&NA.st==='cand')naRender(p,true);
+    });
+    i.addEventListener('change',function(){var h=hb(i.dataset.hm);if(!h)return;if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');editing=false;save();if(typeof renderHistory==='function')renderHistory(p)});
+  });
   $$('[data-hd]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hd);if(!h)return;
-    function del(){p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});save();drawHl(p,h.page);drawHlList()}
-    if(h.img)ask('이 캡처를 삭제할까요?','저장한 이미지와 "내가 이해한 것"이 함께 사라져요.','삭제',del,true);else del()})});
+    function del(){if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});if(typeof RR!=='undefined'&&RR.pid===p.id&&RR.selected===h.id)clearReadingSelection(p);save();drawHl(p,h.page);drawHlList();if(typeof renderHistory==='function')renderHistory(p)}
+    ask(h.img?'이 캡처를 삭제할까요?':h.type==='note'?'이 메모를 삭제할까요?':'이 하이라이트를 삭제할까요?',h.img?'저장한 이미지와 "내가 이해한 것"이 함께 사라져요.':'선택한 기록과 메모가 목록에서 삭제돼요. 저장된 다음 할 일은 유지돼요.','삭제',del,true)})});
   $$('.hl-img',el).forEach(function(im){im.addEventListener('click',function(){
     var ov=document.createElement('div');ov.className='ov';ov.innerHTML='<img class="bigimg" src="'+im.src+'" alt="캡처한 부분 크게 보기">';
     function c(){document.removeEventListener('keydown',k,true);ov.remove()}function k(e){if(e.key==='Escape'){e.stopPropagation();c()}}

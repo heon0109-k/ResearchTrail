@@ -128,6 +128,6 @@ function renderAddPanel(pin){
     }
     S.papers=S.papers.filter(function(x){return !x.tut});
     S.papers.push(np);S.draftMeta=null;S.draftFile=null;
-    S.hidden.delete(tag.id);S.draft=null;S.sel=id;S.panel='detail';renderAll();ensureVisible(id);
+    S.hidden.delete(tag.id);if(S.filterTag!=null&&S.filterTag!==tag.id)S.filterTag=null;S.draft=null;S.sel=id;S.panel='detail';renderAll();ensureVisible(id);
   });
 }

@@ -20,7 +20,7 @@ function verify(expected){
 }
 c.S.papers=[{id:'old',title:'이전에 등록한 논문',date:'2026-09-01',state:'reading',lastReadOrder:2},{id:'new',title:'최근 등록한 논문',date:'2026-11-08',state:'reading',lastReadOrder:1}];
 verify('old');c.S.papers[1].lastReadOrder=3;verify('new');
-c.S.papers[0].lastReadOrder=4;c.S.papers[0].state='done';verify('old');
+c.S.papers[0].lastReadOrder=4;c.S.papers[0].state='done';verify('new'); // Done papers are no longer resume targets (user-requested policy).
 c.S.papers=c.S.papers.filter(p=>p.id!=='old');verify('new');
 c.S.papers[0].lastReadOrder=0;verify('new');
 c.S.papers=[];verify(null);

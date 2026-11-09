@@ -31,7 +31,7 @@ function pvCapInit(p){
     var page=+s.box.dataset.n;
     p.hl=p.hl||[];p.hl.push({id:nid('h'),page:page,text:'',img:img,kind:'그래프·표',mine:'',rects:[[x/s.bb.width,y/s.bb.height,w/s.bb.width,h/s.bb.height]]});
     save();drawHl(p,page);drawHlList();mode(false);
-    if(S.saved===false)toast('저장 공간이 부족해 캡처가 새로고침 후 사라질 수 있어요');
+    if(!S.example&&S.saved===false)toast('저장 공간이 부족해 캡처가 새로고침 후 사라질 수 있어요');
   });
 }
 
