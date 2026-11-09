@@ -9,6 +9,115 @@ function persistPaperLink(p,value,report){
   if(input)input.setCustomValidity('');
   p.link=ref.type==='url'?ref.url:ref.link;return save();
 }
+var paperResourceScans=new WeakMap();
+function paperResourceScan(p){
+  var state=paperResourceScans.get(p),source=p.pdf?null:p.link;
+  if(!state||state.source!==source){
+    state={source:source,status:'idle',candidates:[],notify:null};
+    paperResourceScans.set(p,state);
+  }
+  return state;
+}
+async function scanPaperResources(p,file){
+  var state=paperResourceScan(p);
+  if(file){
+    state=Object.assign({},state,{candidates:[]});
+    paperResourceScans.set(p,state);
+  }else if(state.status==='loading')return;
+  function current(){return paperResourceScans.get(p)===state&&paperBy(p.id)===p&&state.source===(p.pdf?null:p.link)}
+  function update(status,candidates){
+    if(!current())return;
+    state.status=status;state.candidates=candidates;
+    if(state.notify)state.notify();
+  }
+  update('loading',[]);
+  try{
+    var found=await findPaperResources(p,current,file);
+    update(found===null?'missing':'done',found||[]);
+  }catch(e){update('failed',[])}
+}
+function paperResourcesHtml(id){
+  return '<section class="paper-resources" id="'+id+'" aria-labelledby="'+id+'Title"><h4 id="'+id+'Title">코드·데이터셋</h4><ul data-saved-resources></ul>'+
+  '<div class="paper-resource-actions"><button type="button" class="btn sm" data-scan-resources hidden>PDF에서 링크 찾기</button><button type="button" class="btn sm ghost" data-manual-resources aria-expanded="false" aria-controls="'+id+'Form">+ 직접 추가</button></div>'+
+  '<form id="'+id+'Form" hidden><select aria-label="링크 종류"><option value="code">코드</option><option value="data">데이터셋</option></select><input type="text" aria-label="코드·데이터셋 주소" placeholder="링크 붙여넣기" inputmode="url"><button class="btn sm" type="submit">저장</button></form>'+
+  '<div data-found-resources hidden><h5>PDF에서 찾은 링크 <span data-resource-count></span></h5><ul id="'+id+'Results" data-resource-results></ul><button type="button" class="btn sm ghost" data-more-resources aria-expanded="false" aria-controls="'+id+'Results" hidden></button></div>'+
+  '<p class="empty" role="status" data-resource-status></p></section>';
+}
+function wirePaperResources(box,p){
+  if(!box)return;
+  var saved=$('[data-saved-resources]',box),results=$('[data-resource-results]',box),status=$('[data-resource-status]',box);
+  var form=$('form',box),input=$('input',form),kind=$('select',form),scan=$('[data-scan-resources]',box);
+  var manual=$('[data-manual-resources]',box),found=$('[data-found-resources]',box);
+  var count=$('[data-resource-count]',box),more=$('[data-more-resources]',box),expanded=false;
+  function resources(){return (Array.isArray(p.resources)?p.resources:[]).filter(function(item){
+    return item&&(item.kind==='code'||item.kind==='data')&&safeExternalUrl(item.url);
+  })}
+  function label(item){return (item.kind==='code'?'코드':'데이터셋')+(Number.isSafeInteger(item.page)&&item.page>0?' · '+item.page+'쪽':'')}
+  function row(item,action,index){
+    var href=safeExternalUrl(item.url);
+    var url=new URL(href),caption=url.host+url.pathname.replace(/\/$/,'');
+    return '<li><small>'+label(item)+'</small><a href="'+esc(href)+'" title="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(caption)+'</a><button type="button" class="btn sm'+(action==='remove'?' ghost':'')+'" data-resource-'+action+'="'+index+'" aria-label="'+label(item)+' 링크 '+(action==='add'?'저장':'삭제')+'">'+(action==='add'?'저장':'삭제')+'</button></li>';
+  }
+  function render(){
+    var entries=resources();
+    saved.innerHTML=entries.map(function(item,i){return row(item,'remove',i)}).join('');
+    var rows=paperResourceScan(p).candidates.flatMap(function(item,i){
+      return entries.some(function(entry){return entry.url===item.url})?[]:[row(item,'add',i)];
+    });
+    results.innerHTML=(expanded?rows:rows.slice(0,3)).join('');
+    found.hidden=!rows.length;
+    count.textContent=rows.length+'개';
+    more.hidden=rows.length<=3;
+    more.textContent=expanded?'접기':'나머지 '+(rows.length-3)+'개 보기';
+    more.setAttribute('aria-expanded',String(expanded));
+  }
+  function renderScan(){
+    if(!box.isConnected)return;
+    var state=paperResourceScan(p);
+    render();
+    scan.hidden=!(state.status==='failed'||(state.status==='idle'&&(p.pdf||paperResourcePdfUrl(p))));
+    scan.textContent=state.status==='failed'?'다시 찾기':'PDF에서 링크 찾기';
+    status.textContent=state.status==='loading'?'PDF에서 링크를 찾는 중…':
+      state.status==='failed'?'PDF에서 링크를 읽지 못했어요.':
+      state.status==='missing'?'읽기 화면에서 PDF를 올리면 링크를 찾을 수 있어요.':
+      state.status==='done'&&!state.candidates.length?'PDF에서 코드·데이터셋 링크를 찾지 못했어요.':'';
+  }
+  function persist(entries){
+    var old=p.resources;p.resources=entries;
+    if(save()||S.example){render();return true}
+    p.resources=old;status.textContent='링크를 저장하지 못했어요. 다시 시도해 주세요.';return false;
+  }
+  function add(item){
+    var entries=resources();
+    if(entries.some(function(entry){return safeExternalUrl(entry.url)===item.url})){status.textContent='이미 저장한 링크예요.';return false}
+    if(!persist(entries.concat(item)))return false;
+    status.textContent=S.example?'예시 탭에 링크를 저장했어요.':'링크를 저장했어요.';return true;
+  }
+  function showManual(open){
+    form.hidden=!open;manual.setAttribute('aria-expanded',String(open));
+    if(open)input.focus();else manual.focus();
+  }
+  manual.addEventListener('click',function(){showManual(form.hidden)});
+  more.addEventListener('click',function(){expanded=!expanded;render()});
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var href=safeExternalUrl(input.value);
+    if(!href){status.textContent='올바른 http 또는 https 링크를 입력해 주세요.';input.focus();return}
+    if(add({url:href,kind:kind.value})){input.value='';showManual(false)}
+  });
+  box.addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b)return;
+    var candidate=paperResourceScan(p).candidates[Number(b.dataset.resourceAdd)];
+    if(candidate)add(candidate);
+    if(b.hasAttribute('data-resource-remove')){
+      var entries=resources();entries.splice(Number(b.dataset.resourceRemove),1);
+      if(persist(entries))status.textContent='링크를 삭제했어요.';
+    }
+  });
+  scan.addEventListener('click',function(){scanPaperResources(p)});
+  paperResourceScan(p).notify=renderScan;
+  renderScan();
+}
 function renderPanel(){
   var panel=$('#panel'),pin=$('#pin');
   var open=S.panel!=='none';panel.classList.toggle('open',open);
@@ -32,10 +141,11 @@ function renderPanel(){
   '<label class="field"><span>저장 이유</span><textarea id="pMemo" class="big" rows="4">'+esc(p.memo)+'</textarea></label>'+
   '<label class="field"><span>논문 제목</span><textarea id="pTitle" rows="2" class="mono" style="font-size:12px">'+esc(p.title)+'</textarea></label>'+
   '<div class="two"><label class="field"><span>읽은 날짜</span><input type="date" id="pDate" value="'+esc(p.date)+'"></label><label class="field"><span>링크</span><input type="text" id="pLink" value="'+esc(p.link)+'" placeholder="https://"></label></div>'+
+  paperResourcesHtml('pResources')+
   '<div><h4>이동 경로</h4>'+((outs.length||ins.length)?'<ul class="lklist">'+outs.map(function(l){return li(l,'out')}).join('')+ins.map(function(l){return li(l,'in')}).join('')+'</ul>':'<p class="empty">아직 연결이 없어요.</p>')+'</div>'+
   linkArea+
-  '<div><button type="button" class="btn ghost" id="pDel">이 논문 삭제</button></div></div>';
-  $('#pClose').addEventListener('click',function(){S.sel=null;S.panel='none';S.linking=null;renderAll()});
+  '<div class="paper-delete-row"><button type="button" class="btn ghost" id="pDel" aria-label="삭제: 이 논문">삭제</button></div></div>';
+  $('#pClose').addEventListener('click',function(){closeDetailPanel()});
   $('#pRead').addEventListener('click',function(){openReader(p.id)});
   $('#pTag').addEventListener('change',function(e){p.tag=e.target.value;renderAll()});
   $('#pState').addEventListener('change',function(e){p.state=e.target.value||null;renderAll()});
@@ -43,6 +153,7 @@ function renderPanel(){
   $('#pTitle').addEventListener('change',function(e){p.title=e.target.value.trim()||p.title;renderAll()});
   var linkInput=$('#pLink');
   ['input','change'].forEach(function(type){linkInput.addEventListener(type,function(e){persistPaperLink(p,e.target.value,type==='change')})});
+  wirePaperResources($('#pResources'),p);
   $('#pDate').addEventListener('change',function(e){if(e.target.value){p.date=e.target.value;renderAll();ensureVisible(p.id)}});
   $$('[data-go]',pin).forEach(function(b){b.addEventListener('click',function(){select(b.dataset.go)})});
   $$('[data-del]',pin).forEach(function(b){b.addEventListener('click',function(){ask('이 연결을 삭제할까요?','연결 이유도 함께 사라져요.','삭제',function(){S.links=S.links.filter(function(l){return l.id!==b.dataset.del});renderAll()},true)})});
@@ -119,15 +230,17 @@ function renderAddPanel(pin){
     if(ref.type==='invalid'){er.hidden=false;er.textContent='올바른 http 또는 https 링크를 입력해 주세요.';return}
     var tag=tagBy(tv);
     var id=nid('p');var m=S.draftMeta||{};var np={id:id,tag:tag.id,date:dt,title:title,memo:memo,link:(function(){var v=$('#aSrc').value.trim();if(!v)return '';var r=parseRef(v);return r.type==='url'?r.url:r.link})(),state:$('#aState').value||null,abs:m.abs||'',authors:m.authors||'',year:m.year||''};
-    if(S.draftFile){
+    var file=S.draftFile;
+    if(file){
       adding=true;
-      try{await attachPaperPdf(np,S.draftFile)}
+      try{await attachPaperPdf(np,file)}
       catch(error){er.hidden=false;er.textContent='PDF를 저장하지 못했어요. 입력 내용은 유지했으니 다시 추가해 주세요.';adding=false;return}
       adding=false;
       if(S.panel!=='add'||$('#aErr')!==er){idbDel(id);return}
     }
     S.papers=S.papers.filter(function(x){return !x.tut});
     S.papers.push(np);S.draftMeta=null;S.draftFile=null;
+    if(file)scanPaperResources(np,file);
     S.hidden.delete(tag.id);if(S.filterTag!=null&&S.filterTag!==tag.id)S.filterTag=null;S.draft=null;S.sel=id;S.panel='detail';renderAll();ensureVisible(id);
   });
 }

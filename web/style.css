@@ -88,6 +88,18 @@ input::placeholder,textarea::placeholder{color:var(--faint)}
 .pb .big:hover{background:var(--softer)}
 .pb .big:focus{background:#fff}
 .pb h4{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--mute)}
+.paper-resources{border-block:1px solid var(--line);padding:12px 0}
+.paper-resources ul{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}
+.paper-resources ul:empty,.paper-resources [role=status]:empty{display:none}
+.paper-resources li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:8px 10px;background:var(--softer);border:1px solid var(--line);border-radius:8px}
+.paper-resources li a{grid-column:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600}
+.paper-resources li small{grid-column:1;color:var(--mute);font-size:11px}
+.paper-resources li button{grid-column:2;grid-row:1 / span 2}
+.paper-resource-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.paper-resources form:not([hidden]){display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px;align-items:center;margin-top:8px}
+.paper-resources form input{width:100%;min-width:0}
+.paper-resources h5{margin:10px 0 6px;color:var(--mute);font-size:11px;font-weight:600}
+.paper-resources [role=status]{margin:6px 0 0}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tagrow{display:flex;align-items:center;gap:10px}
 .tagrow i{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
@@ -257,6 +269,8 @@ span.tchip:hover{background:none}
 .dact{display:flex;gap:8px;justify-content:flex-end}
 .btn.dng{background:#b3321b;color:#fff}
 .btn.dng:hover{background:#962a17}
+.paper-delete-row{display:flex;justify-content:flex-end}
+#pDel{color:#b3321b}
 .dlane{font-family:var(--sans);font-size:12px;font-weight:600;fill:var(--ink)}
 .dtick{font-family:var(--sans);font-size:11px;fill:var(--faint)}
 .dn:focus-visible{outline:none}
@@ -399,6 +413,7 @@ body{font-size:13.5px}
 /* v18: no ugly cuts */
 .card:not(.cmp) .ct1 .tx{-webkit-line-clamp:2;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
 .card:not(.cmp) .cmemo{-webkit-line-clamp:2;word-break:keep-all;overflow-wrap:anywhere;line-height:1.45}
+.card:not(.cmp):is(.go,.last) .cmemo{display:block;flex:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 
 /* v19: colour = reading state only; tags are neutral */
 .blabel i,.tchip i,.tagrow i{background:#9aa1ad!important}

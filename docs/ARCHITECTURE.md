@@ -22,18 +22,36 @@
 
 ## 2. 구성 요소
 
+### 2.1 현재 브라우저 MVP
+
+| 파일 | 하는 일 |
+|---|---|
+| `web/index.html`, `web/js/main.js` | 웹 진입점. 첫 화면과 예시를 열거나 브라우저에 저장된 타임라인을 복원한다. |
+| `web/js/core.js`, `web/js/frame.js`, `web/js/panel.js` | 브라우저 앱 상태와 화면 전환을 관리하고, 논문 등록·수정과 태그 선택을 처리한다. |
+| `web/js/timeline.js`, `web/js/helpers.js` | 논문 타임라인과 재방문 안내를 표시한다. `helpers.js`는 논문별 메모·다음 할 일·기록 이력을 localStorage에 저장하고 복원한다. |
+| `web/js/reader.js` | 논문 읽기 화면을 열고, 읽기 상태와 메모를 편집하고 이전 읽기 위치로 돌아갈 수 있게 한다. |
+| `web/js/next-action.js`, `web/js/ai-stub.js` | 선택한 메모에서 규칙 기반으로 후보를 제안한다. 후보 편집·취소·확인과 확정 이력 저장은 `next-action.js`가 처리한다. |
+| `web/js/pdf-viewer.js`, `web/js/capture.js`, `web/js/import.js` | PDF 표시·페이지 추적, 형광펜·영역 캡처, 첨부 PDF의 IndexedDB 저장을 담당한다. |
+| `web/js/paper-list.js`, `web/js/find.js`, `web/js/graph.js` | 논문 목록, 제목·읽기 기록 검색, 논문 간 연결 그래프를 표시한다. |
+
+### 2.2 파서 실험에 사용하는 파일
+
 | 파일 | 하는 일 | 출처 | 상태 |
 |---|---|---|---|
-| `src/researchtrail/prompts/parse_query.md` | 파서 프롬프트. 마커 사이 텍스트만 LLM에 보냄 | 강의 3 산출물 | 있음 |
+| `src/researchtrail/prompts/parse_query.md` | 모델 호출 시 마커 사이 텍스트를 사용하는 파서 프롬프트 | 강의 3 산출물 | 있음 |
 | `src/researchtrail/schemas/next_action.schema.json` | `NextAction` 후보 네 필드 출력 스키마 | 강의 3 산출물 | 있음 |
-| `scripts/check_next_action_parser.py` | 파서 실험 러너. 오프라인 48개 검사. 제품 코드 아님 | 강의 3 실험 | 있음 |
-| `src/researchtrail/parser.py` (미생성) | 메모 한 건으로 LLM 호출, 형식 복구 1회, 시간 제한 | 강의 6 설계 (SPEC 5.3, AC7) | 미구현·현재 MVP 미포함 |
+| `scripts/check_next_action_parser.py` | 파서 실험 러너. 오프라인 48개 검사 | 강의 3 실험 | 있음 |
 | `src/researchtrail/policy.py` | 스키마 검사 뒤 정책 검사, 후속 처리 코드 계산 | 강의 6 구현 대상 (SPEC 5.3, AC1) | 구조·원문 구절 검사 구현, 의미 판정은 미검증 |
-| `src/researchtrail/store.py` (미생성) | 과업·기록·맥락·확정 작업 저장, 과업별 조회 | 강의 6 설계 (SPEC 5.1~5.5, AC4~AC6) | 미구현·현재 MVP 미포함 |
-| API | SPEC 5.1절 경로 여섯 개 | SPEC 5.1 | 프레임워크 (미정) |
-| 화면 | 메모 입력, 후보 확인, 재개 화면·기록 이력 | SPEC 3.1 | 브라우저 시연 구현. 서버 연동 미구현 |
 
-`policy.py`의 구조·정책 검사는 현재 실험 러너가 재사용한다. `parser.py`·`store.py`와 서버 API는 설계 단계이며 프레임워크·저장 방식은 미정이다.
+실험 러너가 `policy.py`를 사용한다. 브라우저 MVP의 후보 제안은 `web/js/ai-stub.js`에서 처리한다.
+
+### 2.3 미구현 서버 설계
+
+| 구성 요소 | 설계한 역할 | 근거 | 상태 |
+|---|---|---|---|
+| `src/researchtrail/parser.py` | 메모 한 건으로 LLM 호출, 형식 복구 1회, 시간 제한 | SPEC 5.3, AC7 | 미생성 |
+| `src/researchtrail/store.py` | 과업·기록·맥락·확정 작업의 서버 저장과 과업별 조회 | SPEC 5.1~5.5, AC4~AC6 | 미생성, 저장 방식 미정 |
+| 서버 API | 과업 선택·기록 저장·후보 파싱·확정·재개 조회 등 SPEC에 정의한 경로 여섯 개 제공 | SPEC 5.1 | 미구현, 프레임워크 미정 |
 
 ## 3. 도구
 
