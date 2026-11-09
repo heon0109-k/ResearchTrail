@@ -5,10 +5,11 @@ function landingMark(){try{localStorage.setItem('researchtrail.landing','1')}cat
 var RET=false; /* 내 기록이 있는 채로 예시를 열었는지 */
 function hasMine(){if(S.papers.length&&!S.example)return true;try{var o=JSON.parse(localStorage.getItem(KEY)||'null');return !!(o&&o.papers&&o.papers.length&&!o.example)}catch(e){return false}}
 function showLanding(){
+  try{sessionStorage.setItem('researchtrail.screen','landing')}catch(e){}
   if(typeof S!=='undefined'&&S)S.bubble=null;
   var ch=curChar(),has=hasMine(),go=has?'내 타임라인으로':'시작하기';
   app.innerHTML='<div class="lp" id="lp">'+
-  '<header class="lp-nav"><a class="lp-brand" href="#" data-go="top"><span class="lp-bi">'+spr(ch.rows,1,'')+'</span>ResearchTrail<i>.</i></a>'+
+  '<header class="lp-nav"><a class="lp-brand" href="#" data-go="top">ResearchTrail<i>.</i></a>'+
     '<span class="sp"></span><nav class="lp-menu"><a href="#" data-go="lpDemo">미리보기</a><a href="#" data-go="lpTrail">사용 흐름</a></nav>'+
     '<button type="button" class="btn pri sm" data-lp="start" style="border-radius:999px">'+go+'</button></header>'+
   '<section class="lp-hero"><div class="lp-hl">'+

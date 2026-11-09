@@ -30,7 +30,7 @@ function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMont
 var uid=100;function nid(p){return p+(uid++)}
 var WD=['일','월','화','수','목','금','토'];
 
-var S={name:'',tags:[],papers:[],links:[],view:'card',bands:true,zoom:'month',sel:null,panel:'none',linking:null,hidden:new Set(),q:'',example:false,draft:null,why:false,judge:'',next:'',resumeOpen:true,prevSeen:0,saved:false};
+var S={overviewPan:0,listQuery:'',listScroll:0,overviewZoom:1,filterTag:null,name:'',tags:[],papers:[],links:[],view:'card',bands:true,zoom:'month',sel:null,panel:'none',linking:null,hidden:new Set(),q:'',example:false,draft:null,why:false,judge:'',next:'',resumeOpen:true,prevSeen:0,saved:false};
 var L={a:0,b:1,px:34,bandInfo:[],pos:{}};
 
 function tagBy(id){return S.tags.filter(function(t){return t.id===id})[0]||NOTAG}
@@ -41,13 +41,13 @@ function addTag(name){
   if(f)return f;
   var t={id:nid('t'),name:n,color:PAL[S.tags.length%PAL.length]};S.tags.push(t);return t;
 }
-function reset(){S.name='';S.tags=[];S.papers=[];S.links=[];S.view='card';S.bands=true;S.zoom='month';S.sel=null;S.panel='none';S.linking=null;S.hidden=new Set();S.q='';S.example=false;S.bubble=null;S.draft=null;S.judge='';S.next='';S.why=false;S.resumeOpen=true;D.pos=new Map();D.inited=false}
+function reset(){S.overviewPan=0;S.listQuery='';S.listScroll=0;S.overviewZoom=1;S.filterTag=null;S.name='';S.tags=[];S.papers=[];S.links=[];S.view='card';S.bands=true;S.zoom='month';S.sel=null;S.panel='none';S.linking=null;S.hidden=new Set();S.q='';S.example=false;S.bubble=null;S.draft=null;S.judge='';S.next='';S.why=false;S.resumeOpen=true;D.pos=new Map();D.inited=false}
 
 function loadSample(){
   reset();S.example=true;S.name='의료 논문 검색에 RAG를 쓰는 방법';
   var rag=addTag('RAG'),med=addTag('의료 LLM'),fm=addTag('기반 모델');
   var AX=[['Attention Is All','1706.03762'],['BERT: Pre','1810.04805'],['Retrieval-Augmented Generation for','2005.11401'],['Chain-of-Thought','2201.11903'],['Self-RAG','2310.11511']];
-  function P(id,tag,date,title,memo){var lk='';AX.forEach(function(a){if(title.indexOf(a[0])===0)lk='https://arxiv.org/abs/'+a[1]});S.papers.push({id:id,tag:tag.id,date:date,title:title,memo:memo,link:lk})}
+  function P(id,tag,date,title,memo){var lk='';AX.forEach(function(a){if(title.indexOf(a[0])===0)lk='https://arxiv.org/abs/'+a[1]});var source=typeof SAMPLE_PAPERS!=='undefined'&&SAMPLE_PAPERS[id];if(source)lk=source.source;S.papers.push({id:id,tag:tag.id,date:date,title:title,memo:memo,link:lk})}
   P('s1',fm,'2026-09-14','Attention Is All You Need','트랜스포머 구조부터 다시 정리. 이후 모든 논문의 기준점.');
   P('s2',fm,'2026-09-17','BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding','인코더 사전학습 방식 확인. 의료 도메인 모델의 출발점.');
   P('s3',med,'2026-09-21','BioBERT: a pre-trained biomedical language representation model for biomedical text mining','BERT를 의학 논문 텍스트로 다시 학습하면 얼마나 오르는지 확인.');
@@ -71,7 +71,7 @@ function loadSample(){
   S.papers.forEach(function(p){p.state=stt[p.id]||'skim'});
   S.judge='검색을 항상 하지 않는 Self-RAG 방식이 우리 요약 기능에 더 맞아 보임. Almanac의 평가 방법은 아직 확인 못 함.';
   S.papers.forEach(function(p){if(p.id==='s9')p.todo='Almanac 논문에서 임상 질문 평가 방법만 먼저 읽고 메모하기'});
-  S.papers.forEach(function(p){if(p.id==='s8'){p.page=7;p.total=26;p.todo='Table 2에서 비용·성능 비교 확인하기'}});
-  S.papers.forEach(function(p){if(p.id==='s8'){p.hl=[{id:'h_ex1',page:4,text:'global sensemaking questions over entire text corpora',kind:'개념·방법',mine:'코퍼스 전체를 보고 답해야 하는 큰 질문',rects:[[.12,.22,.55,.03]]},{id:'h_ex2',page:4,text:'community detection with the Leiden algorithm',kind:'개념·방법',mine:'',stuck:'term',unsure:'왜 하필 커뮤니티로 나누는지',solved:false,rects:[[.12,.34,.5,.03]]}]}});
+  S.papers.forEach(function(p){if(p.id==='s8'){p.page=7;p.total=15;p.todo='7쪽의 3.3절에서 C0~C3·TS·SS 비교 조건 확인하기'}});
+  S.papers.forEach(function(p){if(p.id==='s8')p.hl=[{"id": "h_ex1", "page": 1, "text": "global sensemaking questions over datasets", "kind": "개념·방법", "mine": "데이터셋 전체를 보고 답해야 하는 큰 질문", "rects": [[0.289347, 0.714532, 0.284406, 0.011246]]}, {"id": "h_ex2", "page": 4, "text": "In our pipeline, we use Leiden", "kind": "개념·방법", "mine": "", "stuck": "term", "unsure": "왜 하필 커뮤니티로 나누는지", "solved": false, "rects": [[0.394134, 0.689431, 0.202296, 0.011246]]}]});
   showMain();
 }
