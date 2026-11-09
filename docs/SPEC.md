@@ -6,6 +6,8 @@
 
 근거는 로그 4 [P04-Q03][I04-03]·[Q10][I04-10]·[Q11][I04-11]과 로그 6 [P06-Q03][I06-03]·[Q10][I06-10]이다. 문제의 반례, 시간값의 해석, 대상 범위 조정과 반증 조건은 [PROBLEM.md](PROBLEM.md#evidence)에 둔다.
 
+추가 조사에서 S03은 여러 기록을 되짚어 진행 상황을 파악하고 다음 할 일을 정했다. S02는 기존 PDF와 여백 메모로 수월하게 이어 읽었고, S01은 확인할 일이 정해진 상태에서 원문 세부 정보를 찾는 데 어려움을 겪었다. [추가 조사 사례 비교](research/interview.md#supplementary-case-comparison)
+
 이번 제품은 **이미 기록한 맥락을 되찾아 다음 행동으로 이어 가는 것**을 돕는다. 기록 위치를 찾았다고 수식 이해, 과학적 판단, 실험 실행까지 해결되었다고 주장하지 않는다.
 
 <a id="users"></a>
@@ -420,13 +422,12 @@ context:
 | `tests/web_long_candidate.test.cjs` | 긴 후보·70자 경계·유니코드·원문·비동기 반환 보존 | 회귀 실행 통과(팀 승인 전 초안). 규칙 기반 시연 검사 |
 | `tests/web_todo_consistency.test.cjs` | 논문별 작업의 공통 표시·수동/확인 저장·이전 전체 메모 보존·논문 간 분리 | 회귀 실행 통과(팀 승인 전 초안). 서버의 과업별 분리와는 별도 |
 | `tests/web_record_history.test.cjs` | 메모 버전·후보/최종값 분리·취소·저장 실패와 중복 방지·늦은 응답·재접속 | 회귀 실행 통과(팀 승인 전 초안). 서버 API·다중 과업 이력은 미검증 |
-| `docs/research/policy_golden_cases.yaml`, `tests/test_policy_golden.py` | `validate_output` 고정 응답 14건 | 팀 검토 전 초안. 모델 품질·전체 재시도·저장 검증과 구분 |
+| `tests/harness/golden_cases.yaml`, `tests/test_policy_golden.py` | `validate_output` 고정 응답 14건 | 팀 검토 전 초안. 모델 품질·전체 재시도·저장 검증과 구분 |
 | `tests/web_timeline_visibility.test.cjs` | 재접속 시 마지막 열람 카드의 가시 영역 보정·기존 위치 유지 | 회귀 실행 통과(팀 승인 전 초안). 브라우저에서 저장 위치 3종 보정 확인 |
 | `tests/web_unknown_state.test.cjs` | 미기록·레거시 읽기 상태 보존·안전한 표시·읽기 진입·저장 복원 | 회귀 검사 초안. 브라우저 상태 선택·해제 확인, 서버 상태 검증은 미구현 |
 | `tests/web_candidate_context.test.cjs` | 같은 행동의 상태 설명·행동 없는 기한 설명·독립 작업 구분 15건 | 브라우저 예시 회귀 초안. 네 필드 추출·의미 정확도 전체 통과와 구분 |
 | `tests/web_missing_context.test.cjs` | 위치·이유 미기록 표시, 전체 메모 보존과 논문 판단 오귀속 방지 | 브라우저 회귀 초안. Decision·출처·검토 상태·과업 API 전체 검증 아님 |
 | `tests/web_link_persistence.test.cjs` | 상세 패널 링크 수정·삭제 즉시 저장·재접속·저장 실패와 재시도 | 브라우저 회귀 초안. 링크의 원문 내용이나 안전성을 검증하는 검사가 아님 |
-| `tests/harness/golden_cases.yaml` | 아직 제목만 있는 자리표시자 | 입력·기대 조건은 검토 중. 승인된 골든 하니스 실행 결과 없음 |
 
 다음 제안 사례 ID를 위 5개·6개 검사와 1:1 대응해 통과했다고 해석하지 않는다. 서버 저장·재개·오류 통합 검사는 아래의 미구현 경로에 해당한다.
 
@@ -458,7 +459,7 @@ context:
 
 ### 7.2 판정 가능한 기준 초안
 
-- AC3의 기준 사례는 research/semantic_cases_draft.yaml이다. 기존 tests/harness/golden_cases.yaml은 승인된 기대값이 없어 자리표시자 상태를 보존한다. 의미 사례 20건·합격 18건 이상·잘못된 완료 귀속과 없는 장애·기한 생성 각 0건을 제안한다. 실행 전 팀 검토가 필요하다.
+- AC3의 의미 평가 사례는 [semantic_cases_draft.yaml](research/semantic_cases_draft.yaml)에 둔다. [골든 하니스](../tests/harness/golden_cases.yaml)의 고정 응답 14건은 검사 함수의 결정적 동작을 검증하는 팀 검토 전 초안이다. 의미 사례 20건·합격 18건 이상·잘못된 완료 귀속과 없는 장애·기한 생성 각 0건을 제안한다. 실행 전 팀 검토가 필요하다.
 - AC6은 같은 초안의 CONTEXT-DRAFT-01·02 및 기존 6.2절 4개 맥락 검사 제안을 함께 검토한다. 제품 테스트에서는 미기록 판단·위치 자동 생성 0건, 기록 내용 보존 100%, 링크만으로 검증 완료를 표시하는 경우 0건, 재개 시 외부 호출 0회를 요구하는 초안이다. 자동 URL 접속 성공을 의미상 근거 검증으로 사용하지 않는다.
 - 위험 가정·실험 단위·합격선·실행 중단 기준은 spikes/next_action_attribution.md에 작성했다. 숫자는 계획 제안이며 평가 결과가 아니다.
 - 원문 상태 속성은 자유 텍스트로 보존한다. 화면 선택값의 닫힌 목록을 7.4절과 ontology.yaml의 ui_selection에 정의했다. 기존 읽기 값과 모델의 네 필드 계약을 유지한다.
@@ -552,3 +553,9 @@ noteHistory·actionHistory는 논문별 브라우저 이력을 위한 기술 필
 확인 저장 실패 시 작업 값과 해당 확인 이력을 함께 되돌리고 후보를 유지한다. 동일 확인의 재시도는 같은 식별자를 쓰며, 이미 처리한 화면의 반복 클릭은 새 확인을 만들지 않는다. 같은 논문에서 더 최근 요청이 시작된 뒤 도착한 이전 응답은 새 후보를 덮어쓰지 않는다.
 
 이력 없는 이전 데이터는 현재 메모와 현재 작업을 보존하는 데서 시작한다. 예전 작업의 최초 후보·작성 시각·원문 연결은 추정하지 않고 미기록으로 취급한다. 이 브라우저를 벗어나는 서버 영속 저장·다중 기기 동기화·과업별 접근 제어는 미구현이다.
+
+[I04-03]: research/interview.md#p04-q03
+[I04-10]: research/interview.md#p04-q10
+[I04-11]: research/interview.md#p04-q11
+[I06-03]: research/interview.md#p06-q03
+[I06-10]: research/interview.md#p06-q10

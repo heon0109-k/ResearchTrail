@@ -5,9 +5,9 @@ metadata:
   intended_repository_path: docs/ontology.yaml
   source_interview:
     path: docs/research/interview.md
-    sha256: 9a63f9f7af0e6dd7382bbca34c39f69d3f812828b8ce626abfdcb764f4cb3e5b
-    line_count: 2345
-    note: evidence는 이 파일의 로그 번호와 응답 ID를 참조한다. 원문 응답과 분석 내용을 구분한다.
+    sha256: c0a48e1bd687009a01febd34148b6905c43d6da27975dca32b005bbfffbb01dc
+    line_count: 2671
+    note: evidence는 기존 인터뷰 로그와 추가 조사 응답을 참조한다. 원문 응답·익명 요약·분석 내용을 구분한다.
   format_basis:
     filename: 강의02_도메인발견_온톨로지_작성지침.md
     section: E. 미니 온톨로지
@@ -21,7 +21,7 @@ metadata:
   reading_order: [modeling_conventions, vocabulary_decisions, classes, scope, core_job, findings_coverage, comparison_checks,
     team_review]
 modeling_conventions:
-  evidence_format: 로그 N / PXX-QYY[-FZ]. 숫자는 interview.md 3.2절 로그, 응답 ID는 4절의 해당 질문·후속 응답을 가리킨다.
+  evidence_format: 기존 인터뷰는 로그 N / PXX-QYY[-FZ]로 표기한다. 추가 구글폼 조사는 추가 설문 / SXX-QYY[-FZ] 또는 추가 설문 / SXX 후속으로 표기한다. P는 3.2절, S는 3.4절 색인에 연결되며, 문답과 후속 답변은 4절에서 확인한다.
   evidence_status: evidence는 수록 응답의 개념·구분·행동 근거다. 이 YAML의 구조가 사용자의 기존 도구에 이미 구현되었다거나 새 제품의 효과가 확인되었다는 뜻이 아니다.
   finding_references: FND-01–FND-14는 같은 interview.md 6.1절의 분석 후보다. 원응답을 대신하지 않는다.
   identity: 클래스는 개념 유형이다. P01–P10, 자료 A, 특정 회의·논문은 검토 근거 또는 사례이며 클래스 정의가 아니다.
@@ -647,7 +647,7 @@ classes:
     - consulted: ResearchRecord
       cardinality: 0..*
       description: 재개 중 실제로 확인한 기존 기록.
-      evidence: [로그 2 / P02-Q10, 로그 3 / P03-Q10, 로그 4 / P04-Q10, 로그 5 / P05-Q10]
+      evidence: [로그 2 / P02-Q10, 로그 3 / P03-Q10, 로그 4 / P04-Q10, 로그 5 / P05-Q10, 추가 설문 / S03-Q10-F1]
     - reopened: DocumentArtifact
       cardinality: 0..*
       description: 재개 중 다시 연 원문 표현물.
@@ -757,7 +757,7 @@ core_job:
   status: 원문도 검토 후보이며, 다음 되쓰기는 온톨로지 연결을 점검하기 위한 후보 표현이다.
   original_text: 낯선 연구 주제의 출발 방향을 정하려고 여러 논문과 설명을 읽다가 작업을 중단했을 때, 나는 자료를 남긴 이유와 마지막 판단, 남아 있는 확인 작업을 함께 되찾고 싶다.
     그래야 이전 대화를 전부 다시 훑지 않고 현재 과제에 필요한 검토를 이어 갈 수 있다.
-  evidence: [로그 4 / P04-Q03, 로그 4 / P04-Q10, 로그 4 / P04-Q12, 로그 6 / P06-Q03, 로그 6 / P06-Q10]
+  evidence: [로그 4 / P04-Q03, 로그 4 / P04-Q10, 로그 4 / P04-Q12, 로그 6 / P06-Q03, 로그 6 / P06-Q10, 추가 설문 / S03-Q10]
   agreed_job_text: 과제·프로젝트·스터디·연구를 위해 논문을 읽는 학생이 문헌 과업을 중단했다가 재개할 때, 기록된 자료 사용 이유·판단 또는 질문·확인된 다음 작업을 함께 되찾아 검토를 이어 간다.
   ontology_restatement: |
     ResearchTask를 중단한 뒤 ResumeEpisode가 시작되면, 해당 과업의 DocumentUse에서
@@ -772,8 +772,8 @@ core_job:
   - [ResumeEpisode.recovered_question, ResearchQuestion.documented_in]
   - [ResumeEpisode.recovered_decision, Decision.documented_in]
   - [ResumeEpisode.started, NextAction.based_on, Decision.documented_in]
-  baseline_note: P03·P05·P08의 기존 방식과 P04·P10의 짧은 종료 메모 개선을 유지한다. 모든 링크를 새로 입력해야 한다거나 별도 그래프 화면이 필수라는 뜻이 아니다.
-  baseline_evidence: [로그 3 / P03-Q10, 로그 5 / P05-Q10, 로그 8 / P08-Q10, 로그 4 / P04-Q15, 로그 10 / P10-Q15]
+  baseline_note: P03·P05·P08의 기존 방식과 P04·P10의 짧은 종료 메모 개선을 유지한다. S02는 PDF의 읽던 위치와 여백 메모로 수월하게 재개했다. 모든 링크를 새로 입력해야 한다거나 별도 그래프 화면이 필수라는 뜻이 아니다.
+  baseline_evidence: [로그 3 / P03-Q10, 로그 5 / P05-Q10, 로그 8 / P08-Q10, 로그 4 / P04-Q15, 로그 10 / P10-Q15, 추가 설문 / S02 후속]
 findings_coverage:
 - finding: FND-01
   classes: [Document, DocumentUse, ResearchQuestion]
@@ -781,16 +781,16 @@ findings_coverage:
   evidence: [로그 1 / P01-Q03, 로그 4 / P04-Q03, 로그 7 / P07-Q03]
 - finding: FND-02
   classes: [ResearchTask, ResearchRecord, Decision, NextAction, ResumeEpisode]
-  representation_or_boundary: 기존 판단·다음 작업을 재개 때 되찾는 연결.
-  evidence: [로그 1 / P01-Q10, 로그 4 / P04-Q10, 로그 10 / P10-Q10]
+  representation_or_boundary: 기존 판단·다음 작업을 재개 때 되찾는 연결. S03은 이전 대화와 엑셀에서 진행 상황을 되찾고 다음 할 일을 정했다. 기존 판단을 되찾았는지와 실제 첫 작업은 미확인이므로 이 사례의 recovered_decision과 started는 기록하지 않는다.
+  evidence: [로그 1 / P01-Q10, 로그 4 / P04-Q10, 로그 10 / P10-Q10, 추가 설문 / S03-Q10, 추가 설문 / S03-Q10-F3]
 - finding: FND-03
   classes: [ResearchQuestion, ResearchRecord, ResumeEpisode]
   representation_or_boundary: P02의 후속 질문 흐름과 대화 재검토. 파일 미확보·모델 기억 실패로 바꾸지 않음.
   evidence: [로그 2 / P02-Q10, 로그 2 / P02-Q11, 로그 2 / P02-Q16-F1]
 - finding: FND-04
   classes: [NextAction, ResearchRecord, ResumeEpisode]
-  representation_or_boundary: 기존 메모·링크로 수월하게 재개한 경우도 표현.
-  evidence: [로그 3 / P03-Q10, 로그 5 / P05-Q10, 로그 4 / P04-Q15, 로그 8 / P08-Q10]
+  representation_or_boundary: 기존 메모·링크로 수월하게 재개한 경우도 표현. S02는 PDF가 읽던 페이지로 열렸고 여백 메모를 보고 이어 읽었다.
+  evidence: [로그 3 / P03-Q10, 로그 5 / P05-Q10, 로그 4 / P04-Q15, 로그 8 / P08-Q10, 추가 설문 / S02 후속]
 - finding: FND-05
   classes: [ResearchRecord, DocumentUse]
   representation_or_boundary: 필요한 내용과 외부 기록 위치를 남기되 긴 양식·중복 입력을 필수화하지 않는 경계.
@@ -821,8 +821,8 @@ findings_coverage:
   evidence: [로그 4 / P04-Q14-F1, 로그 7 / P07-Q14, 로그 10 / P10-Q14, 로그 5 / P05-Q14]
 - finding: FND-12
   classes: [ResearchQuestion, DocumentArtifact, NextAction, ResumeEpisode]
-  representation_or_boundary: 기록 복원, 이해 미완료, 자료 확보 대기의 원인과 결과를 분리.
-  evidence: [로그 2 / P02-Q16-F1, 로그 6 / P06-Q10, 로그 9 / P09-Q08]
+  representation_or_boundary: 기록 복원, 이해 미완료, 자료 확보 대기의 원인과 결과를 분리. S01은 확인할 일이 정해진 상태에서 원문의 구현 조건을 찾으려 했으므로 검색과 재독을 작업 맥락 복원 시간으로 집계하지 않는다.
+  evidence: [로그 2 / P02-Q16-F1, 로그 6 / P06-Q10, 로그 9 / P09-Q08, 추가 설문 / S01 후속]
 - finding: FND-13
   classes: [DocumentArtifact, ResearchRecord]
   representation_or_boundary: 참조·공유 범위의 경계. 특정 조직의 공식 규정이나 계정 구조를 생성하지 않음.

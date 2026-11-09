@@ -15,14 +15,19 @@ var TOUR_STEPS=[
   {st:'timeline',sel:'nav.sgp',t:'세 가지 보기',d:'타임라인은 읽은 순서, 연결 그래프는 논문 사이의 관계, 내용 찾기는 표시해 둔 수식·그림·메모의 위치를 다시 찾는 곳이에요.'},
   {st:'timeline',sel:'.sgt',t:'태그',d:'태그로 논문을 묶어요. + 를 누르면 새 태그를 만들 수 있고, 태그를 누르면 해당 논문만 보이고, 다시 누르거나 "전체"를 누르면 돌아와요. "태그 구분 없이 보기"를 켜면 줄을 합쳐 볼 수 있어요.'},
   {st:'timeline',sel:'#fcard',t:'기간 조절',d:'1주·1달·전체로 보는 기간을 바꾸고, 아래 막대로 다른 시기로 이동해요.'},
-  {core:1,st:'timeline',sel:null,t:'이제 직접 해 보세요',d:'연습용 카드는 패널 맨 아래 "이 논문 삭제"로 지울 수 있어요. 첫 논문을 추가하며 시작해 보세요. 오른쪽 위 "사용법"을 누르면 태그·보기 방식까지 포함한 전체 안내를 다시 볼 수 있어요.'}
+  {core:1,st:'timeline',sel:null,t:'이제 직접 해 보세요',d:'연습용 카드는 패널 맨 아래 "삭제"로 지울 수 있어요. 첫 논문을 추가하며 시작해 보세요. 오른쪽 위 "사용법"을 누르면 태그·보기 방식까지 포함한 전체 안내를 다시 볼 수 있어요.'}
 ];
 function tutPaper(){return S.papers.filter(function(p){return p.tut})[0]||S.papers.slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date))})[0]||null}
 /* 처음 시작할 때 오늘 날짜로 연습용 빈 카드를 하나 만든다 (안내용, 지워도 됨) */
 function addTutCard(){
   if(S.papers.length)return null;
   var p={id:nid('p'),tag:'',date:todayStr(),title:'연습용 카드 · 눌러서 열어 보세요',memo:'사용법을 익히는 빈 카드예요. 다 써 봤으면 지워도 돼요.',link:'',state:'skim',tut:true};
-  S.papers.push(p);renderAll();if(typeof save==='function')save();return p;
+  S.papers.push(p);
+  renderAll();
+  S.focusTodayOnce=true;
+  focusStart();
+  if(typeof save==='function')save();
+  return p;
 }
 function tourEnsure(st){
   var p=tutPaper();

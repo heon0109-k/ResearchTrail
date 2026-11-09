@@ -1,19 +1,63 @@
 'use strict';
 /* ---------- PDF.js viewer with highlights ---------- */
 var PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+var pdfJsLoading=null;
 function loadPdfJs(){
   if(window.pdfjsLib&&pdfjsLib.GlobalWorkerOptions.workerSrc)return Promise.resolve();
-  return new Promise(function(res,rej){
+  if(pdfJsLoading)return pdfJsLoading;
+  pdfJsLoading=new Promise(function(res,rej){
     var go=function(){fetch(PDFJS+'pdf.worker.min.js').then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(t){pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t],{type:'text/javascript'}));res()}).catch(rej)};
     if(window.pdfjsLib)return go();
     var sc=document.createElement('script');sc.src=PDFJS+'pdf.min.js';sc.onload=go;sc.onerror=rej;document.head.appendChild(sc);
-  });
+  }).finally(function(){pdfJsLoading=null});
+  return pdfJsLoading;
+}
+function paperResourceKind(url){
+  var u=new URL(url),host=u.hostname.replace(/^www\./,'');
+  if((host==='github.com'||host==='gitlab.com'||host==='bitbucket.org')&&u.pathname.split('/').filter(Boolean).length>=2)return 'code';
+  if((host==='huggingface.co'&&u.pathname.startsWith('/datasets/'))||
+    (host==='kaggle.com'&&u.pathname.startsWith('/datasets/'))||
+    (host==='zenodo.org'&&/^\/records?\//.test(u.pathname))||
+    (host==='figshare.com'||host.endsWith('.figshare.com'))||host==='datadryad.org'||host==='archive.ics.uci.edu')return 'data';
+  return '';
+}
+function paperResourcePdfUrl(p){
+  var link=safeExternalUrl(p.link);
+  return samplePdfUrl(p)||pdfUrlOf(p.link)||(link&&/\.pdf$/i.test(new URL(link).pathname)?link:'');
+}
+async function findPaperResources(p,isCurrent,uploadedFile){
+  var file=uploadedFile||(p.pdf?await idbGet(p.id):null);
+  var url=file?'':paperResourcePdfUrl(p);
+  if(!file&&!url)return null;
+  await loadPdfJs();
+  if(!isCurrent())return [];
+  var source=file?{data:await file.arrayBuffer()}:{url:url};
+  var task=pdfjsLib.getDocument({...source,isEvalSupported:false});
+  var found=new Map();
+  try{
+    var doc=await task.promise;
+    for(var n=1;n<=doc.numPages&&isCurrent();n++){
+      var page=await doc.getPage(n);
+      var parts=await Promise.all([page.getAnnotations(),page.getTextContent()]);
+      var words=parts[1].items.map(function(item){return item.str||''}).join(' ');
+      var links=parts[0].map(function(annotation){return annotation.url}).filter(Boolean);
+      (words.match(/(?:https?:\/\/|\b(?:github\.com|gitlab\.com|huggingface\.co|kaggle\.com)\/)[^\s<>"“”]+/gi)||[]).forEach(function(raw){
+        links.push(raw.replace(/[.,;:!?\])}]+$/,''));
+      });
+      links.forEach(function(raw){
+        var href=safeExternalUrl(raw),kind=href&&paperResourceKind(href);
+        if(kind&&!found.has(href))found.set(href,{url:href,kind:kind,page:n});
+      });
+      page.cleanup();
+    }
+    return Array.from(found.values());
+  }finally{await task.destroy()}
 }
 var PV=null;
 function killPv(){if(PV){try{PV.io&&PV.io.disconnect();PV.doc&&PV.doc.destroy()}catch(e){}PV=null}var b=$('#hlbar');if(b)b.remove()}
 function toast(t){var el=$('#rdtoast');if(!el){el=document.createElement('div');el.id='rdtoast';el.className='rdtoast';document.body.appendChild(el)}el.textContent=t;el.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){el.classList.remove('on')},4200)}
 function openPv(p,src,page){
-  return loadPdfJs().then(function(){return pdfjsLib.getDocument(src).promise}).then(function(doc){
+  return loadPdfJs().then(function(){return pdfjsLib.getDocument({...src,isEvalSupported:false}).promise}).then(function(doc){
     if(RD.id!==p.id){doc.destroy();return}
     var box=$('#rdsrc');
     box.innerHTML='<div class="pvwrap"><div class="pvbar"><button type="button" class="btn sm" id="pvPrev" aria-label="이전 쪽">◀</button><span class="pvpg"><input type="number" min="1" id="pvNum" value="1"> / <b id="pvTot">'+doc.numPages+'</b></span><button type="button" class="btn sm" id="pvNext" aria-label="다음 쪽">▶</button><span class="sp"></span><button type="button" class="btn sm" id="pvMinus" aria-label="축소">−</button><span id="pvZ" class="pvz">100%</span><button type="button" class="btn sm" id="pvPlus" aria-label="확대">＋</button><button type="button" class="btn sm" id="pvCap" aria-pressed="false" title="깨지는 수식이나 그래프를 이미지로 저장">영역 캡처</button>'+togHtml()+'</div><div class="pvscroll" id="pvs"></div></div>';

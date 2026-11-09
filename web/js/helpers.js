@@ -26,6 +26,19 @@ function paperResumeContext(p){
     reasonLabel:inc?'넘어온 이유':'저장 이유',
     reasonText:typeof reason==='string'&&reason.trim()?reason:'미기록/확인 필요'};
 }
+function lastReadingMemo(p){
+  var history=p.noteHistory||[];
+  for(var i=history.length-1;i>=0;i--){
+    var source=readingSource(p,history[i].source_highlight_id||'legacy-note');
+    if(source&&source.text.trim())return source.text.trim();
+  }
+  var records=p.hl||[];
+  for(var j=records.length-1;j>=0;j--){
+    var text=records[j].mine;
+    if(typeof text==='string'&&text.trim())return text.trim();
+  }
+  return typeof p.note==='string'?p.note.trim():'';
+}
 function renderResume(){
   var el=$('#resume');if(!el)return;
   var p=curPaper();if(!p){el.hidden=true;return}
@@ -64,7 +77,7 @@ function save(){
     var revision=current&&Number.isSafeInteger(current.storageRevision)?current.storageRevision:0;
     if(STORE_REVISION!==null&&currentRaw&&revision!==STORE_REVISION){conflict=true;throw new Error('STORAGE_FAILURE')}
     var nextRevision=Math.max(revision,STORE_REVISION||0)+1;
-    var o={v:3,storageRevision:nextRevision,name:S.name,tags:S.tags,papers:S.papers.map(function(p){return {id:p.id,tag:p.tag,date:p.date,title:p.title,memo:p.memo,link:p.link,state:p.state==null?null:p.state,note:p.note||'',noteHistory:Array.isArray(p.noteHistory)?p.noteHistory:[],actionHistory:Array.isArray(p.actionHistory)?p.actionHistory:[],page:p.page||'',hl:p.hl||[],todo:p.todo||'',todoSrc:p.todoSrc||'',lastReadOrder:Number.isSafeInteger(p.lastReadOrder)&&p.lastReadOrder>0?p.lastReadOrder:0,total:p.total||'',abs:p.abs||'',authors:p.authors||'',year:p.year||'',pdf:!!p.pdf,fname:p.fname||'',tut:p.tut?true:undefined}}),links:S.links,view:S.view,filterTag:S.filterTag==null?null:S.filterTag,bands:S.bands,zoom:S.zoom,why:S.why,judge:S.judge,next:S.next,resumeOpen:S.resumeOpen,scroll:S.scroll||null,bubbleDay:S.bubbleDay||'',example:S.example,reader:S.reader||null,uid:uid,seen:Date.now()};
+    var o={v:3,storageRevision:nextRevision,name:S.name,tags:S.tags,papers:S.papers.map(function(p){return {id:p.id,tag:p.tag,date:p.date,title:p.title,memo:p.memo,link:p.link,state:p.state==null?null:p.state,note:p.note||'',noteHistory:Array.isArray(p.noteHistory)?p.noteHistory:[],actionHistory:Array.isArray(p.actionHistory)?p.actionHistory:[],page:p.page||'',hl:p.hl||[],todo:p.todo||'',todoSrc:p.todoSrc||'',lastReadOrder:Number.isSafeInteger(p.lastReadOrder)&&p.lastReadOrder>0?p.lastReadOrder:0,total:p.total||'',abs:p.abs||'',authors:p.authors||'',year:p.year||'',pdf:!!p.pdf,fname:p.fname||'',resources:Array.isArray(p.resources)?p.resources:undefined,tut:p.tut?true:undefined}}),links:S.links,view:S.view,filterTag:S.filterTag==null?null:S.filterTag,bands:S.bands,zoom:S.zoom,why:S.why,judge:S.judge,next:S.next,resumeOpen:S.resumeOpen,scroll:S.scroll||null,bubbleDay:S.bubbleDay||'',example:S.example,reader:S.reader||null,uid:uid,seen:Date.now()};
     localStorage.setItem(KEY,JSON.stringify(o));STORE_REVISION=nextRevision;S.saved=true;
   }catch(e){S.saved=false}
   var el=$('#saved');if(el)el.hidden=!S.saved;
@@ -171,7 +184,7 @@ function load(options){
       }catch(e){}
       S.restoreViewOnce=true;
     }
-    if(options&&options.timeline){S.reader=null;S.view='card'}
+    if(options&&options.timeline){S.reader=null;S.view='card';S.zoom='month'}
     uid=Math.max(uid,+o.uid||0);S.prevSeen=+o.seen||0;
     showMain();return true;
   }catch(e){return false}
@@ -210,7 +223,7 @@ function rememberTabView(){
 }
 
 if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('pagehide',function(){
-  var sc=$('#scroller');if(sc&&!S.reader&&S.view==='card')S.scroll={l:sc.scrollLeft,t:sc.scrollTop,z:S.zoom};
+  var sc=$('#scroller');if(sc&&!S.reader&&S.view==='card')S.scroll=timelineScrollState(sc);
   var list=$('#paperList');if(list&&!S.reader&&S.view==='list')S.listScroll=list.scrollTop;
   rememberTabView();
 });

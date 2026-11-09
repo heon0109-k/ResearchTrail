@@ -28,7 +28,7 @@
 | 발표 이후 추가 조사 | S01–S03 | 원문 세부 정보 재탐색, 기존 기록을 활용한 재개, 진행 상황 복원을 보여 주는 보완 사례. 기존 3명 판정과 구분 |
 | 인접 사례 | P02 및 그 밖의 참가자 | 질문 흐름, 원문 위치, 기록 상태 등의 경계를 이해하는 자료. 학부생 표본 수에 더하지 않음 |
 
-이 구분은 인터뷰 3.3절을 따른다. 전체 인터뷰 기록은 P01–P10이지만, **기존 조사에서 우선 분석한 학부생 사례는 P04–P06 세 명**이다. 서로 다른 전공·역할의 열 명을 같은 타깃 사용자 열 명으로 바꾸지 않는다. [참가자·집단 구분](research/interview.md)
+이 구분은 인터뷰 3.3절을 따른다. 전체 인터뷰 기록은 P01–P10이지만, **기존 조사에서 우선 분석한 학부생 사례는 P04–P06 세 명**이다. 서로 다른 전공·역할의 열 명을 같은 타깃 사용자 열 명으로 바꾸지 않는다. [참가자·집단 구분](research/interview.md#participant-groups)
 
 <a id="non-target-users"></a>
 ### 2.3 현재 비대상
@@ -60,6 +60,8 @@
 | E06 | P05는 논문을 읽음, 실행 준비, 실제 실행을 구분했다. P04의 저장된 AI 답은 선배와 회의에서 정한 기준선과 별개였다. | 저장·읽음·채택·착수·완료를 하나의 상태로 합치지 않는다. AI 설명을 사람의 실제 결정으로 바꾸지 않는다. | 로그 5: [Q08][I05-08], [Q11][I05-11], [Q12][I05-12]; 로그 4: [Q09-F1][I04-09-F1] |
 
 분석 후보와의 연결: E01은 FND-01, E02는 FND-02, E04는 FND-04, E05는 FND-05, E06은 FND-10과 연결된다. 발견 항목은 원응답을 대신하지 않으며, 최종 판단은 위 응답 ID로 되돌아가 확인한다.
+
+추가 설문 S01–S03이 기존 발견을 뒷받침하거나 그 범위를 좁히는 지점은 [추가 조사 사례 비교](research/interview.md#supplementary-case-comparison)에 정리했다.
 
 ### 3.2 반례와 현재 대안
 
@@ -113,9 +115,9 @@ P06은 질문을 다시 적고 목적을 되찾은 뒤에도 수식 이해의 �
 
 ## 5. 추가 조사와 검증 계획 — 2026-11-09 업데이트
 
-[추가 학부생 설문 분석](research/interview.md#additional-survey)에 교수 피드백을 반영한 추가 조사 응답 세 건을 정리했다. S01–S03은 기존 인터뷰와 별도로 참여한 학부연구생이며, 후속 답변은 각자의 구글폼 응답 기록에 연결했다.
+[추가 학부생 설문 분석](research/interview.md#additional-survey)에 교수 피드백을 반영한 추가 조사 응답 세 건을 정리했다. S01–S03은 기존 인터뷰에 참여하지 않은 학부연구생 3명이다. 각 후속 답변은 같은 응답자의 구글폼 기록에 연결했다.
 
-[S01 후속](research/interview.md#s01-resume-case)은 원문에서 이미지 크기 조정 방법을 찾으려 한 사례다. [S02 후속](research/interview.md#s02-resume-case)은 PDF의 이전 페이지와 여백 메모를 활용해 수월하게 재개한 사례다. [S03 후속](research/interview.md#s03-q10-f1)은 대화와 엑셀을 다시 보며 진행 상황을 파악하고 다음 할 일을 정한 사례다. 사례별 시간과 활동 범위는 [추가 조사 사례 비교](research/interview.md#supplementary-case-comparison)에 정리했다.
+[S01 후속](research/interview.md#s01-resume-case)은 원문에서 이미지 크기 조정 방법을 찾으려 한 사례다. [S02 후속](research/interview.md#s02-resume-case)은 PDF의 이전 페이지와 여백 메모를 활용해 수월하게 재개한 사례다. [S03 후속](research/interview.md#s03-q10-f1)은 대화와 엑셀을 다시 보며 진행 상황을 파악하고 다음 할 일을 정한 사례다. [S01-Q10](research/interview.md#s01-q10)에서는 PDF에 남긴 표시와 이전 정리로 읽던 부분부터 이어 봤다. [S02-Q15](research/interview.md#s02-q15)의 수식·그래프 재탐색은 발표 자료에 쓸 원문 위치를 찾는 일이었다. 정리 방식 변경 후의 시간 감소는 응답자의 회상으로 기록한다. 사례별 시간과 활동 범위는 [추가 조사 사례 비교](research/interview.md#supplementary-case-comparison)에 정리했다.
 
 ### 5.1 문제 실재 기준과 추가 설문의 관계
 
@@ -181,3 +183,28 @@ P06은 질문을 다시 적고 목적을 되찾은 뒤에도 수식 이해의 �
 | R1 | | | | | | | | | |
 | R2 | | | | | | | | | |
 | R3 | | | | | | | | | |
+
+[I04-03]: research/interview.md#p04-q03
+[I04-03-F1]: research/interview.md#p04-q03-f1
+[I04-09-F1]: research/interview.md#p04-q09-f1
+[I04-10]: research/interview.md#p04-q10
+[I04-10-F1]: research/interview.md#p04-q10-f1
+[I04-11]: research/interview.md#p04-q11
+[I04-12]: research/interview.md#p04-q12
+[I04-15]: research/interview.md#p04-q15
+[I04-15-F1]: research/interview.md#p04-q15-f1
+[I04-16]: research/interview.md#p04-q16
+[I04-16-F1]: research/interview.md#p04-q16-f1
+[I05-08]: research/interview.md#p05-q08
+[I05-10]: research/interview.md#p05-q10
+[I05-10-F1]: research/interview.md#p05-q10-f1
+[I05-11]: research/interview.md#p05-q11
+[I05-12]: research/interview.md#p05-q12
+[I05-15-F1]: research/interview.md#p05-q15-f1
+[I06-03]: research/interview.md#p06-q03
+[I06-10]: research/interview.md#p06-q10
+[I06-10-F1]: research/interview.md#p06-q10-f1
+[I06-11]: research/interview.md#p06-q11
+[I06-11-F1]: research/interview.md#p06-q11-f1
+[I06-15]: research/interview.md#p06-q15
+[I06-16]: research/interview.md#p06-q16

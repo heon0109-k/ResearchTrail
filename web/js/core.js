@@ -41,7 +41,7 @@ function addTag(name){
   if(f)return f;
   var t={id:nid('t'),name:n,color:PAL[S.tags.length%PAL.length]};S.tags.push(t);return t;
 }
-function reset(){S.overviewPan=0;S.listQuery='';S.listScroll=0;S.overviewZoom=1;S.filterTag=null;S.name='';S.tags=[];S.papers=[];S.links=[];S.view='card';S.bands=true;S.zoom='month';S.sel=null;S.panel='none';S.linking=null;S.hidden=new Set();S.q='';S.example=false;S.bubble=null;S.draft=null;S.judge='';S.next='';S.why=false;S.resumeOpen=true;D.pos=new Map();D.inited=false}
+function reset(){S.timelineRange=null;S.overviewPan=0;S.listQuery='';S.listScroll=0;S.overviewZoom=1;S.filterTag=null;S.name='';S.tags=[];S.papers=[];S.links=[];S.view='card';S.bands=true;S.zoom='month';S.sel=null;S.panel='none';S.linking=null;S.hidden=new Set();S.q='';S.example=false;S.bubble=null;S.draft=null;S.judge='';S.next='';S.why=false;S.resumeOpen=true;D.pos=new Map();D.inited=false}
 
 function loadSample(){
   reset();S.example=true;S.name='의료 논문 검색에 RAG를 쓰는 방법';

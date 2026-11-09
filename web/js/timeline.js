@@ -3,13 +3,18 @@
 function rng(){
   var ds=S.papers.filter(visible).map(function(p){return dnum(p.date)});if(!ds.length)ds=[dnum(todayStr())];
   var a=Math.min.apply(null,ds)-14,b=Math.max.apply(null,ds)+14;
-  if(S.zoom!=='all'){var td=dnum(todayStr());a=Math.min(a,td-913);b=Math.max(b,td+913)}
-  if(b-a<60){var m=(a+b)/2;a=m-30;b=m+30}
+  var minimumDays=S.zoom==='all'?60:30;
+  if(S.zoom!=='all'){
+    var today=dnum(todayStr());
+    a=Math.min(a,today-14);b=Math.max(b,today+14);
+    if(S.timelineRange){a=Math.min(a,S.timelineRange[0]);b=Math.max(b,S.timelineRange[1])}
+  }
+  if(b-a<minimumDays){var m=(a+b)/2;a=m-minimumDays/2;b=m+minimumDays/2}
   return [Math.floor(a),Math.ceil(b)];
 }
 function ppd(){
-  var r=rng();
   if(S.zoom==='week')return 72;if(S.zoom==='month')return 34;
+  var r=rng();
   var sc=$('#scroller');var w=(S.zoom==='all'&&L.overviewWidth)||(sc&&sc.clientWidth)||900;
   return Math.max(.01,(w-LABELW-CW-32)/(r[1]-r[0]));
 }
@@ -74,6 +79,22 @@ function scrollToDay(day){
   if(S.zoom==='all'&&(S.overviewZoom||1)>1.001){sc.scrollLeft=(L.panPadding||0)+LABELW+(day-L.a)*L.px*L.scale-sc.clientWidth/2;updateMinimapWin();return;}
   if(S.zoom==='all'){sc.scrollLeft=(L.panPadding||0)+(day-(L.a+L.b)/2)/(L.b-L.a)*sc.clientWidth;updateMinimapWin();return;}
   sc.scrollLeft=Math.max(0,((day-L.a)*L.px+LABELW)*(L.scale||1)-sc.clientWidth/2);updateMinimapWin();
+}
+function timelineScrollState(sc){
+  return {l:sc.scrollLeft,t:sc.scrollTop,z:S.zoom,range:S.zoom==='all'?null:S.timelineRange};
+}
+function extendTimelineRange(sc,direction){
+  if(S.zoom==='all'||S.view!=='card'||S.reader||!S.timelineRange||!direction)return false;
+  var left=sc.scrollLeft;
+  var distance=direction<0?left:sc.scrollWidth-sc.clientWidth-left;
+  if(distance>Math.min(96,L.px*3))return false;
+  var start=L.a;
+  S.timelineRange=direction<0?[L.a-14,L.b]:[L.a,L.b+14];
+  renderCards();
+  // Prepending dates shifts card coordinates, so move the viewport by the same amount.
+  sc.scrollLeft=left+(start-L.a)*L.px;
+  updateMinimapWin();
+  return true;
 }
 function rpath(pts,r){
   var q=[pts[0]];
@@ -147,7 +168,13 @@ function renderCards(){
   var oldLeft=$('#scroller').scrollLeft,oldTop=$('#scroller').scrollTop;
   var overviewViewport=$('#scroller');
   if(S.zoom==='all'&&!fitPass){L.overviewWidth=Math.max(1100,overviewViewport.clientWidth);L.fitScale=1}
-  var r=rng(),a=r[0],b=r[1],px=ppd();L.a=a;L.b=b;L.px=px;
+  var r=rng(),a=r[0],b=r[1],px=ppd();
+  if(S.zoom!=='all'){
+    var extra=Math.max(0,Math.ceil(overviewViewport.clientWidth/px)+7-(b-a));
+    a-=Math.floor(extra/2);b+=Math.ceil(extra/2);
+    S.timelineRange=[a,b];
+  }
+  L.a=a;L.b=b;L.px=px;
   var compact=S.zoom==='all'||px<20,cw=CW,ch=compact?94:CH;
   var W=LABELW+(b-a)*px+CW+32;
   var bands=bandList(S.bands);
@@ -178,6 +205,14 @@ function renderCards(){
     y+=h;
   });
   var H=y+8;
+  if(S.zoom==='all'&&fitPass<2&&overviewViewport.clientHeight>0){
+    // Widen the date layout before scaling it down to fit the tag rows.
+    var widthToFill=overviewViewport.clientWidth*Math.max(1,H/overviewViewport.clientHeight);
+    if(widthToFill>W+1){
+      L.overviewWidth=Math.ceil(widthToFill);
+      return renderCards(fitPass+1);
+    }
+  }
   // axis
   var ax='<div class="acorner"></div>';
   var dow0=new Date(a*864e5).getUTCDay();var toMon=(8-dow0)%7;
@@ -210,8 +245,12 @@ function renderCards(){
     var st=readingState(p.state);
     var inc=S.links.filter(function(l){return l.to===p.id});
     var why=(S.why&&inc.length)?'<div class="cwhy">↩ '+esc(inc[0].reason||'미기록/확인 필요')+(inc.length>1?' 외 '+(inc.length-1):'')+'</div>':'';
+    var previewMemo=p.memo;
+    if(p.tut&&previewMemo==='사용법을 익히는 빈 카드예요. 다 써 봤으면 지워도 돼요.'){
+      previewMemo='사용법을 익히는 빈 카드예요.';
+    }
     cardsHtml+='<div class="'+cls+'" data-id="'+p.id+'" tabindex="0" role="button" aria-label="'+esc(p.title+' · '+st.t+' · '+p.date+(mark?' · '+mark:''))+'" style="left:'+ps.x+'px;top:'+ps.y+'px;width:'+ps.w+'px;height:'+ps.h+'px;--tc:'+t.color+'">'+
-      (mark?'<div class="cmk">'+mark+'</div>':'')+'<div class="ct1"><span class="tx">'+esc(p.title)+'</span></div><div class="cmemo">'+esc(p.memo)+'</div>'+
+      (mark?'<div class="cmk">'+mark+'</div>':'')+'<div class="ct1"><span class="tx">'+esc(p.title)+'</span></div><div class="cmemo">'+esc(previewMemo)+'</div>'+
       '<div class="cfoot"><span class="ctitle">'+sg(p.state)+' '+esc(p.title)+'</span><span class="cdt">'+p.date.slice(5)+'</span></div></div>';
   });
   var who=resumePaper;
@@ -221,10 +260,10 @@ function renderCards(){
     var bp=paperBy(S.bubble),bs=bp&&L.pos[bp.id];
     if(bs){
       var context=paperResumeContext(bp),whyTxt=context.reasonText,whyLab=context.reasonLabel;
-      var legacyJudge=resumePaper&&bp.id===resumePaper.id?S.judge:'';
+      var readingMemo=lastReadingMemo(bp);
       var todoTxt=bp.todo||'';
       var legacyNext=resumePaper&&bp.id===resumePaper.id&&S.next&&S.next!==bp.todo?S.next:'';
-      var BW=310,BH=172+(legacyJudge?52+Math.ceil(legacyJudge.length/22)*19:0)+(legacyNext?52+Math.ceil(legacyNext.length/22)*19:0)+(todoTxt?52+Math.ceil(todoTxt.length/22)*19:0)+(whyTxt?34+Math.ceil(whyTxt.length/24)*19:0),bx=Math.max(LABELW+4,Math.min(W-BW-12,bs.x-20)),below=true,by=bs.y+bs.h+16;
+      var BW=310,BH=172+(readingMemo?52+Math.ceil(readingMemo.length/22)*19:0)+(legacyNext?52+Math.ceil(legacyNext.length/22)*19:0)+(todoTxt?52+Math.ceil(todoTxt.length/22)*19:0)+(whyTxt?34+Math.ceil(whyTxt.length/24)*19:0),bx=Math.max(LABELW+4,Math.min(W-BW-12,bs.x-20)),below=true,by=bs.y+bs.h+16;
       if(by+BH>H&&bs.y-BH-16>AXISH){below=false;by=bs.y-BH-16-((curChar().rows.length*2)-1)}
       var tail=Math.max(24,Math.min(BW-40,bs.x+bs.w/2-bx-7));
       var gap=S.bubbleGap,msg=gap>=864e5?(Math.floor(gap/864e5)+'일 만이에요'):(gap>=36e5?(Math.floor(gap/36e5)+'시간 만이에요'):'');
@@ -235,7 +274,9 @@ function renderCards(){
       cardsHtml+='<div class="rbub'+(below?'':' up')+'" id="rbub" role="dialog" aria-label="이어 읽기 안내" style="left:'+bx+'px;top:'+by+'px;width:'+BW+'px;--tl:'+tail+'px">'+
         '<div class="h"><span>'+head+'</span><button type="button" class="x" id="rbX" aria-label="닫기">×</button></div>'+
         '<div class="m">'+esc(big)+'</div><div class="pg">'+esc(sub)+'</div>'+
-        (bp.state!=='skim'&&bp.page&&bp.total?'<div class="bar"><i style="width:'+Math.max(3,Math.min(100,Math.round(bp.page/bp.total*100)))+'%"></i></div>':'')+(whyTxt?'<div class="q"><div class="k">'+whyLab+'</div><div class="t">'+esc(whyTxt)+'</div></div>':'')+(todoTxt?'<div class="nx td"><div class="k">다음 할 일</div><div class="t">'+esc(todoTxt)+'</div></div>':'')+(legacyJudge?'<div class="q"><div class="k">전체 타임라인 메모 · 논문 연결 미확인</div><div class="t">'+esc(legacyJudge)+'</div></div>':'')+(legacyNext?'<div class="nx td"><div class="k">이전 전체 메모 · 논문 연결 미확인</div><div class="t">'+esc(legacyNext)+'</div></div>':'')+
+        (bp.state!=='skim'&&bp.page&&bp.total?'<div class="bar"><i style="width:'+Math.max(3,Math.min(100,Math.round(bp.page/bp.total*100)))+'%"></i></div>':'')+(whyTxt?'<div class="q"><div class="k">'+whyLab+'</div><div class="t">'+esc(whyTxt)+'</div></div>':'')+(todoTxt?'<div class="nx td"><div class="k">다음 할 일</div><div class="t">'+esc(todoTxt)+'</div></div>':'')+
+        (readingMemo?'<div class="q"><div class="k">마지막 메모</div><div class="t">'+esc(readingMemo)+'</div></div>':'')+
+        (legacyNext?'<div class="nx td"><div class="k">이전 전체 메모 · 논문 연결 미확인</div><div class="t">'+esc(legacyNext)+'</div></div>':'')+
         '<button type="button" class="go" id="rbGo">'+(bp.state==='skim'?'읽기 시작':'이어 읽기')+'</button></div>';
     }
   }
@@ -287,13 +328,25 @@ function lblSvg(mx,my,txt){
 }
 function wireScroller(){
   var sc=$('#scroller');
-  sc.addEventListener('wheel',function(e){if(S.view!=='card'||S.zoom!=='all'||!e.ctrlKey)return;e.preventDefault();zoomOverviewAt(Math.exp(-e.deltaY*.01),e.clientX,e.clientY)},{passive:false});
+  sc.addEventListener('wheel',function(e){
+    if(S.view!=='card')return;
+    if(S.zoom==='all'){
+      if(e.ctrlKey){e.preventDefault();zoomOverviewAt(Math.exp(-e.deltaY*.01),e.clientX,e.clientY)}
+      return;
+    }
+    if(e.ctrlKey)return;
+    var horizontal=e.deltaX||(e.shiftKey?e.deltaY:0);
+    // At a hard edge the browser may emit a wheel event without a scroll event.
+    if(horizontal>0&&sc.scrollWidth-sc.clientWidth-sc.scrollLeft<=1)extendTimelineRange(sc,1);
+    if(horizontal<0&&sc.scrollLeft<=1)extendTimelineRange(sc,-1);
+  },{passive:false});
   sc.addEventListener('click',function(e){
+    if(e.target.closest('#rbub'))return;
     var c=e.target.closest('.card');
     if(c){onPick(c.dataset.id);return}
     if(e.target.closest('.axis')||e.target.closest('.blabel')||e.target.closest('.lk'))return;
     if(S.linking)return;
-    if(S.sel||S.panel==='add'){S.sel=null;S.panel='none';renderAll()}
+    if(S.sel||S.panel==='add')closeDetailPanel();
   });
   sc.addEventListener('dblclick',function(e){
     if(e.target.closest('.card')||e.target.closest('.blabel')||e.target.closest('.axis'))return;
@@ -332,11 +385,21 @@ function wireScroller(){
   sc.addEventListener('focusout',hideTip);
   sc.addEventListener('click',function(e){var c=e.target.closest&&e.target.closest('.card');sup=c?c.dataset.id:null;hideTip()});
   sc.addEventListener('scroll',hideTip);
-  var raf=0;
-  sc.addEventListener('scroll',function(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;updateMinimapWin()})});
+  var raf=0,previousLeft=sc.scrollLeft;
+  sc.addEventListener('scroll',function(){
+    if(raf)return;
+    raf=requestAnimationFrame(function(){
+      raf=0;
+      if(!sc.isConnected)return;
+      var skipGrowth=sc.scrollLeft===L.skipRangeGrowthAt;
+      L.skipRangeGrowthAt=null;
+      if(skipGrowth||!extendTimelineRange(sc,Math.sign(sc.scrollLeft-previousLeft)))updateMinimapWin();
+      previousLeft=sc.scrollLeft;
+    });
+  });
   window.addEventListener('resize',function(){if(S.view==='card'&&S.zoom==='all'&&$('#scroller')){renderCards();updateMinimapWin()}});
   document.addEventListener('keydown',function(e){
-    if(e.key==='Escape'&&$('#panel')){if(S.linking){S.linking=null;renderAll()}else if(S.panel!=='none'){S.sel=null;S.panel='none';renderAll()}}
+    if(e.key==='Escape'&&$('#panel')){if(S.linking){S.linking=null;renderAll()}else if(S.panel!=='none'){closeDetailPanel()}}
   });
 }
 function minimapRange(){
@@ -392,7 +455,8 @@ function updateMinimapWin(){
   var zoomed=S.zoom==='all'&&(S.overviewZoom||1)>1.001;
   var s=zoomed?L.a+(sc.scrollLeft-(L.panPadding||0))/((L.scale||1)*px):S.zoom==='all'?L.a+(sc.scrollLeft-(L.panPadding||0))/sc.clientWidth*(L.b-L.a):L.a+sc.scrollLeft/((L.scale||1)*px),e=zoomed?s+(sc.clientWidth-LABELW)/((L.scale||1)*px):S.zoom==='all'?s+(L.b-L.a):L.a+(sc.scrollLeft+sc.clientWidth-LABELW)/((L.scale||1)*px);
   if(S.zoom==='all')S.overviewPan=(sc.scrollLeft-(L.panPadding||0))/sc.clientWidth;
-  var mm=$('#mm');mm.setAttribute('aria-valuemin',a);mm.setAttribute('aria-valuemax',b);mm.setAttribute('aria-valuenow',Math.round((s+e)/2));mm.setAttribute('aria-valuetext',dstr(Math.round((s+e)/2)));
+  var center=Math.round((s+e)/2);
+  var mm=$('#mm');mm.setAttribute('aria-valuemin',a);mm.setAttribute('aria-valuemax',b);mm.setAttribute('aria-valuenow',Math.max(Math.ceil(a),Math.min(Math.floor(b),center)));mm.setAttribute('aria-valuetext',dstr(center));
   var left=Math.max(0,Math.min(98,(s-a)/(b-a)*100)),right=Math.max(left+2,Math.min(100,(e-a)/(b-a)*100));
   w.style.left=left+'%';w.style.width=(right-left)+'%';
   $('#rng').textContent=dstr(Math.floor(s))+' → '+dstr(Math.floor(e));
@@ -402,6 +466,7 @@ function wireMinimap(){
   function go(e){
     var r=mm.getBoundingClientRect();var f=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
     var range=minimapRange();scrollToDay(range[0]+f*(range[1]-range[0]));
+    L.skipRangeGrowthAt=$('#scroller').scrollLeft;
   }
   mm.addEventListener('pointerdown',function(e){dragging=true;mm.setPointerCapture(e.pointerId);go(e)});
   mm.addEventListener('pointermove',function(e){if(dragging)go(e)});

@@ -57,7 +57,11 @@ function wirePick(p){
   var f=$('#rdFile');if(!f)return;
   f.addEventListener('change',function(e){var file=e.target.files[0];if(!file)return;
     f.disabled=true;
-    attachPaperPdf(p,file).then(function(){save();if(S.reader===p.id){readerSrc(p,p.page);renderRNotes()}}).catch(function(){
+    attachPaperPdf(p,file).then(function(){
+      save();
+      if(typeof scanPaperResources==='function')scanPaperResources(p,file);
+      if(S.reader===p.id){readerSrc(p,p.page);renderRNotes()}
+    }).catch(function(){
       var box=$('#rdsrc');if(S.reader===p.id&&box){var error=document.createElement('p');error.setAttribute('role','alert');error.textContent='PDF를 저장하지 못했어요. 기존 첨부와 메모는 유지했으니 다시 선택해 주세요.';box.appendChild(error)}
     }).finally(function(){f.disabled=false;f.value=''})});
 }
@@ -124,6 +128,7 @@ function renderRNotes(){
    '<div class="two"><label class="field"><span>읽던 쪽 (자동 기록)</span><input type="number" min="1" id="rPage" value="'+esc(p.page)+'" placeholder="예: 7"></label><div class="field"><span>&nbsp;</span><button type="button" class="btn" id="rGo">이 쪽으로 이동</button></div></div>'+
    '</section><section class="reader-section reader-records" aria-label="읽기 기록"><div class="records-heading"><h3>읽기 기록</h3><button type="button" class="record-add" id="rAddNote">+ 메모 추가</button></div><p class="reader-hint">문장이나 캡처에 짧게 메모를 남겨요. 메모 아래의 "다음 할 일 찾기"를 누르면 그 메모에서 후보를 찾아요.</p><div id="rRecords">'+legacyReadingRecordHtml(p)+'<div id="rHl"></div></div></section>'+
    '<section class="reader-section reader-next" aria-label="다음에 할 일"><h3>다음에 할 일</h3><div id="rTodoSaved"><label class="field"><span class="sr-only">저장된 다음에 할 일</span><textarea id="rTodo" rows="2" placeholder="아직 정하지 않았어요. 직접 적어도 돼요.">'+esc(p.todo||'')+'</textarea></label><p class="reader-hint">다시 돌아오면 여기서 이어가요. 직접 고쳐 적어도 돼요.</p></div><div class="na" id="naBox" hidden></div></section><section id="rHistory" aria-label="기록 이력"></section>'+
+   (typeof paperResourcesHtml==='function'&&(p.pdf||(p.resources||[]).length||(typeof samplePdfUrl==='function'&&samplePdfUrl(p)))?paperResourcesHtml('rResources'):'')+
    '<details class="reader-extra"><summary>저장 이유</summary><label class="field"><span class="sr-only">저장 이유</span><textarea id="rMemo" rows="2">'+esc(p.memo)+'</textarea></label></details>'+
    (p.abs?'<details class="rabs"><summary>초록 보기</summary><p>'+esc(p.abs)+'</p></details>':'')+
    '<div><h4>이어진 논문</h4>'+((outs.length||ins.length)?'<ul class="lklist">'+outs.map(function(l){return li(l,'out')}).join('')+ins.map(function(l){return li(l,'in')}).join('')+'</ul>':'<p class="empty">아직 없어요. 읽다가 이어서 본 논문을 연결해 두세요.</p>')+
@@ -145,6 +150,7 @@ function renderRNotes(){
   noteField.addEventListener('change',function(){rememberNote(p,p.note||'');editingNote=false;save();renderHistory(p);if(NA.pid===p.id&&NA.st==='cand')naRender(p,true)})}
   $('#rTodo').addEventListener('change',function(){rememberManualTodo(p);save();renderHistory(p)});
   naInit(p);renderHistory(p);
+  if(typeof wirePaperResources==='function')wirePaperResources($('#rResources'),p);
   $$('[data-go]',el).forEach(function(b){b.addEventListener('click',function(){openReader(b.dataset.go)})});
   $$('[data-del]',el).forEach(function(b){b.addEventListener('click',function(){ask('이 연결을 삭제할까요?','연결 이유도 함께 사라져요.','삭제',function(){S.links=S.links.filter(function(l){return l.id!==b.dataset.del});save();renderRNotes()},true)})});
   var ok=$('#rLkOk');if(ok)ok.addEventListener('click',function(){
