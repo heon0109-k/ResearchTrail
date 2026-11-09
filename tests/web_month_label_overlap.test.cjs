@@ -1,0 +1,5 @@
+// Draft UI regression: a new month's title stays visible beside the pinned current month.
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const label={textContent:'',getBoundingClientRect:()=>({left:120,right:212})},sc={scrollLeft:0},duplicate={textContent:'2026.08',style:{},getBoundingClientRect:()=>({left:125,right:190})},next={textContent:'2026.09',style:{},getBoundingClientRect:()=>({left:130,right:195})};
+const c={S:{view:'card'},L:{a:Date.parse('2026-08-31')/864e5,px:34,scale:1},LABELW:120,$:s=>s==='#timelineMonth'?label:s==='#scroller'?sc:{},$$:()=>[duplicate,next]};vm.createContext(c);const source=fs.readFileSync('web/js/timeline.js','utf8');vm.runInContext(source.slice(source.indexOf('function updateVisibleMonth(){'),source.indexOf('function updateMinimapWin(){')),c);c.updateVisibleMonth();assert.equal(label.textContent,'2026.08');assert.equal(duplicate.style.visibility,'hidden');assert.equal(next.style.visibility,'');assert.equal(next.style.transform,'translateX(92px)');
+console.log('PASS: redundant current-month title hidden, upcoming month shifted rather than lost.');

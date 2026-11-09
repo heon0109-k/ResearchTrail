@@ -11,7 +11,7 @@ function renderDots(){
   var svg=$('#dotsvg');var w=svg.clientWidth||800,h=svg.clientHeight||500;
   if(!D.inited){D.tx=w/2;D.ty=h/2;D.k=1;D.inited=true}
   S.papers.forEach(function(p){if(!D.pos.has(p.id)){var an=anchorOf(p.tag);D.pos.set(p.id,{x:an.x+(Math.random()-.5)*90,y:an.y+(Math.random()-.5)*90,vx:0,vy:0,fx:null,fy:null})}});
-  var deg={};S.links.forEach(function(l){deg[l.from]=(deg[l.from]||0)+1;deg[l.to]=(deg[l.to]||0)+1});
+  var deg={};S.links.forEach(function(l){var a=paperBy(l.from),b=paperBy(l.to);if(!a||!b||!visible(a)||!visible(b))return;deg[l.from]=(deg[l.from]||0)+1;deg[l.to]=(deg[l.to]||0)+1});
   var nb=null;
   if(S.sel){nb=new Set([S.sel]);S.links.forEach(function(l){if(l.from===S.sel)nb.add(l.to);if(l.to===S.sel)nb.add(l.from)})}
   var defs='<defs><marker id="dArrG" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0L8,4L0,8Z" fill="#aab2bd"/></marker><marker id="dArrI" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0L8,4L0,8Z" fill="#12161c"/></marker></defs>';
