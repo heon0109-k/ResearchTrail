@@ -40,7 +40,7 @@ function paperResourcesHtml(id){
   return '<section class="paper-resources" id="'+id+'" aria-labelledby="'+id+'Title"><h4 id="'+id+'Title">코드·데이터셋</h4><ul data-saved-resources></ul>'+
   '<div class="paper-resource-actions"><button type="button" class="btn sm" data-scan-resources hidden>PDF에서 링크 찾기</button><button type="button" class="btn sm ghost" data-manual-resources aria-expanded="false" aria-controls="'+id+'Form">+ 직접 추가</button></div>'+
   '<form id="'+id+'Form" hidden><select aria-label="링크 종류"><option value="code">코드</option><option value="data">데이터셋</option></select><input type="text" aria-label="코드·데이터셋 주소" placeholder="링크 붙여넣기" inputmode="url"><button class="btn sm" type="submit">저장</button></form>'+
-  '<div data-found-resources hidden><h5>PDF에서 찾은 링크 <span data-resource-count></span></h5><ul id="'+id+'Results" data-resource-results></ul><button type="button" class="btn sm ghost" data-more-resources aria-expanded="false" aria-controls="'+id+'Results" hidden></button></div>'+
+  '<div data-found-resources hidden><h5>PDF에서 찾은 링크 <span data-resource-count></span></h5><p class="empty">인용한 자료의 링크도 포함될 수 있어요.</p><ul id="'+id+'Results" data-resource-results></ul><button type="button" class="btn sm ghost" data-more-resources aria-expanded="false" aria-controls="'+id+'Results" hidden></button></div>'+
   '<p class="empty" role="status" data-resource-status></p></section>';
 }
 function wirePaperResources(box,p){

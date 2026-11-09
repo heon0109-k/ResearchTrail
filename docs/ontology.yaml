@@ -5,8 +5,8 @@ metadata:
   intended_repository_path: docs/ontology.yaml
   source_interview:
     path: docs/research/interview.md
-    sha256: 22b5f2b0e51211f32896518aed88684cb6af47144d97f4d7ca6a59f816a2383a
-    line_count: 2662
+    sha256: c0a48e1bd687009a01febd34148b6905c43d6da27975dca32b005bbfffbb01dc
+    line_count: 2671
     note: evidence는 기존 인터뷰 로그와 추가 조사 응답을 참조한다. 원문 응답·익명 요약·분석 내용을 구분한다.
   format_basis:
     filename: 강의02_도메인발견_온톨로지_작성지침.md

@@ -422,13 +422,12 @@ context:
 | `tests/web_long_candidate.test.cjs` | 긴 후보·70자 경계·유니코드·원문·비동기 반환 보존 | 회귀 실행 통과(팀 승인 전 초안). 규칙 기반 시연 검사 |
 | `tests/web_todo_consistency.test.cjs` | 논문별 작업의 공통 표시·수동/확인 저장·이전 전체 메모 보존·논문 간 분리 | 회귀 실행 통과(팀 승인 전 초안). 서버의 과업별 분리와는 별도 |
 | `tests/web_record_history.test.cjs` | 메모 버전·후보/최종값 분리·취소·저장 실패와 중복 방지·늦은 응답·재접속 | 회귀 실행 통과(팀 승인 전 초안). 서버 API·다중 과업 이력은 미검증 |
-| `docs/research/policy_golden_cases.yaml`, `tests/test_policy_golden.py` | `validate_output` 고정 응답 14건 | 팀 검토 전 초안. 모델 품질·전체 재시도·저장 검증과 구분 |
+| `tests/harness/golden_cases.yaml`, `tests/test_policy_golden.py` | `validate_output` 고정 응답 14건 | 팀 검토 전 초안. 모델 품질·전체 재시도·저장 검증과 구분 |
 | `tests/web_timeline_visibility.test.cjs` | 재접속 시 마지막 열람 카드의 가시 영역 보정·기존 위치 유지 | 회귀 실행 통과(팀 승인 전 초안). 브라우저에서 저장 위치 3종 보정 확인 |
 | `tests/web_unknown_state.test.cjs` | 미기록·레거시 읽기 상태 보존·안전한 표시·읽기 진입·저장 복원 | 회귀 검사 초안. 브라우저 상태 선택·해제 확인, 서버 상태 검증은 미구현 |
 | `tests/web_candidate_context.test.cjs` | 같은 행동의 상태 설명·행동 없는 기한 설명·독립 작업 구분 15건 | 브라우저 예시 회귀 초안. 네 필드 추출·의미 정확도 전체 통과와 구분 |
 | `tests/web_missing_context.test.cjs` | 위치·이유 미기록 표시, 전체 메모 보존과 논문 판단 오귀속 방지 | 브라우저 회귀 초안. Decision·출처·검토 상태·과업 API 전체 검증 아님 |
 | `tests/web_link_persistence.test.cjs` | 상세 패널 링크 수정·삭제 즉시 저장·재접속·저장 실패와 재시도 | 브라우저 회귀 초안. 링크의 원문 내용이나 안전성을 검증하는 검사가 아님 |
-| `tests/harness/golden_cases.yaml` | 아직 제목만 있는 자리표시자 | 입력·기대 조건은 검토 중. 승인된 골든 하니스 실행 결과 없음 |
 
 다음 제안 사례 ID를 위 5개·6개 검사와 1:1 대응해 통과했다고 해석하지 않는다. 서버 저장·재개·오류 통합 검사는 아래의 미구현 경로에 해당한다.
 
@@ -460,7 +459,7 @@ context:
 
 ### 7.2 판정 가능한 기준 초안
 
-- AC3의 기준 사례는 research/semantic_cases_draft.yaml이다. 기존 tests/harness/golden_cases.yaml은 승인된 기대값이 없어 자리표시자 상태를 보존한다. 의미 사례 20건·합격 18건 이상·잘못된 완료 귀속과 없는 장애·기한 생성 각 0건을 제안한다. 실행 전 팀 검토가 필요하다.
+- AC3의 의미 평가 사례는 [semantic_cases_draft.yaml](research/semantic_cases_draft.yaml)에 둔다. [골든 하니스](../tests/harness/golden_cases.yaml)의 고정 응답 14건은 검사 함수의 결정적 동작을 검증하는 팀 검토 전 초안이다. 의미 사례 20건·합격 18건 이상·잘못된 완료 귀속과 없는 장애·기한 생성 각 0건을 제안한다. 실행 전 팀 검토가 필요하다.
 - AC6은 같은 초안의 CONTEXT-DRAFT-01·02 및 기존 6.2절 4개 맥락 검사 제안을 함께 검토한다. 제품 테스트에서는 미기록 판단·위치 자동 생성 0건, 기록 내용 보존 100%, 링크만으로 검증 완료를 표시하는 경우 0건, 재개 시 외부 호출 0회를 요구하는 초안이다. 자동 URL 접속 성공을 의미상 근거 검증으로 사용하지 않는다.
 - 위험 가정·실험 단위·합격선·실행 중단 기준은 spikes/next_action_attribution.md에 작성했다. 숫자는 계획 제안이며 평가 결과가 아니다.
 - 원문 상태 속성은 자유 텍스트로 보존한다. 화면 선택값의 닫힌 목록을 7.4절과 ontology.yaml의 ui_selection에 정의했다. 기존 읽기 값과 모델의 네 필드 계약을 유지한다.
