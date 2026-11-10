@@ -797,6 +797,12 @@ a.btn[hidden]{display:none}
 .save-error{pointer-events:none;position:fixed;z-index:10000;left:50%;bottom:24px;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);padding:12px 16px;border:1px solid #e6a19b;border-radius:10px;background:#fff2f0;color:#8c2720;font-size:13px;line-height:1.5;box-shadow:0 3px 12px #0001}
 
 .history-list{margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:8px}.history-list summary{cursor:pointer;font-size:13px;font-weight:600}.history-entry{padding:9px 0;border-top:1px solid var(--line);margin-top:8px}.history-label{font-size:12px;color:var(--mute);margin-top:8px}.history-text{font:inherit;font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--soft);padding:8px;border-radius:6px;margin:4px 0}
+.history-heading{margin:12px 0 0;color:var(--mute);font-size:12px;font-weight:600}
+.history-version+.history-version{border-top:1px solid var(--line);margin-top:8px;padding-top:4px}
+.history-version-head{display:flex;align-items:center;justify-content:space-between;margin-top:4px;color:var(--mute);font-size:12px}
+.history-version [data-history-remove]{width:26px;height:26px;border:0;border-radius:5px;background:none;color:#b42318;font-size:18px;line-height:1;cursor:pointer}
+.history-version [data-history-remove]:hover{background:#fff2f0}
+.history-list .history-origin summary{font-size:12px;color:var(--mute);font-weight:500}
 
 /* Unknown reading state is separate from the three explicit selections. */
 .sg-unknown{border-style:dashed;opacity:.65;background:none}
@@ -958,14 +964,15 @@ a.btn[hidden]{display:none}
 #scroller{overflow-anchor:none}
 #scroller.overview-fit{overflow-x:auto;overflow-y:auto;scrollbar-width:none;overscroll-behavior-x:contain}
 #scroller.overview-fit::-webkit-scrollbar{display:none}
+#scroller.overview-fit #canvas{overflow:clip}
 .overview-sheet{position:absolute;left:0;top:0;transform-origin:top left}
+.overview-sheet .band::before,.overview-sheet .axis::before{content:"";position:absolute;inset:0 calc(-1 * var(--overview-right)) 0 calc(-1 * var(--overview-gutter));background:inherit;pointer-events:none}
+.overview-sheet .last-band::before{bottom:calc(-1 * var(--overview-bottom))}
 
-.overview-controls{position:absolute;right:20px;bottom:62px;z-index:16;display:flex;align-items:center;gap:2px;background:rgba(255,255,255,.9);border:1px solid #e4e7eb;border-radius:8px;padding:3px}
+.overview-controls{flex:none}
 .overview-controls[hidden]{display:none}
-.overview-controls button{height:28px;min-width:30px;padding:0 8px;border:0;border-radius:5px;background:none;color:#58616e;font:inherit;font-size:17px;cursor:pointer}
-.overview-controls button:last-child{font-size:11.5px;border-left:1px solid #e7eaee;border-radius:0;padding:0 10px}
-.overview-controls button:hover:not(:disabled){background:#edf0f4;color:#252b33}
-.overview-controls button:disabled{opacity:.3;cursor:default}
+.overview-controls button{height:28px;padding:0 9px;border:1px solid #e4e7eb;border-radius:7px;background:#fff;color:#58616e;font:inherit;font-size:12px;white-space:nowrap;cursor:pointer}
+.overview-controls button:hover{background:#f3f4f6;color:#252b33}
 .overview-controls button:focus-visible{outline:2px solid #2f9bee;outline-offset:1px}
 
 /* Scaled overview uses explicit pinned coordinates, not transformed sticky boxes. */
@@ -1021,3 +1028,186 @@ a.btn[hidden]{display:none}
 .overview-sheet .card.cmp .cdt{font-size:11px}
 
 #overviewControls button:last-child{border-left:0;border-radius:5px}
+
+/* Reader layout: collapsible left menu and resizable notes panel. */
+.app.reading.side-closed .side{display:none}
+.rdside-tog{flex:none}
+.rdresize{flex:none;width:7px;margin:0 -3px;position:relative;z-index:5;cursor:col-resize;touch-action:none;background:transparent}
+.rdresize::after{content:"";position:absolute;top:0;bottom:0;left:3px;width:1px;background:transparent;transition:background .12s,width .12s,left .12s}
+.rdresize:hover::after,.rdresize:focus-visible::after,.reader.resizing .rdresize::after{left:2px;width:3px;background:#2f9bee}
+.rdresize:focus-visible{outline:none}
+.reader.resizing,.reader.resizing *{cursor:col-resize!important;user-select:none!important}
+.reader.resizing .rdsrc{pointer-events:none}
+.reader.notes-closed .rdresize{display:none}
+@media(max-width:900px){.rdresize{display:none}.rdnotes{width:auto!important}}
+@media(max-width:860px){.rdside-tog{display:none}}
+
+/* AI 누적 정리 (실험). 켜져 있으면 메모별 "다음 할 일 찾기" 버튼을 숨긴다. */
+.reader.ai-on .record-candidate{display:none!important}
+.reader-ai{display:flex;flex-direction:column;gap:10px;background:#f5faff;border:1px solid #d3e8fb;border-radius:12px;padding:14px 14px 12px}
+.ai-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ai-head h3{display:flex;align-items:center;gap:6px;margin:0}
+.ai-badge{font-style:normal;font-size:10.5px;font-weight:700;color:#197cc4;background:#e3f1fd;border-radius:999px;padding:1px 7px}
+.ai-tools{display:flex;gap:12px}
+.ai-tools .ai-off{color:var(--mute)}
+.ai-tools button:disabled{opacity:.45;cursor:default}
+.ai-status{font-size:11.5px;color:var(--faint);margin:0}
+.ai-err{font-size:12px;line-height:1.5;color:#8c2720;background:#fff2f0;border-radius:8px;padding:7px 9px;margin:0}
+.ai-sec h4{font-size:11.5px;font-weight:700;color:#4a5563;margin:0 0 5px}
+.ai-sec ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ai-sec li{display:flex;flex-direction:column;gap:3px;font-size:12.5px;line-height:1.5;color:var(--ink)}
+.ai-none{font-size:12px;line-height:1.5;color:var(--faint);margin:0}
+.ai-next{background:#fff;border:1px solid #d3e8fb;border-radius:9px;padding:10px}
+.ai-next-text{font-size:13px;font-weight:600;line-height:1.5;margin:0 0 4px;color:#0f2a40}
+.ai-src{display:flex;flex-wrap:wrap;gap:4px}
+.ai-chip{border:0;background:#e9eef4;color:#4a5563;border-radius:999px;font:inherit;font-size:10.5px;font-weight:600;padding:1px 8px;cursor:pointer}
+.ai-chip:hover{background:#d8e6f4;color:#105b92}
+.ai-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.ai-saved{font-size:11.5px;font-weight:600;color:#197cc4}
+.ai-foot{font-size:10.5px;line-height:1.5;color:var(--faint);margin:0}
+.ai-setup{display:flex;flex-direction:column;gap:8px}
+.ai-setup input[type=password]{width:100%}
+.ai-consent{display:flex;gap:7px;align-items:flex-start;font-size:12px;line-height:1.5;color:var(--ink)}
+.ai-consent input{margin-top:3px;flex:none}
+.ai-msg{font-size:12px;color:#8c2720;margin:0;min-height:0}
+.reader.ai-on .reader-records>.reader-hint{display:none}
+
+/* 논문에 질문하기 (실험) */
+.rtabs{display:flex;gap:4px;background:var(--soft);border-radius:9px;padding:3px;flex:none}
+.rtabs button{flex:1;height:30px;border:0;border-radius:7px;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--mute);cursor:pointer}
+.rtabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.rdnotes.chat-mode>:not(.rtabs):not(#rChat){display:none!important}
+.rdnotes.chat-mode{overflow:hidden}
+.reader-chat{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px}
+.reader-chat[hidden]{display:none}
+.chat-list{flex:1;min-height:120px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:2px}
+.chat-m p{margin:0;font-size:13px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.chat-u{align-self:flex-end;max-width:88%;background:var(--ink);color:#fff;border-radius:12px 12px 4px 12px;padding:8px 11px}
+.chat-u .chat-quote{font-size:11.5px;color:#c9ccd3;margin-bottom:4px}
+.chat-b{align-self:flex-start;max-width:94%;background:var(--soft);border-radius:12px 12px 12px 4px;padding:9px 12px}
+.chat-refuse{background:#fff;border:1px dashed #d5d8de}
+.chat-refuse p{color:var(--mute)}
+.chat-wait p{color:var(--faint)}
+.chat-pg{border:0;background:#e3f1fd;color:#197cc4;border-radius:999px;font:inherit;font-size:11px;font-weight:700;padding:0 7px;margin:0 2px;cursor:pointer}
+.chat-empty{margin:auto 0;display:flex;flex-direction:column;gap:10px}
+.chat-empty p{margin:0;font-size:12.5px;color:var(--mute)}
+.chat-ex{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.chat-exb{border:1px solid var(--line);background:#fff;border-radius:999px;font:inherit;font-size:12px;color:var(--ink);padding:5px 11px;cursor:pointer}
+.chat-exb:hover{border-color:#b9dcf8;background:#f5faff}
+.chat-box{flex:none;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:12px;padding:8px}
+.chat-box textarea{border:0;resize:none;font:inherit;font-size:13px;line-height:1.55;padding:4px 4px;min-height:44px;background:#fff}
+.chat-box textarea:focus{outline:none}
+.chat-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.chat-scope{font-size:11px;color:var(--faint)}
+.chat-sel{display:flex;align-items:flex-start;gap:6px;background:#f5faff;border-radius:8px;padding:6px 8px;font-size:11.5px;line-height:1.5;color:#3a3a42}
+.chat-sel span{flex:1;min-width:0;overflow-wrap:anywhere}
+.chat-sel .x{border:0;background:none;color:var(--faint);cursor:pointer}
+.chat-ex-row{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;flex:none;padding:1px 0;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+.chat-ex-row::-webkit-scrollbar{display:none}
+.chat-ex-row .chat-exb{white-space:nowrap}
+.chat-ex-row::-webkit-scrollbar{display:none}
+.chat-ex-row .chat-exb{flex:none;font-size:11.5px;padding:3px 9px;color:var(--mute)}
+.chat-top{display:flex;justify-content:flex-end;flex:none;margin-bottom:-4px}
+.chat-new{border:0;background:none;font:inherit;font-size:12px;font-weight:600;color:var(--mute);padding:2px 4px;border-radius:6px;cursor:pointer}
+.chat-new:hover{color:var(--ink);background:var(--soft)}
+.chat-new:disabled{opacity:.4;cursor:default}
+.chat-ex-row .chat-exb-sel{color:#197cc4;border-color:#b9dcf8;background:#f5faff}
+.pvbar #rdDl{margin-left:auto}
+.pvbar #rdDl+.icbtn{margin-left:4px}
+.dlbtn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;padding:0;border:0;border-radius:6px;background:none;color:#7a808c;cursor:pointer;flex:none}
+.dlbtn:hover,.dlbtn:focus-visible{background:var(--soft);color:var(--ink)}
+.dlbtn:disabled{opacity:.4;cursor:default}
+.dlbtn[hidden]{display:none}
+.rdbar .dlbtn{margin-left:auto}
+.dlbtn{position:relative}
+.dlbtn::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);right:0;z-index:40;white-space:nowrap;background:#1d1d22;color:#fff;font-size:11.5px;font-weight:500;line-height:1;padding:6px 8px;border-radius:6px;opacity:0;pointer-events:none;transform:translateY(-2px);transition:opacity .12s,transform .12s}
+.dlbtn:hover::after,.dlbtn:focus-visible::after{opacity:1;transform:none}
+/* AI가 채운 다음 할 일 표시: 칸 오른쪽 위 반짝이 아이콘 */
+#rTodoSaved .field{position:relative}
+#rTodoSaved .field.ai-draft #rTodo{padding-right:34px}
+.ai-mark{position:absolute;top:9px;right:10px;display:inline-flex;color:#2f9bee!important;cursor:default;outline:none}
+.ai-mark svg{fill:#2f9bee}
+.ai-mark[hidden]{display:none}
+.ai-mark::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);right:-4px;z-index:40;white-space:nowrap;background:#1d1d22;color:#fff;font-size:11.5px;font-weight:500;line-height:1;padding:6px 8px;border-radius:6px;opacity:0;pointer-events:none;transform:translateY(-2px);transition:opacity .12s,transform .12s}
+.ai-mark:hover::after,.ai-mark:focus-visible::after{opacity:1;transform:none}
+/* 할 일 칸 안의 작은 저장 버튼 */
+#rTodoSaved .field.has-save #rTodo{padding-bottom:34px}
+.ai-use-in{position:absolute;right:8px;bottom:8px;border:0;background:#e3f1fd;color:#197cc4;font:inherit;font-size:12px;font-weight:700;line-height:1;padding:6px 12px;border-radius:999px;cursor:pointer}
+.ai-use-in:hover{background:#cfe6fb;color:#105b92}
+.ai-use-in:focus-visible{outline:2px solid #2f9bee;outline-offset:2px}
+/* AI 정리 보기: 줄 끝 쪽 번호만, 여백 넉넉히 */
+.reader-next .ai-sec{margin-top:14px}
+.reader-next .ai-sec h4{font-size:12px;font-weight:600;color:var(--mute);margin:0 0 8px}
+.reader-next .ai-sec ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.reader-next .ai-sec li{display:block;position:relative;padding-left:12px;font-size:13px;line-height:1.6;color:var(--ink)}
+.reader-next .ai-sec li::before{content:"";position:absolute;left:0;top:.7em;width:4px;height:4px;border-radius:50%;background:#9aa1ad}
+.reader-next .ai-src{display:inline}
+.reader-next .ai-chip{display:inline;border:0;background:none;padding:0;margin-left:2px;font:inherit;font-size:11.5px;font-weight:600;color:#197cc4;cursor:pointer;white-space:nowrap}
+.reader-next .ai-chip:hover{text-decoration:underline;text-underline-offset:2px;background:none}
+.reader-next .ai-chip+.ai-chip::before{content:"· ";color:#9aa1ad}
+.ai-basis{margin:12px 0 0;font-size:12px;line-height:1.6;color:var(--mute)}
+/* 읽기 패널 아래쪽 정리: 이어진 논문 입력칸은 "+ 연결"을 눌러야 열림, 예시 출처는 작은 링크 */
+.rlinks h4{margin:0}
+.rlk[hidden]{display:none!important}
+.rlinks .empty{margin-top:6px}
+.sample-source{border-top:0;padding-top:0}
+.sample-source>summary{font-size:11.5px!important;font-weight:500!important;color:var(--faint)!important;list-style:none}
+.sample-source>summary::-webkit-details-marker{display:none}
+.sample-source>summary::before{content:none!important}
+.sample-source>summary:hover{color:var(--mute)!important;text-decoration:underline;text-underline-offset:2px}
+.ai-edit-hint{position:absolute;right:66px;bottom:14px;font-size:10.5px;color:#c4c8d0!important;font-weight:400;pointer-events:none;white-space:nowrap}
+/* 고칠 수 있는 칸임을 모양으로: 마우스를 올리면 연한 파란 테두리 */
+#rTodoSaved #rTodo{border:1px solid transparent;transition:border-color .12s,box-shadow .12s}
+#rTodoSaved #rTodo:hover{border-color:#b9dcf8}
+#rTodoSaved #rTodo:focus{border-color:#2f9bee;box-shadow:0 0 0 3px rgba(47,155,238,.12);outline:none}
+/* 변경 기록은 평소 숨기고, 맨 아래 작은 링크로만 연다 */
+.rdnotes #rHistory{display:none}
+.rdnotes.show-history #rHistory{display:block}
+.rdnotes .sample-source{order:95}
+.rdnotes #rHistToggle{order:0}
+.rdnotes .rfoot{order:99}
+.rd-mini-link{align-self:flex-start;border:0;background:none;padding:0;font:inherit;font-size:11.5px;color:var(--faint);cursor:pointer;margin-top:-8px}
+.rd-mini-link:hover{color:var(--mute);text-decoration:underline;text-underline-offset:2px}
+/* 변경 기록: 날짜순 한 줄 목록 */
+.hist-tl{list-style:none;margin:10px 0 0;padding:0 0 0 14px;border-left:2px solid #e4e6eb;display:flex;flex-direction:column;gap:12px}
+.hist-it{position:relative}
+.hist-it::before{content:"";position:absolute;left:-19px;top:5px;width:8px;height:8px;border-radius:50%;background:#c9ced6;border:2px solid #fff}
+.hist-it.is-current::before{background:#2f9bee}
+.hist-meta{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--faint)}
+.hist-meta em{font-style:normal;font-size:10.5px;font-weight:700;color:#197cc4;background:#e3f1fd;border-radius:999px;padding:0 6px}
+.hist-x{margin-left:auto;border:0;background:none;color:#b8bdc6;font-size:13px;line-height:1;padding:0 2px;cursor:pointer;opacity:0;transition:opacity .12s}
+.hist-it:hover .hist-x,.hist-x:focus-visible{opacity:1}
+.hist-x:hover{color:#b8462a}
+.hist-text{margin:3px 0 0;font-size:12.5px;line-height:1.55;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.hist-sub{margin:2px 0 0;font-size:11px;line-height:1.5;color:var(--faint);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.hist-cand .hist-text{color:var(--mute)}
+.chat-ex-row.at-end{-webkit-mask-image:none;mask-image:none}
+.reader-records #rHistToggle{align-self:flex-end;margin-top:-2px}
+.reader-records #rHistory .history-list{margin-top:0}
+#rResources{border-top:0!important}
+/* AI가 켜져 있으면 메모를 "선택"할 필요가 없다: 선택 표시를 숨기고,
+   AI 정리의 쪽 번호를 눌러 이동했을 때만 그 메모를 잠깐 깜빡여 알려 준다. */
+.reader.ai-on .record-selected{display:none!important}
+.reader.ai-on .reading-card.is-selected{border-color:transparent!important;box-shadow:none!important;animation:rec-flash 1.4s ease-out 1}
+@keyframes rec-flash{0%,35%{box-shadow:0 0 0 2px #2f9bee}100%{box-shadow:0 0 0 2px rgba(47,155,238,0)}}
+/* 읽기 기록 접힌 목록 */
+.hllist{gap:6px!important}
+.reading-card .rc-preview{margin:2px 0 0;font-size:12.5px;line-height:1.5;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.reading-card .rc-preview.is-empty{color:var(--faint)}
+.reading-card.rc-open .rc-preview{display:none}
+.reading-card:not(.rc-open){cursor:pointer;padding-top:7px!important;padding-bottom:8px!important}
+.reading-card:not(.rc-open) .hl-meta,.reading-card:not(.rc-open) .hl-img,.reading-card:not(.rc-open) .record-candidate,.reading-card:not(.rc-open)>textarea{display:none!important}
+.reading-card:not(.rc-open) .hgo{color:var(--mute)!important;display:-webkit-box!important;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px!important}
+.reading-card:not(.rc-open) .hl-tools{display:none!important}
+.reading-card:not(.rc-open) .hl-top{min-height:0!important}
+.reading-card:not(.rc-open) .hl-top .hgo{padding-top:0!important}
+.reading-card:not(.rc-open){gap:2px!important}
+/* AI 정리 근거: 쪽 번호 한 줄, 여백 줄이기 */
+.reader-next .ai-basis{margin:6px 0 0!important}
+.reader-next .ai-sec{margin-top:10px!important}
+.reader-next .ai-sec h4{margin-bottom:6px!important}
+.reader-next .ai-sec ul{gap:6px!important}
+.reader-next .ai-chip+.ai-chip::before,.reader-next .ai-rest .ai-chip::before{content:"· ";color:#9aa1ad}
+.reader-next .ai-more{border:0;background:none;padding:0 0 0 4px;font:inherit;font-size:11.5px;font-weight:600;color:var(--mute);cursor:pointer}
+.reader-next .ai-more:hover{color:var(--ink);text-decoration:underline}
+.reader-next .ai-rest[hidden]{display:none}

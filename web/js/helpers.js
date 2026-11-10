@@ -77,7 +77,7 @@ function save(){
     var revision=current&&Number.isSafeInteger(current.storageRevision)?current.storageRevision:0;
     if(STORE_REVISION!==null&&currentRaw&&revision!==STORE_REVISION){conflict=true;throw new Error('STORAGE_FAILURE')}
     var nextRevision=Math.max(revision,STORE_REVISION||0)+1;
-    var o={v:3,storageRevision:nextRevision,name:S.name,tags:S.tags,papers:S.papers.map(function(p){return {id:p.id,tag:p.tag,date:p.date,title:p.title,memo:p.memo,link:p.link,state:p.state==null?null:p.state,note:p.note||'',noteHistory:Array.isArray(p.noteHistory)?p.noteHistory:[],actionHistory:Array.isArray(p.actionHistory)?p.actionHistory:[],page:p.page||'',hl:p.hl||[],todo:p.todo||'',todoSrc:p.todoSrc||'',lastReadOrder:Number.isSafeInteger(p.lastReadOrder)&&p.lastReadOrder>0?p.lastReadOrder:0,total:p.total||'',abs:p.abs||'',authors:p.authors||'',year:p.year||'',pdf:!!p.pdf,fname:p.fname||'',resources:Array.isArray(p.resources)?p.resources:undefined,tut:p.tut?true:undefined}}),links:S.links,view:S.view,filterTag:S.filterTag==null?null:S.filterTag,bands:S.bands,zoom:S.zoom,why:S.why,judge:S.judge,next:S.next,resumeOpen:S.resumeOpen,scroll:S.scroll||null,bubbleDay:S.bubbleDay||'',example:S.example,reader:S.reader||null,uid:uid,seen:Date.now()};
+    var o={v:3,storageRevision:nextRevision,name:S.name,tags:S.tags,papers:S.papers.map(function(p){return {id:p.id,tag:p.tag,date:p.date,title:p.title,memo:p.memo,link:p.link,state:p.state==null?null:p.state,note:p.note||'',noteHistory:Array.isArray(p.noteHistory)?p.noteHistory:[],actionHistory:Array.isArray(p.actionHistory)?p.actionHistory:[],page:p.page||'',hl:p.hl||[],todo:p.todo||'',todoSrc:p.todoSrc||'',aiSum:p.aiSum&&typeof p.aiSum==='object'?p.aiSum:undefined,lastReadOrder:Number.isSafeInteger(p.lastReadOrder)&&p.lastReadOrder>0?p.lastReadOrder:0,total:p.total||'',abs:p.abs||'',authors:p.authors||'',year:p.year||'',pdf:!!p.pdf,fname:p.fname||'',resources:Array.isArray(p.resources)?p.resources:undefined,tut:p.tut?true:undefined}}),links:S.links,view:S.view,filterTag:S.filterTag==null?null:S.filterTag,bands:S.bands,zoom:S.zoom,why:S.why,judge:S.judge,next:S.next,resumeOpen:S.resumeOpen,scroll:S.scroll||null,bubbleDay:S.bubbleDay||'',example:S.example,reader:S.reader||null,uid:uid,seen:Date.now()};
     localStorage.setItem(KEY,JSON.stringify(o));STORE_REVISION=nextRevision;S.saved=true;
   }catch(e){S.saved=false}
   var el=$('#saved');if(el)el.hidden=!S.saved;
@@ -136,23 +136,57 @@ function renderHistory(p) {
   if (!box) return;
   var notes=Array.isArray(p.noteHistory)?p.noteHistory:[];
   var actions=Array.isArray(p.actionHistory)?p.actionHistory:[];
-  function block(label,value) {
-    return '<div class="history-label">'+esc(label)+'</div><pre class="history-text">'+esc(value==null?'미기록':value||'(빈 내용)')+'</pre>';
-  }
-  var content=notes.slice().reverse().map(function(entry,index){
-    return '<details class="history-entry"><summary>'+(entry.source_page?'p.'+esc(entry.source_page)+' · ':'')+'메모 '+(notes.length-index)+'</summary>'+block('원문 메모',entry.content_text)+'</details>';
-  }).join('');
-  content+=actions.slice().reverse().map(function(entry,index){
-    var title=entry.kind==='candidate'?'생성한 후보':entry.kind==='confirmed'?'확인한 다음 할 일':entry.kind==='manual'?'직접 입력한 다음 할 일':'이전 다음 할 일 · 최초 후보 미기록';
-    var body='';
-    if (entry.kind==='candidate'||entry.kind==='confirmed') {
-      if(entry.source_highlight_id)body+=block('선택한 읽기 기록',entry.source_page?'p.'+entry.source_page:'쪽 미기록');
-      body+=block('요청 당시 원문 메모',entry.source_note)+block('최초 후보',entry.original_candidate);
+  var wasOpen=box.querySelector&&$('.history-list[open]',box);
+  var openGroups=box.querySelectorAll?$$('[data-history-group][open]',box).map(function(el){return el.dataset.historyGroup}):[];
+  var groups=new Map();
+  notes.slice().reverse().forEach(function(entry){
+    if(entry.hidden_in_history)return;
+    var key=entry.source_highlight_id||'legacy-note';
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(entry);
+  });
+  /* 날짜순 한 줄 목록: 언제 · 무엇 · 내용 한두 줄. 최근 것이 위. */
+  function when(t){if(!t)return '';var d=new Date(t);if(isNaN(d))return '';return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+  var items=[];
+  groups.forEach(function(versions,key){
+    var source=readingSource(p,key);
+    versions.forEach(function(entry,index){
+      var current=index===0&&source&&source.text===entry.content_text;
+      items.push({t:entry.created_at||0,kind:'memo',label:(entry.source_page?'p.'+entry.source_page+' ':'')+(current?'메모':'메모 수정 전'),text:entry.content_text||'(빈 메모)',id:entry.id,current:current});
+    });
+  });
+  actions.forEach(function(entry){
+    var t=entry.created_at||entry.imported_at||0;
+    if(Object.prototype.hasOwnProperty.call(entry,'final_action')){
+      var cur=entry.final_action===p.todo;
+      items.push({t:t,kind:'todo',label:entry.kind==='ai'?'AI 제안 저장':entry.kind==='manual'?'직접 쓴 할 일':'할 일 저장',text:entry.final_action||'(빈 할 일)',sub:entry.original_candidate&&entry.original_candidate!==entry.final_action?'처음 제안: '+entry.original_candidate:'',current:cur});
+    }else if(entry.kind==='candidate'&&entry.original_candidate){
+      items.push({t:t,kind:'cand',label:'받은 제안',text:entry.original_candidate});
     }
-    if (Object.prototype.hasOwnProperty.call(entry,'final_action')) body+=block('저장한 최종 내용',entry.final_action);
-    return '<details class="history-entry"><summary>'+esc(title)+' '+(actions.length-index)+'</summary>'+body+'</details>';
-  }).join('');
-  box.innerHTML='<details class="history-list"><summary>기록 이력 ('+(notes.length+actions.length)+')</summary>'+(content||'<p class="empty">아직 기록 이력이 없어요.</p>')+'</details>';
+  });
+  items.sort(function(a,b){return (b.t||0)-(a.t||0)});
+  var shown=items.slice(0,30);
+  var content=shown.length?'<ol class="hist-tl">'+shown.map(function(it){
+    return '<li class="hist-it hist-'+it.kind+(it.current?' is-current':'')+'"><div class="hist-meta"><span>'+esc(when(it.t)||'날짜 없음')+'</span><span>·</span><span>'+esc(it.label)+'</span>'+(it.current?'<em>지금</em>':'')+
+      (it.kind==='memo'&&it.id?'<button type="button" class="hist-x" data-history-remove="'+esc(it.id)+'" aria-label="이 메모 버전을 이력에서 지우기" title="이력에서 지우기">×</button>':'')+'</div>'+
+      '<p class="hist-text">'+esc(it.text)+'</p>'+(it.sub?'<p class="hist-sub">'+esc(it.sub)+'</p>':'')+'</li>';
+  }).join('')+'</ol>'+(items.length>shown.length?'<p class="empty">최근 30개만 보여요.</p>':''):'';
+  box.innerHTML='<details class="history-list"'+(wasOpen?' open':'')+'><summary>기록 이력</summary>'+(content||'<p class="empty">아직 기록 이력이 없어요.</p>')+'</details>';
+  box.onclick=function(event){
+    var button=event.target.closest('[data-history-remove]');
+    if(!button)return;
+    var id=button.dataset.historyRemove;
+    ask('이 메모 버전을 이력에서 지울까요?','현재 메모와 저장한 다음 할 일에는 영향을 주지 않아요.','이력에서 지우기',function(){
+      var previous=p.noteHistory,entry=previous.find(function(note){return note.id===id});
+      if(!entry)return;
+      var source=readingSource(p,entry.source_highlight_id||'legacy-note');
+      var linked=(p.actionHistory||[]).some(function(action){return action.source_record_id===id});
+      var keep=linked||(source&&source.text===entry.content_text);
+      p.noteHistory=keep?previous.map(function(note){return note===entry?Object.assign({},note,{hidden_in_history:true}):note}):previous.filter(function(note){return note!==entry});
+      if(!save()&&!S.example){p.noteHistory=previous;return}
+      if(S.reader===p.id)renderHistory(p);
+    },true);
+  };
 }
 
 function load(options){

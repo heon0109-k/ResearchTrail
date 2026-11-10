@@ -40,6 +40,7 @@ function zoomOverviewAt(factor,clientX,clientY){
 function adjustOverviewZoom(direction){
   if(S.zoom!=='all'||S.view!=='card')return;
   var sc=$('#scroller'),scale=L.scale||1,cx=(sc.scrollLeft+sc.clientWidth/2)/scale,cy=(sc.scrollTop+sc.clientHeight/2)/scale;
+  if(direction===0&&S.detailScroll)S.detailScroll.fitViewport={width:sc.clientWidth,height:sc.clientHeight};
   S.overviewZoom=direction===0?1:Math.max(1,Math.min(4,(S.overviewZoom||1)*Math.pow(1.25,direction)));
   if(S.overviewZoom<1.01)S.overviewZoom=1;
   S.bubble=null;renderRbar();renderCards();
@@ -167,7 +168,9 @@ function renderCards(){
   var fitPass=arguments[0]||0;
   var oldLeft=$('#scroller').scrollLeft,oldTop=$('#scroller').scrollTop;
   var overviewViewport=$('#scroller');
-  if(S.zoom==='all'&&!fitPass){L.overviewWidth=Math.max(1100,overviewViewport.clientWidth);L.fitScale=1}
+  var lockedViewport=S.zoom==='all'&&S.detailScroll&&S.detailScroll.fitViewport;
+  var fitViewport=lockedViewport||{width:overviewViewport.clientWidth,height:overviewViewport.clientHeight};
+  if(S.zoom==='all'&&!fitPass){L.fitViewport=fitViewport;L.overviewWidth=Math.max(1100,fitViewport.width);L.fitScale=1}
   var r=rng(),a=r[0],b=r[1],px=ppd();
   if(S.zoom!=='all'){
     var extra=Math.max(0,Math.ceil(overviewViewport.clientWidth/px)+7-(b-a));
@@ -192,7 +195,7 @@ function renderCards(){
     var rows=Math.max(1,ends.length);var h=Math.max(120,30+rows*(ch+GAP)+8);
     var step=ch+GAP,off=28;
     if(bands.length===1){
-      var avail=($('#scroller')?$('#scroller').clientHeight:0)-AXISH-8;
+      var avail=fitViewport.height-AXISH-8;
       if(avail>h){
         h=avail;var pad=36;
         if(rows<=1){off=156}
@@ -201,13 +204,13 @@ function renderCards(){
     }
     items.forEach(function(p){L.pos[p.id]={x:p._x,y:y+off+p._row*step,w:cw,h:ch}});
     L.bandInfo.push({band:bd,y:y,h:h});
-    bandsHtml+='<div class="band'+(bi%2?' alt':'')+'" style="top:'+y+'px;height:'+h+'px;width:'+W+'px;--bc:'+bd.color+'"><div class="blabel" style="--c:'+bd.color+'"><i></i><span>'+esc(bd.name)+'</span></div></div>';
+    bandsHtml+='<div class="band'+(bi%2?' alt':'')+(bi===bands.length-1?' last-band':'')+'" style="top:'+y+'px;height:'+h+'px;width:'+W+'px;--bc:'+bd.color+'"><div class="blabel" style="--c:'+bd.color+'"><i></i><span>'+esc(bd.name)+'</span></div></div>';
     y+=h;
   });
   var H=y+8;
-  if(S.zoom==='all'&&fitPass<2&&overviewViewport.clientHeight>0){
+  if(S.zoom==='all'&&fitPass<2&&fitViewport.height>0){
     // Widen the date layout before scaling it down to fit the tag rows.
-    var widthToFill=overviewViewport.clientWidth*Math.max(1,H/overviewViewport.clientHeight);
+    var widthToFill=fitViewport.width*Math.max(1,H/fitViewport.height);
     if(widthToFill>W+1){
       L.overviewWidth=Math.ceil(widthToFill);
       return renderCards(fitPass+1);
@@ -281,19 +284,23 @@ function renderCards(){
     }
   }
   var canvas=$('#canvas'),scroller=$('#scroller'),overview=S.zoom==='all';
-  var fullHeight=Math.max(H,scroller.clientHeight);
+  var fullHeight=Math.max(H,fitViewport.height);
   var magnify=overview?Math.max(1,Math.min(4,S.overviewZoom||1)):1;
-  L.fitScale=overview?Math.min(1,scroller.clientWidth/W,scroller.clientHeight/fullHeight):1;
+  L.fitScale=overview?Math.min(1,fitViewport.width/W,fitViewport.height/fullHeight):1;
   L.scale=overview?L.fitScale*magnify:1;
   if(scroller.classList)scroller.classList.toggle('overview-fit',overview);
   L.panPadding=overview?20:0;
+  // Fill the canvas behind the fitted cards without changing their layout or scale.
+  var gutter=overview?L.panPadding/L.scale:0;
+  if(overview)fullHeight=Math.max(fullHeight,scroller.clientHeight/L.scale);
+  var rightFill=overview?Math.max(0,scroller.clientWidth/L.scale-W)+gutter:0;
   canvas.style.width=(overview?Math.max(scroller.clientWidth,W*L.scale)+L.panPadding*2:W)+'px';canvas.style.height=(overview?Math.max(scroller.clientHeight,fullHeight*L.scale):fullHeight)+'px';
   var content='<div class="axis" style="width:'+W+'px">'+ax+'</div>'+bandsHtml+
-    '<div class="grid" style="width:'+W+'px;background-size:'+(7*px)+'px 100%;background-position:'+(LABELW+toMon*px)+'px 0"></div>'+todayHtml+
+    '<div class="grid" style="left:'+(-gutter)+'px;width:'+(W+gutter+rightFill)+'px;background-size:'+(7*px)+'px 100%;background-position:'+(LABELW+toMon*px+gutter)+'px 0"></div>'+todayHtml+
     '<svg id="links" class="'+(S.sel?'has-sel':'')+'" width="'+W+'" height="'+H+'">'+defs+lks+'</svg>'+cardsHtml+
     '<svg id="lbls" width="'+W+'" height="'+H+'">'+lbls+'<g id="hov"></g></svg>';
-  canvas.innerHTML=overview?'<div class="overview-sheet" style="left:'+L.panPadding+'px;width:'+W+'px;height:'+fullHeight+'px;transform:scale('+L.scale+')">'+content+'</div>':content;
-  if(overview){scroller.scrollLeft=magnify===1?L.panPadding+Math.max(-L.panPadding/scroller.clientWidth,Math.min(L.panPadding/scroller.clientWidth,S.overviewPan||0))*scroller.clientWidth:oldLeft;scroller.scrollTop=oldTop;var minus=$('#overviewMinus'),plus=$('#overviewPlus');if(minus)minus.disabled=magnify<=1;if(plus)plus.disabled=magnify>=4;var bubble=$('#rbub');if(bubble){bubble.style.maxHeight=Math.max(100,H-AXISH-24)+'px';bubble.style.overflowY='auto';bubble.style.top=Math.max(AXISH+12,Math.min(parseFloat(bubble.style.top),H-bubble.offsetHeight-12))+'px'}}
+  canvas.innerHTML=overview?'<div class="overview-sheet" style="left:'+L.panPadding+'px;width:'+W+'px;height:'+fullHeight+'px;--overview-gutter:'+gutter+'px;--overview-right:'+rightFill+'px;--overview-bottom:'+(fullHeight-y)+'px;transform:scale('+L.scale+')">'+content+'</div>':content;
+  if(overview){scroller.scrollLeft=magnify===1&&!lockedViewport?L.panPadding+Math.max(-L.panPadding/scroller.clientWidth,Math.min(L.panPadding/scroller.clientWidth,S.overviewPan||0))*scroller.clientWidth:oldLeft;scroller.scrollTop=oldTop;var minus=$('#overviewMinus'),plus=$('#overviewPlus');if(minus)minus.disabled=magnify<=1;if(plus)plus.disabled=magnify>=4;var bubble=$('#rbub');if(bubble){bubble.style.maxHeight=Math.max(100,H-AXISH-24)+'px';bubble.style.overflowY='auto';bubble.style.top=Math.max(AXISH+12,Math.min(parseFloat(bubble.style.top),H-bubble.offsetHeight-12))+'px'}}
   var wh=$('.who',canvas);if(wh){var showB=function(){if(S.bubble)return;var cp=curPaper();if(!cp)return;S.bubble=cp.id;S.bubbleGap=S.prevSeen?Date.now()-S.prevSeen:0;renderAll()};wh.addEventListener('mouseenter',showB);wh.addEventListener('click',showB);}
   var bg=$('#rbGo');if(bg){bg.addEventListener('click',function(){var id=S.bubble;dismissBubble(true);openReader(id)});$('#rbX').addEventListener('click',function(){dismissBubble(true);renderAll()})}
 }
