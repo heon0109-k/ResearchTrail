@@ -60,7 +60,7 @@ function openPv(p,src,page){
   return loadPdfJs().then(function(){return pdfjsLib.getDocument({...src,isEvalSupported:false}).promise}).then(function(doc){
     if(RD.id!==p.id){doc.destroy();return}
     var box=$('#rdsrc');
-    box.innerHTML='<div class="pvwrap"><div class="pvbar"><button type="button" class="btn sm" id="pvPrev" aria-label="이전 쪽">◀</button><span class="pvpg"><input type="number" min="1" id="pvNum" value="1"> / <b id="pvTot">'+doc.numPages+'</b></span><button type="button" class="btn sm" id="pvNext" aria-label="다음 쪽">▶</button><span class="sp"></span><button type="button" class="btn sm" id="pvMinus" aria-label="축소">−</button><span id="pvZ" class="pvz">100%</span><button type="button" class="btn sm" id="pvPlus" aria-label="확대">＋</button><button type="button" class="btn sm" id="pvCap" aria-pressed="false" title="깨지는 수식이나 그래프를 이미지로 저장">영역 캡처</button>'+togHtml()+'</div><div class="pvscroll" id="pvs"></div></div>';
+    box.innerHTML='<div class="pvwrap"><div class="pvbar"><button type="button" class="btn sm" id="pvPrev" aria-label="이전 쪽">◀</button><span class="pvpg"><input type="number" min="1" id="pvNum" value="1"> / <b id="pvTot">'+doc.numPages+'</b></span><button type="button" class="btn sm" id="pvNext" aria-label="다음 쪽">▶</button><span class="sp"></span><button type="button" class="btn sm" id="pvMinus" aria-label="축소">−</button><span id="pvZ" class="pvz">100%</span><button type="button" class="btn sm" id="pvPlus" aria-label="확대">＋</button><button type="button" class="btn sm" id="pvCap" aria-pressed="false" title="깨지는 수식이나 그래프를 이미지로 저장">영역 캡처</button>'+togHtml()+'</div><div class="pvscroll" id="pvs"></div></div>';if(typeof placePdfDownload==='function')placePdfDownload();
     PV={doc:doc,zoom:1,pages:[],io:null,pid:p.id,cur:1};
     if(String(p.total)!==String(doc.numPages)){p.total=String(doc.numPages);save()}
     $('#reader').classList.add('has-pv');applyNotes();
@@ -237,8 +237,8 @@ function drawHlList(){
   var hs=(p.hl||[]).slice().sort(function(a,b){return (a.page||Infinity)-(b.page||Infinity)});
   el.innerHTML=hs.length?'<ul class="hllist">'+hs.map(function(h){
     var selected=typeof RR!=='undefined'&&RR.pid===p.id&&RR.selected===h.id;
-    return '<li class="reading-card'+(selected?' is-selected':'')+'" data-rid="'+esc(h.id)+'" tabindex="0" aria-label="읽기 기록 선택"><span class="record-selected">선택한 기록</span><div class="hl-top"><button type="button" class="hgo" '+(h.page?'data-pg="'+h.page+'"':'disabled')+'><b>'+(h.page?'p.'+h.page:'쪽 미기록')+'</b> '+(h.type==='note'?'메모':h.img?'캡처한 부분':esc(short(h.text,80)))+'</button><div class="hl-tools"><button type="button" class="hl-copy" data-hq="'+h.id+'" aria-label="AI에게 물어볼 질문 복사" title="AI에게 물어볼 질문 복사"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 4V3a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v7a1 1 0 0 0 1 1h1"/></svg></button><button type="button" class="x" data-hd="'+h.id+'" aria-label="하이라이트 삭제">×</button></div></div>'+
-      (h.img?'<img class="hl-img" title="눌러서 크게 보기" src="'+h.img+'" alt="캡처한 부분">':'')+
+    return '<li class="reading-card'+(selected?' is-selected':'')+'" data-rid="'+esc(h.id)+'" tabindex="0" aria-label="읽기 기록 선택"><span class="record-selected">선택한 기록</span><div class="hl-top"><button type="button" class="hgo" '+(h.page?'data-pg="'+h.page+'"':'disabled')+'><b>'+(h.page?'p.'+h.page:'쪽 미기록')+'</b> '+(h.type==='note'?'메모':h.img?esc(h.text||'캡처한 부분'):esc(short(h.text,80)))+'</button><div class="hl-tools"><button type="button" class="hl-copy" data-hq="'+h.id+'" aria-label="AI에게 물어볼 질문 복사" title="AI에게 물어볼 질문 복사"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 4V3a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v7a1 1 0 0 0 1 1h1"/></svg></button><button type="button" class="x" data-hd="'+h.id+'" aria-label="하이라이트 삭제">×</button></div></div>'+
+      (h.img?'<img class="hl-img" title="눌러서 크게 보기" src="'+esc(h.img)+'" alt="'+esc(h.text||'캡처한 부분')+'">':'')+
       '<div class="hl-meta">'+highlightKindMenu(h)+'<textarea rows="2" data-hm="'+h.id+'" placeholder="메모를 남겨 보세요" aria-label="하이라이트 메모">'+esc(h.mine||'')+'</textarea></div><button type="button" class="record-candidate" data-record-candidate="'+esc(h.id)+'">다음 할 일 찾기 →</button></li>';
   }).join('')+'</ul>':'<p class="empty">PDF에서 형광펜·영역 캡처를 남기거나 위의 "+ 메모 추가"로 짧게 기록해 보세요.</p>';
   function hb(id){return (p.hl||[]).filter(function(x){return x.id===id})[0]}
@@ -270,6 +270,7 @@ function drawHlList(){
     var ov=document.createElement('div');ov.className='ov';ov.innerHTML='<img class="bigimg" src="'+im.src+'" alt="캡처한 부분 크게 보기">';
     function c(){document.removeEventListener('keydown',k,true);ov.remove()}function k(e){if(e.key==='Escape'){e.stopPropagation();c()}}
     document.addEventListener('keydown',k,true);ov.addEventListener('click',c);document.body.appendChild(ov)})});
+  if(typeof compactRecords==='function')compactRecords();
 }
 
 

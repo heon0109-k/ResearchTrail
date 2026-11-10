@@ -13,9 +13,10 @@ function showMain(){
   '<button class="tog" id="bWhy" type="button" aria-pressed="false" hidden><i></i>이유 보기</button>'+
   '<div class="me"><button type="button" class="mebtn" id="meBtn" aria-haspopup="true" aria-expanded="false"></button><div class="mepop" id="mePop" hidden></div></div>'+
   '</aside><div class="main"><header class="bar"><h1 id="tName"></h1><span id="exTag" class="tagex" hidden>예시</span><span class="sp"></span><button type="button" class="btn ghost sm" id="tourBtn" title="화면 기능 소개 다시 보기">사용법</button><button type="button" class="btn own" id="ownBtn" hidden>내 타임라인 시작</button></header><div class="rbar" id="rbar" hidden></div>'+
-  '<div class="work"><div class="viewport"><div class="emptybox" id="emptyBox" hidden><p class="eb-hint">왼쪽 위 <b>+ 논문 추가</b>로 시작하거나, 타임라인의 빈 곳을 더블클릭하세요.</p></div><div id="bandsw"><button class="tog" id="bBand" type="button" aria-pressed="false"><i></i>태그 구분 없이 보기</button></div><div class="overview-controls" id="overviewControls" hidden><button type="button" id="overviewFit">화면 맞춤</button></div><section id="paperList" class="paper-list" aria-label="논문 목록" hidden></section><div id="timelineMonth" class="timeline-month" aria-label="현재 보이는 연도와 월" hidden></div><div id="scroller"><div id="canvas"></div></div><div id="dotwrap" hidden><svg id="dotsvg" role="img" aria-label="논문 연결 그래프"></svg><div class="gh"><button type="button" class="ghb" id="ghB" aria-label="그래프 보는 법" aria-expanded="false">?</button><div class="ghp" id="ghP" role="tooltip"><div class="r"><i class="c rd"></i>읽는 중</div><div class="r"><i class="c dn"></i>다 읽음</div><div class="r"><i class="c sk"></i>읽을 예정</div><div class="r sz"><i class="c big"></i>연결이 많을수록 큼</div></div></div></div></div><aside class="panel" id="panel" aria-label="논문 패널"><div class="pin" id="pin"></div></aside></div>'+
+  '<div class="work"><div class="viewport"><div class="emptybox" id="emptyBox" hidden><p class="eb-hint">왼쪽 위 <b>+ 논문 추가</b>로 시작하거나, 타임라인의 빈 곳을 더블클릭하세요.</p></div><div id="bandsw"><button class="tog" id="bBand" type="button" aria-pressed="false"><i></i>태그 구분 없이 보기</button></div><section id="paperList" class="paper-list" aria-label="논문 목록" hidden></section><div id="timelineMonth" class="timeline-month" aria-label="현재 보이는 연도와 월" hidden></div><div id="scroller"><div id="canvas"></div></div><div id="dotwrap" hidden><svg id="dotsvg" role="img" aria-label="논문 연결 그래프"></svg><div class="gh"><button type="button" class="ghb" id="ghB" aria-label="그래프 보는 법" aria-expanded="false">?</button><div class="ghp" id="ghP" role="tooltip"><div class="r"><i class="c rd"></i>읽는 중</div><div class="r"><i class="c dn"></i>다 읽음</div><div class="r"><i class="c sk"></i>읽을 예정</div><div class="r sz"><i class="c big"></i>연결이 많을수록 큼</div></div></div></div></div><aside class="panel" id="panel" aria-label="논문 패널"><div class="pin" id="pin"></div></aside></div>'+
   '<section class="reader" id="reader" hidden></section>'+
-  '<footer class="foot" id="fcard"><div class="seg" id="zoomSeg" role="group" aria-label="확대 단계"><button data-z="week" type="button">1주</button><button data-z="month" type="button">1달</button><button data-z="all" type="button">전체</button></div><div class="mm" id="mm" role="slider" tabindex="0" aria-label="타임라인 날짜 이동"></div><div class="rng" id="rng"></div></footer>'+
+  '<footer class="foot" id="fcard"><div class="seg" id="zoomSeg" role="group" aria-label="확대 단계"><button data-z="week" type="button">1주</button><button data-z="month" type="button">1달</button><button data-z="all" type="button">전체</button></div>'+
+  '<div class="overview-controls" id="overviewControls" hidden><button type="button" id="overviewFit">화면 맞춤</button></div><div class="mm" id="mm" role="slider" tabindex="0" aria-label="타임라인 날짜 이동"></div><div class="rng" id="rng"></div></footer>'+
   '<footer class="foot" id="fdot" hidden><span style="font-size:12px;color:var(--mute)">같은 태그끼리 모이고, 연결된 논문은 선으로 이어져요.</span><span style="flex:1"></span><button class="btn" id="relayout" type="button">배치 다시 계산</button></footer>'+
   '</div></div>';
   $('#overviewFit').addEventListener('click',function(){adjustOverviewZoom(0)});
@@ -64,6 +65,7 @@ function select(id){
   if(!id){closeDetailPanel();return}
   if(S.panel!=='detail'&&S.view==='card'&&!S.reader){
     S.detailScroll=timelineScrollState($('#scroller'));
+    if(S.zoom==='all')S.detailScroll.fitViewport=L.fitViewport;
   }
   S.reader=null;S.sel=id;S.panel='detail';S.linking=null;
   renderAll();ensureVisible(id);
@@ -87,7 +89,15 @@ function onPick(id){
   select(id);
 }
 function ensureVisible(id){
-  if(S.view!=='card'||S.zoom==='all')return;var sc=$('#scroller');var p=L.pos[id];if(!p)return;
+  if(S.view!=='card')return;var sc=$('#scroller');var p=L.pos[id];if(!p)return;
+  if(S.zoom==='all'){
+    if(S.panel!=='detail')return;
+    var scale=L.scale||1,x=(L.panPadding||0)+p.x*scale,y=p.y*scale;
+    if(x<sc.scrollLeft+LABELW||x+p.w*scale>sc.scrollLeft+sc.clientWidth)sc.scrollLeft=x-LABELW-8;
+    if(y<sc.scrollTop+AXISH||y+p.h*scale>sc.scrollTop+sc.clientHeight)sc.scrollTop=y-AXISH-8;
+    updateMinimapWin();
+    return;
+  }
   var pw=S.panel!=='none'?372:0;var left=sc.scrollLeft+LABELW,right=sc.scrollLeft+sc.clientWidth-pw;
   if(p.x<left+8||p.x+p.w>right-8){sc.scrollLeft=Math.max(0,p.x-LABELW-(sc.clientWidth-pw-LABELW-p.w)/2)}
   var top=sc.scrollTop+AXISH,bot=sc.scrollTop+sc.clientHeight;

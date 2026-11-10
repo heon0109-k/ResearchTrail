@@ -3,6 +3,35 @@
 var RD={id:null,url:null};
 var RR={pid:null,selected:null};
 var NOTES_OPEN=true;try{NOTES_OPEN=localStorage.getItem('researchtrail.notes')!=='0'}catch(e){}
+var SIDE_OPEN=true;try{SIDE_OPEN=localStorage.getItem('researchtrail.side')!=='0'}catch(e){}
+var NOTES_W=360;try{var _nw=parseInt(localStorage.getItem('researchtrail.notesW'),10);if(_nw>=280&&_nw<=900)NOTES_W=_nw}catch(e){}
+function sideTogHtml(){return '<button type="button" class="icbtn rdside-tog" data-side-tog="1"></button>'}
+function applySide(){var a=$('.app');if(a)a.classList.toggle('side-closed',!SIDE_OPEN);
+  var d=SIDE_OPEN?'M15 4l-6 6 6 6M9 4l-6 6 6 6':'M5 4l6 6-6 6M11 4l6 6-6 6';
+  $$('[data-side-tog]').forEach(function(b){b.setAttribute('aria-pressed',SIDE_OPEN);b.setAttribute('aria-expanded',SIDE_OPEN);b.setAttribute('aria-label',SIDE_OPEN?'왼쪽 메뉴 접기':'왼쪽 메뉴 펴기');b.title=SIDE_OPEN?'왼쪽 메뉴 접기':'왼쪽 메뉴 펴기';
+    b.innerHTML='<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+d+'"/></svg>'})}
+function clampNotesW(w){var body=$('.rdbody'),max=body&&body.clientWidth?Math.max(280,Math.min(900,body.clientWidth-320)):900;return Math.round(Math.max(280,Math.min(max,w)))}
+function applyNotesW(){var n=$('#rdnotes'),h=$('#rdResize');if(!n)return;NOTES_W=clampNotesW(NOTES_W);n.style.width=NOTES_W+'px';if(h)h.setAttribute('aria-valuenow',NOTES_W)}
+function saveNotesW(){try{localStorage.setItem('researchtrail.notesW',String(NOTES_W))}catch(e){}}
+function relayoutPv(p){if(typeof PV!=='undefined'&&PV){setTimeout(function(){if(!PV)return;var cur=PV.cur;buildPages(p);pvGo(cur,true)},60)}}
+function wireNotesResize(p){
+  var h=$('#rdResize'),r=$('#reader');if(!h||!r)return;
+  h.addEventListener('pointerdown',function(e){
+    if(e.button!==0)return;e.preventDefault();
+    var body=$('.rdbody'),right=body.getBoundingClientRect().right;
+    try{h.setPointerCapture(e.pointerId)}catch(x){}
+    r.classList.add('resizing');
+    function move(ev){NOTES_W=clampNotesW(right-ev.clientX);applyNotesW()}
+    function up(){h.removeEventListener('pointermove',move);h.removeEventListener('pointerup',up);h.removeEventListener('pointercancel',up);r.classList.remove('resizing');saveNotesW();relayoutPv(p)}
+    h.addEventListener('pointermove',move);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);
+  });
+  h.addEventListener('keydown',function(e){
+    var step=e.shiftKey?60:20;
+    if(e.key==='ArrowLeft')NOTES_W+=step;else if(e.key==='ArrowRight')NOTES_W-=step;else if(e.key==='Home')NOTES_W=900;else if(e.key==='End')NOTES_W=280;else return;
+    e.preventDefault();applyNotesW();saveNotesW();relayoutPv(p);
+  });
+  h.addEventListener('dblclick',function(){NOTES_W=360;applyNotesW();saveNotesW();relayoutPv(p)});
+}
 function togHtml(){return '<button type="button" class="icbtn" data-tog="1" aria-label="메모 패널 접기/펴기"></button>'}
 function applyNotes(){var r=$('#reader');if(!r)return;r.classList.toggle('notes-closed',!NOTES_OPEN);
   var d=NOTES_OPEN?'M5 4l6 6-6 6M11 4l6 6-6 6':'M15 4l-6 6 6 6M9 4l-6 6 6 6';
@@ -69,13 +98,16 @@ function renderReader(){
   var p=paperBy(S.reader),el=$('#reader');
   if(RD.id===p.id&&el.firstChild)return;
   RD.id=p.id;
-  el.innerHTML='<div class="rdbar"><button type="button" class="btn sm" id="rdBack">← '+(S.view==='list'?'논문 목록':'타임라인')+'</button><div class="rdt" id="rdTitle"></div><span class="sp"></span>'+
-    '<a class="btn sm" id="rdOpen" target="_blank" rel="noopener" hidden>새 탭에서 열기</a>'+
+  el.innerHTML='<div class="rdbar">'+sideTogHtml()+'<button type="button" class="btn sm" id="rdBack">← '+(S.view==='list'?'논문 목록':'타임라인')+'</button><div class="rdt" id="rdTitle"></div><span class="sp"></span>'+
+    '<button type="button" class="dlbtn" id="rdDl" aria-label="PDF 다운로드" data-tip="PDF 다운로드" hidden><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg></button>'+
     '<span class="rdtog1">'+togHtml()+'</span></div>'+
-    '<div class="rdbody"><div class="rdsrc" id="rdsrc"></div><aside class="rdnotes" id="rdnotes"></aside></div>';
+    '<div class="rdbody"><div class="rdsrc" id="rdsrc"></div><div class="rdresize" id="rdResize" role="separator" aria-orientation="vertical" aria-label="메모 패널 너비 조절 (드래그하거나 좌우 화살표, 더블클릭하면 기본 너비)" aria-valuemin="280" aria-valuemax="900" tabindex="0"></div><aside class="rdnotes" id="rdnotes"></aside></div>';
   $('#rdBack').addEventListener('click',closeReader);
-  applyNotes(p);
-  el.onclick=function(e){var t=e.target.closest&&e.target.closest('[data-tog]');if(!t)return;NOTES_OPEN=!NOTES_OPEN;try{localStorage.setItem('researchtrail.notes',NOTES_OPEN?'1':'0')}catch(x){}applyNotes();if(PV){setTimeout(function(){var cur=PV.cur;buildPages(p);pvGo(cur,true)},60)}};
+  applyNotes(p);applySide();applyNotesW();wireNotesResize(p);
+  el.onclick=function(e){
+    var sd=e.target.closest&&e.target.closest('[data-side-tog]');
+    if(sd){SIDE_OPEN=!SIDE_OPEN;try{localStorage.setItem('researchtrail.side',SIDE_OPEN?'1':'0')}catch(x){}applySide();applyNotesW();relayoutPv(p);return}
+    var t=e.target.closest&&e.target.closest('[data-tog]');if(!t)return;NOTES_OPEN=!NOTES_OPEN;try{localStorage.setItem('researchtrail.notes',NOTES_OPEN?'1':'0')}catch(x){}applyNotes();if(PV){setTimeout(function(){var cur=PV.cur;buildPages(p);pvGo(cur,true)},60)}};
   readerSrc(p,p.page);renderRNotes();
 }
 function resizeReaderTodo(){
@@ -117,46 +149,99 @@ function renderRNotes(){
   if(RR.pid!==p.id){RR.pid=p.id;RR.selected=null}
   if(RR.selected&&!readingSource(p,RR.selected))RR.selected=null;
   $('#rdTitle').textContent=p.title;
-  var op=$('#rdOpen');var ou=p.pdf?'':((typeof samplePdfUrl==='function'&&samplePdfUrl(p))||pdfUrlOf(p.link)||safeExternalUrl(p.link));op.hidden=!ou;if(ou)op.href=ou;else op.removeAttribute('href');
+  var dl=$('#rdDl');if(dl){dl.hidden=!pdfDownloadSource(p);dl.onclick=function(){downloadPaperPdf(p,dl)}}
   var outs=S.links.filter(function(l){return l.from===p.id}),ins=S.links.filter(function(l){return l.to===p.id});
   function li(l,dir){var o=paperBy(dir==='out'?l.to:l.from);if(!o)return '';return '<li><span class="arr">'+(dir==='out'?'→':'←')+'</span><button type="button" class="go" data-go="'+o.id+'">'+esc(short(o.title,44))+'</button>'+(l.reason?'<span class="why">'+esc(l.reason)+'</span>':'')+'<button type="button" class="x" data-del="'+l.id+'" aria-label="연결 삭제">×</button></li>'}
   var others=S.papers.filter(function(x){return x.id!==p.id}).sort(function(a,b){return dnum(b.date)-dnum(a.date)});
   var meta=[p.authors?esc(short(p.authors,60)):'',p.year||''].filter(Boolean).join(' · ');
   el.innerHTML=
+   '<div class="rtabs" role="tablist" aria-label="오른쪽 패널"><button type="button" role="tab" data-rtab="notes">기록</button><button type="button" role="tab" data-rtab="chat">질문하기</button></div>'+
+   '<section class="reader-chat" id="rChat" aria-label="질문하기" hidden></section>'+
    (meta?'<div class="rmeta">'+meta+'</div>':'')+
+   '<section class="reader-section reader-ai" id="rAi" aria-label="AI 정리"></section>'+
    '<section class="reader-section reader-resume" aria-label="이어 읽기"><h3>이어 읽기</h3><label class="field"><span>읽은 정도</span><select id="rState">'+stateOpts(p.state)+'</select></label>'+
    '<div class="two"><label class="field"><span>읽던 쪽 (자동 기록)</span><input type="number" min="1" id="rPage" value="'+esc(p.page)+'" placeholder="예: 7"></label><div class="field"><span>&nbsp;</span><button type="button" class="btn" id="rGo">이 쪽으로 이동</button></div></div>'+
    '</section><section class="reader-section reader-records" aria-label="읽기 기록"><div class="records-heading"><h3>읽기 기록</h3><button type="button" class="record-add" id="rAddNote">+ 메모 추가</button></div><p class="reader-hint">문장이나 캡처에 짧게 메모를 남겨요. 메모 아래의 "다음 할 일 찾기"를 누르면 그 메모에서 후보를 찾아요.</p><div id="rRecords">'+legacyReadingRecordHtml(p)+'<div id="rHl"></div></div></section>'+
-   '<section class="reader-section reader-next" aria-label="다음에 할 일"><h3>다음에 할 일</h3><div id="rTodoSaved"><label class="field"><span class="sr-only">저장된 다음에 할 일</span><textarea id="rTodo" rows="2" placeholder="아직 정하지 않았어요. 직접 적어도 돼요.">'+esc(p.todo||'')+'</textarea></label><p class="reader-hint">다시 돌아오면 여기서 이어가요. 직접 고쳐 적어도 돼요.</p></div><div class="na" id="naBox" hidden></div></section><section id="rHistory" aria-label="기록 이력"></section>'+
+   '<section class="reader-section reader-next" aria-label="다음에 할 일"><h3>다음에 할 일</h3><div id="rTodoSaved"><div class="field"><textarea id="rTodo" rows="2" aria-label="다음에 할 일" placeholder="다음에 할 일을 적어 보세요.">'+esc(p.todo||'')+'</textarea></div></div><div class="na" id="naBox" hidden></div></section><section id="rHistory" aria-label="기록 이력"></section>'+
    (typeof paperResourcesHtml==='function'&&(p.pdf||(p.resources||[]).length||(typeof samplePdfUrl==='function'&&samplePdfUrl(p)))?paperResourcesHtml('rResources'):'')+
    '<details class="reader-extra"><summary>저장 이유</summary><label class="field"><span class="sr-only">저장 이유</span><textarea id="rMemo" rows="2">'+esc(p.memo)+'</textarea></label></details>'+
    (p.abs?'<details class="rabs"><summary>초록 보기</summary><p>'+esc(p.abs)+'</p></details>':'')+
-   '<div><h4>이어진 논문</h4>'+((outs.length||ins.length)?'<ul class="lklist">'+outs.map(function(l){return li(l,'out')}).join('')+ins.map(function(l){return li(l,'in')}).join('')+'</ul>':'<p class="empty">아직 없어요. 읽다가 이어서 본 논문을 연결해 두세요.</p>')+
-     (others.length?'<div class="rlk"><select id="rLkTo" aria-label="이어진 논문"><option value="">이 논문에서 이어서 본 논문…</option>'+others.map(function(o){return '<option value="'+o.id+'">'+esc(short(o.title,46))+'</option>'}).join('')+'</select><input type="text" id="rLkWhy" placeholder="왜 이어서 봤나요?"><button type="button" class="btn" id="rLkOk">연결</button><p class="empty" id="rLkErr" style="color:var(--c3)" hidden></p></div>':'')+'</div>'+
+   '<div class="rlinks"><div class="records-heading"><h4>이어진 논문</h4>'+(others.length?'<button type="button" class="record-add" id="rLkAdd" aria-expanded="false">+ 연결</button>':'')+'</div>'+((outs.length||ins.length)?'<ul class="lklist">'+outs.map(function(l){return li(l,'out')}).join('')+ins.map(function(l){return li(l,'in')}).join('')+'</ul>':'<p class="empty">아직 없어요. 읽다가 이어서 본 논문을 연결해 두세요.</p>')+
+     (others.length?'<div class="rlk" id="rLkForm" hidden><select id="rLkTo" aria-label="이어진 논문"><option value="">이 논문에서 이어서 본 논문…</option>'+others.map(function(o){return '<option value="'+o.id+'">'+esc(short(o.title,46))+'</option>'}).join('')+'</select><input type="text" id="rLkWhy" placeholder="왜 이어서 봤나요?"><button type="button" class="btn" id="rLkOk">연결</button><p class="empty" id="rLkErr" style="color:var(--c3)" hidden></p></div>':'')+'</div>'+
    (typeof sampleSourceHtml==='function'?sampleSourceHtml(p):'')+
+   '<button type="button" class="rd-mini-link" id="rHistToggle" aria-expanded="false">변경 기록 보기</button>'+
    '<div class="rfoot"><button type="button" class="btn pri" id="rDone">다 읽었어요</button></div>';
   $('#rState').addEventListener('change',function(e){p.state=e.target.value||null;save()});
   $('#rPage').addEventListener('change',function(e){p.page=e.target.value;save()});
   $('#rGo').addEventListener('click',function(){p.page=$('#rPage').value;save();if(PV)pvGo(+p.page,true);else readerSrc(p,p.page)});
-  drawHlList();wireReadingRecords(p);
+  drawHlList();wireReadingRecords(p);if(typeof compactRecords==='function')compactRecords();
   $('#rMemo').addEventListener('input',function(e){p.memo=e.target.value;save()});
   resizeReaderTodo();
-  $('#rTodo').addEventListener('input',function(e){resizeReaderTodo();p.todo=e.target.value;p.todoSrc='manual';save()});
+  $('#rTodo').addEventListener('input',function(e){resizeReaderTodo();if(typeof aiEditTodo==='function'&&aiEditTodo(p,e.target))return;p.todo=e.target.value;p.todoSrc='manual';save()});
   var editingNote=false,noteField=$('#rNote');
   if(noteField){noteField.addEventListener('input',function(e){
     if(!editingNote){rememberNote(p,p.note||'');editingNote=true}
     p.note=e.target.value;save();if(NA.pid===p.id&&NA.st==='cand')naRender(p,true);
   });
   noteField.addEventListener('change',function(){rememberNote(p,p.note||'');editingNote=false;save();renderHistory(p);if(NA.pid===p.id&&NA.st==='cand')naRender(p,true)})}
-  $('#rTodo').addEventListener('change',function(){rememberManualTodo(p);save();renderHistory(p)});
+  $('#rTodo').addEventListener('change',function(){if(typeof aiOn==='function'&&aiOn())return;rememberManualTodo(p);save();renderHistory(p)});
   naInit(p);renderHistory(p);
+  if(typeof aiInit==='function')aiInit(p);
+  if(typeof chatInit==='function')chatInit(p);
   if(typeof wirePaperResources==='function')wirePaperResources($('#rResources'),p);
   $$('[data-go]',el).forEach(function(b){b.addEventListener('click',function(){openReader(b.dataset.go)})});
   $$('[data-del]',el).forEach(function(b){b.addEventListener('click',function(){ask('이 연결을 삭제할까요?','연결 이유도 함께 사라져요.','삭제',function(){S.links=S.links.filter(function(l){return l.id!==b.dataset.del});save();renderRNotes()},true)})});
+  var lkAdd=$('#rLkAdd');if(lkAdd)lkAdd.addEventListener('click',function(){
+    var f=$('#rLkForm');if(!f)return;var open=f.hidden;f.hidden=!open;lkAdd.setAttribute('aria-expanded',open);lkAdd.textContent=open?'닫기':'+ 연결';
+    if(open){var sel=$('#rLkTo');if(sel)sel.focus()}
+  });
   var ok=$('#rLkOk');if(ok)ok.addEventListener('click',function(){
     var to=$('#rLkTo').value,er=$('#rLkErr');if(!to){er.hidden=false;er.textContent='이어서 본 논문을 골라 주세요.';return}
     var e=linkError(p.id,to);if(e){er.hidden=false;er.textContent=e;return}
     S.links.push({id:nid('l'),from:p.id,to:to,reason:$('#rLkWhy').value.trim()});save();renderRNotes();
   });
+  /* 변경 기록 링크와 목록을 "읽기 기록" 칸 안 맨 아래로 넣는다(따로 구분선 없이). */
+  (function(){var rec=el&&el.querySelector?el.querySelector('.reader-records'):null,ht0=$('#rHistToggle'),hb=$('#rHistory');if(rec&&ht0&&rec.appendChild){rec.appendChild(ht0);if(hb)rec.appendChild(hb)}})();
+  var ht=$('#rHistToggle');if(ht)ht.addEventListener('click',function(){var n=$('#rdnotes'),on=!n.classList.contains('show-history');n.classList.toggle('show-history',on);ht.setAttribute('aria-expanded',on);ht.textContent=on?'변경 기록 닫기':'변경 기록 보기';var h=$('#rHistory');if(on&&h){var d=h.querySelector('details');if(d)d.open=true;h.scrollIntoView({block:'nearest',behavior:'smooth'})}});
   $('#rDone').addEventListener('click',function(){p.state='done';var next=curPaper();if(next)S.sel=next.id;closeReader()});
+}
+
+/* PDF 다운로드: 올린 PDF는 이 브라우저 저장소에서, 예시 논문은 앱 폴더에서, arXiv는 원문 PDF에서 받는다. */
+function pdfDownloadSource(p){
+  if(!p)return null;
+  if(p.pdf)return {kind:'local'};
+  var u=(typeof samplePdfUrl==='function'&&samplePdfUrl(p))||'';if(u)return {kind:'url',url:u};
+  u=pdfUrlOf(p.link);if(u)return {kind:'url',url:u,external:true};
+  return null;
+}
+function pdfFileName(p){
+  var base=String(p.fname||p.title||'paper').replace(/\.pdf$/i,'').replace(/[\\/:*?"<>|\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim().slice(0,120)||'paper';
+  return base+'.pdf';
+}
+function saveBlobAs(blob,name){
+  var url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){try{URL.revokeObjectURL(url)}catch(e){}},4000);
+}
+function downloadPaperPdf(p,btn){
+  var src=pdfDownloadSource(p);if(!src)return;
+  if(btn)btn.disabled=true;
+  var done=function(){if(btn)btn.disabled=false};
+  var get=src.kind==='local'?idbGet(p.id):fetch(src.url).then(function(r){if(!r.ok)throw 0;return r.blob()});
+  get.then(function(b){
+    if(!b)throw 0;
+    saveBlobAs(b,pdfFileName(p));done();
+  }).catch(function(){
+    done();
+    if(src.kind==='url'){
+      window.open(src.url,'_blank','noopener');
+      toast('바로 받지 못해 PDF를 새 탭에서 열었어요. 거기서 저장해 주세요.');
+    }else toast('PDF를 꺼내지 못했어요. 다시 시도해 주세요.');
+  });
+}
+
+/* PDF 뷰어가 열리면 다운로드 버튼을 PDF 도구 줄의 접기 화살표 바로 왼쪽으로 옮긴다. */
+function placePdfDownload(){
+  var dl=$('#rdDl'),tog=$('.pvbar [data-tog]');
+  if(dl&&tog&&tog.parentNode&&dl.nextSibling!==tog)tog.parentNode.insertBefore(dl,tog);
 }
