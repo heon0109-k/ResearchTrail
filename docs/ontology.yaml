@@ -5,8 +5,8 @@ metadata:
   intended_repository_path: docs/ontology.yaml
   source_interview:
     path: docs/research/interview.md
-    sha256: c0a48e1bd687009a01febd34148b6905c43d6da27975dca32b005bbfffbb01dc
-    line_count: 2671
+    sha256: 7c6a59af55abe8cd1bda4994418c6b3bac0014f93ac918670fa10c199bb88980
+    line_count: 2679
     note: evidence는 기존 인터뷰 로그와 추가 조사 응답을 참조한다. 원문 응답·익명 요약·분석 내용을 구분한다.
   format_basis:
     filename: 강의02_도메인발견_온톨로지_작성지침.md
@@ -254,8 +254,8 @@ classes:
         type: string
         nullable: true
         description: 확인된 파일 위치·링크·소장 위치.
-        note: 폴더 이름이나 링크의 실제 값이 수록되지 않았다면 값을 지어내지 않는다.
-        evidence: [로그 2 / P02-Q02, 로그 3 / P03-Q02, 로그 7 / P07-Q02]
+        note: 검색 환경만으로 파일 위치를 특정하지 않는다. 폴더 이름이나 링크를 모르면 미기록으로 둔다.
+        evidence: [로그 2 / P02-Q02, 로그 3 / P03-Q02]
       availability_text:
         type: string
         nullable: true
@@ -333,8 +333,8 @@ classes:
     - documented_in: ResearchRecord
       cardinality: 0..*
       description: 사용 이유·역할을 적은 기록.
-      note: 당시 이유가 기록되지 않았던 사례에는 당시 기록 관계를 만들어 넣지 않는다.
-      evidence: [로그 3 / P03-Q03, 로그 5 / P05-Q03, 로그 6 / P06-Q03, 로그 7 / P07-Q03]
+      note: P07-Q03의 파일 메모에는 반론으로 쓸 이유가 빠져 있었다. 당시 목적 기록의 누락은 purpose_recording_text로 표현한다.
+      evidence: [로그 3 / P03-Q03, 로그 5 / P05-Q03, 로그 6 / P06-Q03]
     - focuses_on: EvidenceExcerpt
       cardinality: 0..*
       description: 그 용도로 다시 보려는 문헌의 구체적인 대목.
@@ -555,8 +555,8 @@ classes:
         type: string
         nullable: true
         description: 그 행동을 수행하는 데 남은 장애나 대기 이유.
-        note: 문헌 본문, 보충자료, 실행 파일 가운데 무엇이 없는지 구별한다.
-        evidence: [로그 5 / P05-Q08, 로그 6 / P06-Q12, 로그 9 / P09-Q12]
+        note: 문헌 본문, 보충자료, 실행 파일 가운데 무엇이 없는지 구별한다. P06-Q12의 다음 모임 전이라는 표현은 deadline_text에 해당한다.
+        evidence: [로그 5 / P05-Q08, 로그 9 / P09-Q12]
       deadline_text:
         type: string
         nullable: true
@@ -585,7 +585,8 @@ classes:
     - targets_record: ResearchRecord
       cardinality: 0..*
       description: 다시 검토하거나 작성·수정하려는 기록.
-      evidence: [로그 1 / P01-Q10, 로그 4 / P04-Q15, 로그 8 / P08-Q13]
+      note: P04-Q15의 다음 행동을 적어 둔 줄은 documented_in의 근거다.
+      evidence: [로그 1 / P01-Q10, 로그 8 / P08-Q13]
     - documented_in: ResearchRecord
       cardinality: 0..*
       description: 다음 행동을 적어 둔 노트·표의 마지막 줄 등의 기록.
@@ -647,11 +648,13 @@ classes:
     - consulted: ResearchRecord
       cardinality: 0..*
       description: 재개 중 실제로 확인한 기존 기록.
+      note: S03은 이전 대화와 엑셀을 확인했다. 실제 첫 행동과 이전 결정의 복원은 미확인이다.
       evidence: [로그 2 / P02-Q10, 로그 3 / P03-Q10, 로그 4 / P04-Q10, 로그 5 / P05-Q10, 추가 설문 / S03-Q10-F1]
     - reopened: DocumentArtifact
       cardinality: 0..*
       description: 재개 중 다시 연 원문 표현물.
-      evidence: [로그 1 / P01-Q10, 로그 4 / P04-Q10-F1, 로그 9 / P09-Q10]
+      note: 재개 중 다시 열린 원문이 확인된 경우에 연결한다. P04-Q10-F1과 P09-Q10은 재개 중 PDF를 확인한 사례이며, PDF를 다시 열었는지는 미확인이다. P01-Q10의 논문은 이미 열려 있었다.
+      evidence: [추가 설문 / S02 후속]
     - recovered_question: ResearchQuestion
       cardinality: 0..*
       description: 기록에서 다시 확인한 질문이나 막힌 지점.
@@ -675,7 +678,7 @@ scope:
   primary_situation:
     source_sections: [interview.md §1.2, interview.md §3.3, interview.md §7.1–7.2]
     text: 과제·프로젝트·스터디·연구를 위해 논문을 읽고 기록하며, 중단한 읽기와 탐색을 다시 이어가려는 학생의 문헌 과업 재개를 중심 상황으로 삼는다.
-    note: PROBLEM.md와 문헌 과업 재개 범위를 동일하게 정의한다. P04의 출발 방향 선정은 하위 상황이고 P05의 원활한 재개는 반례다. 추가 설문은 대상 조건과 중복 확인 후 편입한다.
+    note: PROBLEM.md와 문헌 과업 재개 범위를 동일하게 정의한다. P04의 출발 방향 선정은 하위 상황이고 P05의 원활한 재개는 반례다. S01–S03은 기존 면담에 참여하지 않은 추가 조사 응답자이며, 기존 P04–P06의 판정 분모와 분리한다.
     evidence: [로그 4 / P04-Q01, 로그 5 / P05-Q01, 로그 6 / P06-Q01]
   managed_concept_candidates:
   - classes: [ResearchTask, ResearchQuestion, DocumentUse, Decision, NextAction]
@@ -754,11 +757,10 @@ domain_constraints:
   evidence: [로그 4 / P04-Q16-F1, 로그 9 / P09-Q16, 로그 10 / P10-Q16]
 core_job:
   source: interview.md §7.1
-  status: 원문도 검토 후보이며, 다음 되쓰기는 온톨로지 연결을 점검하기 위한 후보 표현이다.
-  original_text: 낯선 연구 주제의 출발 방향을 정하려고 여러 논문과 설명을 읽다가 작업을 중단했을 때, 나는 자료를 남긴 이유와 마지막 판단, 남아 있는 확인 작업을 함께 되찾고 싶다.
-    그래야 이전 대화를 전부 다시 훑지 않고 현재 과제에 필요한 검토를 이어 갈 수 있다.
+  status: 인터뷰 7.1절의 개정 문장과 agreed_job_text는 팀 검토 대기 상태다. 되쓰기는 온톨로지 연결을 점검하기 위한 후보 표현이다.
+  original_text: 과제·프로젝트·스터디·연구를 위해 논문을 읽다가 잠시 멈춘 뒤 돌아왔을 때, 나는 그 자료를 왜 남겼는지, 어디까지 판단했거나 어떤 질문이 남았는지, 다음에 무엇을 할지 함께 확인하고 싶다. 그래야 이전 대화와 메모를 처음부터 다시 훑지 않고 필요한 검토나 작성을 이어 갈 수 있다.
   evidence: [로그 4 / P04-Q03, 로그 4 / P04-Q10, 로그 4 / P04-Q12, 로그 6 / P06-Q03, 로그 6 / P06-Q10, 추가 설문 / S03-Q10]
-  agreed_job_text: 과제·프로젝트·스터디·연구를 위해 논문을 읽는 학생이 문헌 과업을 중단했다가 재개할 때, 기록된 자료 사용 이유·판단 또는 질문·확인된 다음 작업을 함께 되찾아 검토를 이어 간다.
+  agreed_job_text: 과제·프로젝트·스터디·연구를 위해 논문을 읽는 학생이 문헌 과업을 중단했다가 재개할 때, 기록된 자료 사용 이유·판단 또는 질문·다음 작업을 확인해 필요한 검토나 작성을 이어 간다.
   ontology_restatement: |
     ResearchTask를 중단한 뒤 ResumeEpisode가 시작되면, 해당 과업의 DocumentUse에서
     문헌별 purpose_text·role_text를 확인하고, ResearchRecord에 남은 ResearchQuestion,
