@@ -16,7 +16,7 @@
 
 핵심 흐름: 과업 선택 → 짧은 메모 저장 → 다음 작업 후보 추출 → 사용자 검토·확인 → 같은 과업 재열람 (`docs/SPEC.md` 3절).
 
-논문 검색·추천, RAG 질의응답, 요약·연구 계획 생성, PDF·OCR 추출, 메일·알림·코드 실행은 이번 버전의 범위가 아니다 (`docs/SPEC.md` 4.2절).
+논문 검색·추천, 여러 논문을 대상으로 하는 RAG 질의응답, 연구 계획 생성, 일반 PDF 데이터 추출·OCR, 메일·알림·코드 실행은 이번 MVP 범위 밖이다. 질문하기는 현재 열어 둔 PDF 한 편을 검색하는 별도 실험 기능이며 MVP 평가 AC에 포함하지 않는다 (`docs/SPEC.md` 4.2절). 다음 작업 파싱과 재개 조회는 RAG 없이 동작한다.
 
 ## 2. 도메인 용어집
 
@@ -113,7 +113,7 @@
 - `tests/`: 테스트. `tests/harness/golden_cases.yaml`에 데이터 기반 골든 케이스
 - `evals/`: 모델 품질 평가와 결과(`evals/results/`)
 - `data/seed/`: 예시 데이터
-- `config/`: 설정(`rag.yaml`. RAG는 이번 버전 비포함 범위)
+- `config/`: `rag.yaml`에 질문하기의 단일 PDF 검색 설정과 코드 근거를 기록한다.
 - `docs/`: `PROBLEM.md`, `SPEC.md`, `ontology.yaml`, `ARCHITECTURE.md`, `research/`(인터뷰·실험 기록), `spikes/`, `prompts/`(위임 프롬프트 기록)
 
 진행 상태
