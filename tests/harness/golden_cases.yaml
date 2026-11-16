@@ -4,8 +4,13 @@ loader_rules:
   default_status: stop
   validator: src/researchtrail/schemas/next_action.schema.json
 scope: 고정 응답의 결정적 검사. 실제 모델 품질·재시도 횟수·저장 동작은 평가하지 않는다.
+category_definitions:
+  normal: 스키마·원문 구절 검사를 통과해 정상 후보로 처리해야 하는 입력
+  boundary: null 행동·공백·문자열 "null"·길이 절단처럼 오류와 정상의 경계에서 정해진 분기로 보내야 하는 입력
+  forbidden: 원문에 없는 행동·상태, 잘못된 JSON, 미정의·중복 키, 차단 응답처럼 정상 후보로 받아들이면 안 되는 출력
 cases:
 - id: NA-STRUCT-01
+  category: normal
   ac:
   - AC1
   input:
@@ -19,6 +24,7 @@ cases:
   expect_repair_eligible: false
   note: 'SPEC 5.3 / AC1: 스키마·원문 구절 통과 시 사람 확인'
 - id: NA-CLARIFY-01
+  category: boundary
   ac:
   - AC2
   input:
@@ -32,6 +38,7 @@ cases:
   expect_repair_eligible: false
   note: 'SPEC 5.3 / AC2: 유효한 null 행동은 재질문'
 - id: NA-STRUCT-02
+  category: forbidden
   ac:
   - AC1
   input:
@@ -44,6 +51,7 @@ cases:
   expect_repair_eligible: true
   note: 'SPEC 5.3 / AC1: 잘못된 JSON 거부'
 - id: NA-STRUCT-03
+  category: forbidden
   ac:
   - AC1
   input:
@@ -56,6 +64,7 @@ cases:
   expect_repair_eligible: true
   note: 'SPEC 5.3 / AC1: 필수 action_text 누락 거부'
 - id: NA-STRUCT-04
+  category: forbidden
   ac:
   - AC1
   input:
@@ -68,6 +77,7 @@ cases:
   expect_repair_eligible: true
   note: 'SPEC 5.3 / AC1: 미정의 키 거부'
 - id: NA-STRUCT-05
+  category: boundary
   ac:
   - AC1
   input:
@@ -82,6 +92,7 @@ cases:
   expect_errors_include:
   - action_text:whitespace_only
 - id: NA-STRUCT-06
+  category: boundary
   ac:
   - AC1
   input:
@@ -96,6 +107,7 @@ cases:
   expect_errors_include:
   - action_text:literal_null_placeholder
 - id: NA-STRUCT-07
+  category: forbidden
   ac:
   - AC3
   input:
@@ -110,6 +122,7 @@ cases:
   expect_errors_include:
   - progress_text:not_contiguous_input_span
 - id: NA-STRUCT-08
+  category: normal
   ac:
   - AC1
   input:
@@ -124,6 +137,7 @@ cases:
   expect_repair_eligible: false
   note: 'SPEC 5.3 / AC1: 선택 필드 null을 정규화에서 생략'
 - id: NA-STRUCT-09
+  category: boundary
   ac:
   - AC1
   input:
@@ -138,6 +152,7 @@ cases:
   expect_errors_include:
   - null_action_with_other_properties
 - id: NA-STRUCT-10
+  category: forbidden
   ac:
   - AC3
   input:
@@ -152,6 +167,7 @@ cases:
   expect_errors_include:
   - action_text:not_contiguous_input_span
 - id: NA-STRUCT-11
+  category: boundary
   ac:
   - AC7
   input:
@@ -164,6 +180,7 @@ cases:
   expect_repair_eligible: true
   note: 'SPEC 5.3 / AC7: 길이 제한 출력의 형식 복구 분류. 재시도 상한은 별도 흐름 검사'
 - id: NA-STRUCT-12
+  category: forbidden
   ac:
   - AC7
   input:
@@ -176,6 +193,7 @@ cases:
   expect_repair_eligible: false
   note: 'SPEC 5.3 / AC7: 차단된 응답은 후보 없이 중단'
 - id: NA-STRUCT-13
+  category: forbidden
   ac:
   - AC1
   input:

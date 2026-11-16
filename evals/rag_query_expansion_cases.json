@@ -1,0 +1,145 @@
+{
+  "status": "draft; human semantic review pending",
+  "basis": "User-requested regression and held-out cases; source pages inspected before new live runs",
+  "conditions": {
+    "startPage": 1,
+    "freshConversation": true,
+    "selection": false,
+    "questionPageNumbers": false
+  },
+  "regression": [
+    {
+      "id": "G1",
+      "pid": "s8",
+      "q": "TS와 SS 실험 조건은 각각 어떤 문맥을 사용해?",
+      "gold": [
+        7
+      ],
+      "expected": "TS: 원문 텍스트를 섞고 나눠 map-reduce 요약. SS: 텍스트 청크를 검색해 토큰 한도까지 문맥에 추가."
+    },
+    {
+      "id": "G2",
+      "pid": "s8",
+      "q": "원문을 섞어 나눠서 요약하는 비교 방법과, 질문에 맞는 글 조각을 찾아 넣는 비교 방법은 입력 내용을 어떻게 다르게 구성해?",
+      "gold": [
+        7
+      ],
+      "expected": "G1과 동일"
+    },
+    {
+      "id": "G3",
+      "pid": "s8",
+      "q": "TS와 SS 실험에 사용한 GPU 모델명과 GPU 개수는?",
+      "gold": [],
+      "expected": "미기재: 근거 부족 안내"
+    },
+    {
+      "id": "B1",
+      "pid": "s2",
+      "q": "Masked LM에서 예측 대상으로 고른 토큰은 [MASK], random token, unchanged token으로 각각 얼마나 처리해?",
+      "gold": [
+        4,
+        12
+      ],
+      "expected": "선택된 토큰 중 [MASK] 80%, 임의 토큰 10%, 유지 10%. 전체 토큰 중 선택은 15%."
+    },
+    {
+      "id": "B2",
+      "pid": "s2",
+      "q": "가린 낱말을 맞히는 학습에서 예측 대상으로 뽑은 낱말을 가림 표시로 바꾸거나, 임의 낱말로 바꾸거나, 그대로 두는 비율은 각각 얼마야?",
+      "gold": [
+        4,
+        12
+      ],
+      "expected": "B1과 동일"
+    },
+    {
+      "id": "B3",
+      "pid": "s2",
+      "q": "BERT 사전학습에 사용된 전력량은 몇 kWh야?",
+      "gold": [],
+      "expected": "미기재: 근거 부족 안내"
+    },
+    {
+      "id": "V1",
+      "pid": "s3",
+      "q": "BioBERT가 original WordPiece vocabulary를 그대로 사용한 두 가지 이유는?",
+      "gold": [
+        3
+      ],
+      "expected": "기존 BERT와 호환·재사용·교환 가능. 기존 WordPiece로 새 단어도 표현하고 의생명 분야에 맞게 학습 가능."
+    },
+    {
+      "id": "V2",
+      "pid": "s3",
+      "q": "의생명 분야에 맞춰 추가 학습하면서도 기존 낱말 사전을 새로 만들지 않은 두 가지 이유는?",
+      "gold": [
+        3
+      ],
+      "expected": "V1과 동일"
+    },
+    {
+      "id": "V3",
+      "pid": "s3",
+      "q": "BioBERT를 환자 대상 무작위 임상시험으로 검증했을 때 등록 환자 수는?",
+      "gold": [],
+      "expected": "미기재: 근거 부족 안내"
+    }
+  ],
+  "heldout": [
+    {
+      "id": "H1",
+      "pid": "s8",
+      "q": "원문을 더 긴 덩어리로 나눠 개체를 추출하면 호출 횟수와 찾아내는 정보량 사이에 어떤 상충이 있어?",
+      "gold": [
+        3
+      ],
+      "expected": "긴 청크는 추출 모델 호출을 줄이지만 긴 문맥에서 재현율이 낮아진다.",
+      "source": "GraphRAG §2.1"
+    },
+    {
+      "id": "H2",
+      "pid": "s2",
+      "q": "사전학습의 대부분 단계와 마지막 단계에서 입력 길이를 각각 어떻게 설정했고, 단계 비중은 얼마였어?",
+      "gold": [
+        13
+      ],
+      "expected": "전체 단계의 90%는 길이 128, 마지막 10%는 길이 512.",
+      "source": "BERT Appendix A.2"
+    },
+    {
+      "id": "H3",
+      "pid": "s7",
+      "q": "찾은 문서가 답변을 얼마나 뒷받침하는지 판단하는 표시는 어떤 세 가지 상태를 구분해?",
+      "gold": [
+        4
+      ],
+      "expected": "IsSUP: fully supported, partially supported, no support.",
+      "source": "Self-RAG Table 1"
+    }
+  ],
+  "cold_holdout": [
+    {
+      "id": "H4",
+      "pid": "s3",
+      "q": "의학 문헌을 추가로 학습할 때 초록 자료와 전문 자료는 각각 몇 단어 규모였어?",
+      "gold": [
+        3
+      ],
+      "expected": "PubMed abstracts 4.5B words (45억), PMC full-text articles 13.5B words (135억).",
+      "source": "BioBERT Table 1",
+      "status": "frozen after final implementation; no earlier live run"
+    },
+    {
+      "id": "H5",
+      "pid": "s7",
+      "q": "생성 모델을 학습시킬 때 검색해 붙인 지문 자체도 손실 계산에 포함해?",
+      "gold": [
+        5
+      ],
+      "expected": "검색된 텍스트 청크는 손실 계산에서 마스킹하여 제외한다.",
+      "source": "Self-RAG §3.2.2",
+      "status": "frozen after final implementation; no earlier live run"
+    }
+  ]
+}

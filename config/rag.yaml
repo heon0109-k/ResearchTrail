@@ -1,2 +1,35 @@
-enabled: false
-reason: 다음 할 일 제안에는 현재 메모 한 건만 필요하고, 재개는 해당 과업의 저장 기록을 조회하면 충분하다.
+enabled: true # web/js/chat.js의 실험 기능인 질문하기
+source:
+  scope: open_pdf # chat.js에서 질문 시작 시 열린 PDF 객체를 사용
+  extraction: pdfjs_getTextContent # chat-retrieval.js에서 페이지별 텍스트 추출
+chunking:
+  chunk_chars: 1600 # chat-retrieval.js CHUNK_CHARS
+  overlap: 320 # chat-retrieval.js OVERLAP
+  unit: page # chat-retrieval.js에서 페이지별 구간과 원본 쪽 번호 유지
+embedding:
+  enabled: false # chat-retrieval.js의 키워드 점수로 검색하여 벡터 모델 호출 불필요
+store:
+  type: memory_weak_map # chat-retrieval.js의 PDF 객체별 WeakMap 캐시
+retrieval:
+  max_chunks: 6 # chat-retrieval.js MAX_CHUNKS
+  max_context_chars: 10000 # chat-retrieval.js MAX_CONTEXT_CHARS
+  min_score_exclusive: 0 # chat-retrieval.js에서 점수 > 0인 구간을 전역 후보로 선택
+  page_priority: [explicit, selected, deictic_current, summary_first] # chat-retrieval.js의 우선 쪽 추가 순서
+  fallback: current_page # chat-retrieval.js에서 현재 쪽을 보충. 우선·보충 구간에는 점수 하한을 적용하지 않음
+  korean_expansion:
+    calls: 1 # chat-query-expansion.js의 요청 1회, 재시도 없음
+    timeout_ms: 8000 # chat-query-expansion.js TIMEOUT_MS
+    max_terms: 12 # chat-query-expansion.js MAX_TERMS
+    max_term_chars: 48 # chat-query-expansion.js normalize
+    max_vocabulary_words: 1800 # chat-query-expansion.js vocabulary
+    max_vocabulary_chars: 14000 # chat-query-expansion.js vocabulary
+    fallback: original_terms # chat.js에서 확장 실패 시 원래 질문으로 검색
+constraints:
+  document_count: 1 # chat.js의 현재 PDF만 색인하고 PDF 교체 후 늦게 온 결과는 버림
+  consent_required: true # chat.js의 키·동의 검사와 chat-query-expansion.js의 재검사
+  next_action_rag: false # AI 정리는 독립된 ai-summary.js 경로에서 동작
+  evidence_checks: [found, exact_source_quote] # chat.js에서 found=false 또는 인용 불일치 시 근거 부족 처리
+  korean_normal_total_calls: 2 # 검색어 확장 1회와 chat.js 답변 1회
+  korean_max_total_calls: 3 # chat.js의 답변 복구 또는 503 재시도 1회 포함
+observability:
+  stored_citation_pages: sent # chat.js 대화 기록의 sent는 인용 검증 후 표시된 쪽
