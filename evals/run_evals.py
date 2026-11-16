@@ -80,9 +80,13 @@ def readiness(cases, decisions, target, dataset, design):
     reasons = []
     if any(c['expect'][target] is None for c in cases):
         reasons.append('selected target has expectations awaiting human review')
-    if decisions.get('status') != 'approved' or decisions.get('target') != target:
-        reasons.append('target/design approval pending')
-    for key in ('reviewers', 'approved_at', 'rationale', 'dataset_role', 'golden_review_reference', 'runner_review_reference'):
+    review = decisions.get('evaluation_review', decisions)
+    if review.get('status') != 'approved' or decisions.get('target') != target:
+        reasons.append('evaluation runner acceptance pending (not team-wide agreement)')
+    for key in ('reviewers', 'approved_at', 'rationale'):
+        if not review.get(key):
+            reasons.append('missing evaluation reviewer record: ' + key)
+    for key in ('dataset_role', 'golden_review_reference', 'runner_review_reference'):
         if not decisions.get(key):
             reasons.append('missing human decision: ' + key)
     if decisions.get('dataset_role') not in ('holdout', 'development'):
