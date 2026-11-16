@@ -4,22 +4,22 @@
   "reviewers": [],
   "approved_at": null,
   "rationale": null,
-  "dataset_role": null,
+  "dataset_role": "development",
   "unused_for_tuning_confirmed": null,
-  "golden_review_reference": null,
-  "runner_review_reference": null,
+  "golden_review_reference": "docs/prompts/delegation_policy.md",
+  "runner_review_reference": "docs/prompts/delegation_evals.md#김경림의-규칙-기반-evals-실행-승인",
   "thresholds": {
     "overall_min": 1.0,
     "clarification_min": 1.0,
     "critical_max": 0
   },
   "frozen_hashes": {
-    "dataset": null,
-    "design": null,
-    "grader": null,
-    "adapter": null,
-    "schema": null,
-    "policy": null
+    "dataset": "be7e06e99cca20436e1a7c94b1d527d9c49335d9fe499579af9b4afd28bab783",
+    "design": "3b969973dde2f0d90569a3ad1d29ce21697e238e250bf4c8c7a7ade763d841cc",
+    "grader": "9cbb892ab800e4a5dec13925689957e406758ae401dc200c68ac33d40ab4ea69",
+    "adapter": "f4c5a829eda829901b0c5a5d998273ec880c91fa48fbbbfedb1b2b7ff7af6d50",
+    "schema": "5b5a2f74f49aec0307a930f0440301fae5e3bd5a9535233295ff837e7b02844e",
+    "policy": "1f16cac3491310c70e28b4073427f46cce3c174ad1014d3b9979140acdb8918b"
   },
   "model_metadata": null,
   "scope_decision": {
@@ -234,10 +234,12 @@
     "scope": "합격선에 대한 사용자 결정만 반영. 팀 전체 검토·러너 수용·공식 실행 승인은 아님."
   },
   "evaluation_review": {
-    "status": "pending",
-    "reviewers": [],
-    "approved_at": null,
-    "rationale": null,
+    "status": "approved",
+    "reviewers": [
+      "김경림"
+    ],
+    "approved_at": "2026-11-16T23:44:47+09:00",
+    "rationale": "후보 없음이 기대되는 합성 사례에서 null은 통과하고 임의 후보는 실패·중대 위반으로 판정됨을 확인했다. 개발용 stub 20건의 합격선과 첫 공식 실행을 수용했다.",
     "scope": "실행기와 판정 기준에 대한 사람의 검토·수용 기록. 팀원 전원 합의나 PR 댓글 수를 요구하지 않음."
   }
 }
