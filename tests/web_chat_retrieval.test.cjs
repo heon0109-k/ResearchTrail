@@ -145,18 +145,3 @@ test('R6: a response arriving after PDF replacement cannot become a stored answe
   await pending;
   assert.equal(c.chatLoad(p.id).filter(m => m.role === 'bot').length, 0);
 });
-
-test('Korean paraphrases retrieve English method passages without model search hints', async () => {
-  const mask = 'Masked LM. Selected token positions are used for prediction. Replace with a [MASK] token 80%, a random token 10%, or the unchanged token 10%.';
-  const vocab = 'We used the original BERT vocabulary for compatibility and reuse. New words can be represented and fine-tuned for the biomedical domain using the original WordPiece vocabulary.';
-  const cases = [
-    ['가린 낱말을 맞히는 학습에서 예측 대상으로 뽑은 낱말을 가림 표시로 바꾸거나, 임의 낱말로 바꾸거나, 그대로 두는 비율은 각각 얼마야?', mask],
-    ['의생명 분야에 맞춰 추가 학습하면서도 기존 낱말 사전을 새로 만들지 않은 두 가지 이유는?', vocab]
-  ];
-  for (const [question, passage] of cases) {
-    const index = await retrieval.buildIndex(pdf(['Overview', 'Other models predict tokens', passage]));
-    const ctx = retrieval.search(index, question, { currentPage: 1, expandedTerms: [] });
-    assert.equal(ctx.pages[0].n, 3);
-    assert.ok(ctx.pages[0].text.includes(passage));
-  }
-});

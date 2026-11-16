@@ -21,21 +21,6 @@ var ChatRetrieval=(function(){
     var words=normalize(text).toLowerCase().match(/[a-z][a-z0-9]*(?:-[a-z0-9]+)*|[가-힣]{2,}|\d+\.\d+(?:\.\d+)*/g)||[];
     return words.flatMap(function(t){return t.includes('-')?[t].concat(t.split('-')):[t]}).filter(function(t){return t.length>1&&!stop.has(t)}).map(wordKey);
   }
-  // Seed search with common Korean paraphrases of technical terms. These are
-  // retrieval hints only, and complement the model's document-specific expansion.
-  function koreanTerms(text){
-    var rules=[
-      [/(?:가린|가림|가려진|가려서|마스킹).{0,24}(?:낱말|단어|토큰|표시)|(?:낱말|단어|토큰).{0,16}(?:가리|가림|마스킹)/, 'masked mask'],
-      [/(?:낱말|단어|토큰).{0,18}(?:맞히|예측)|예측.{0,22}(?:낱말|단어|토큰)/, 'token prediction'],
-      [/(?:임의|무작위).{0,8}(?:낱말|단어|토큰)/, 'random token'],
-      [/(?:낱말|단어|토큰).{0,48}그대로\s*두/, 'unchanged'],
-      [/(?:낱말|단어|어휘)\s*(?:사전|목록)|어휘집/, 'vocabulary'],
-      [/(?:기존|원래).{0,20}(?:사전|어휘)/, 'original vocabulary'],
-      [/(?:의생명|생의학|생물의학)/, 'biomedical'],
-      [/추가\s*학습|미세\s*조정/, 'pre-training fine-tuned']
-    ];
-    return rules.filter(function(rule){return rule[0].test(text)}).flatMap(function(rule){return tokens(rule[1])});
-  }
   function chunksForPage(n,text){
     var out=[];
     for(var start=0;start<text.length;){
@@ -74,7 +59,7 @@ var ChatRetrieval=(function(){
   }
   function search(index,q,options){
     options=options||{};
-    var terms=Array.from(new Set(tokens(q).concat(koreanTerms(q)))),original=new Set(terms);
+    var terms=Array.from(new Set(tokens(q))),original=new Set(terms);
     (options.expandedTerms||[]).slice(0,12).forEach(function(term){if(typeof term==='string')tokens(term.slice(0,48)).forEach(function(t){if(terms.indexOf(t)<0)terms.push(t)})});
     var active=terms.filter(function(t){return index.df.has(t)});
     var ranked=index.chunks.map(function(c){
