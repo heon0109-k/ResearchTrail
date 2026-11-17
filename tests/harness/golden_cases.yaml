@@ -1,4 +1,8 @@
-status: draft_pending_team_review
+status: approved
+review:
+  reviewers: [최중헌, 김경림]
+  approved_at: '2026-11-17'
+  method: 두 검토자가 SPEC 5.3 기준으로 14건의 기대 처리 방식을 한 건씩 O/X 판정했다. 두 사람 모두 O 14 / X 0. 기대값은 변경하지 않았다.
 target: researchtrail.policy.validate_output
 loader_rules:
   default_status: stop
