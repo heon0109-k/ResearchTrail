@@ -1,6 +1,6 @@
 # 다음 작업 정책 검증 기록
 
-**상태 · 팀 검토 대기.** 고정된 응답에 대한 정책 판정 14건을 확인했다. 팀이 승인할 기준은 [골든 케이스](../../tests/harness/golden_cases.yaml)와 [실행 테스트](../../tests/test_policy_golden.py)에 있다.
+**상태 · 팀 검토 완료.** 고정된 응답에 대한 정책 판정 14건을 확인했다. 팀이 승인할 기준은 [골든 케이스](../../tests/harness/golden_cases.yaml)와 [실행 테스트](../../tests/test_policy_golden.py)에 있다.
 
 ## 위임 범위
 
