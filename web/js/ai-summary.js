@@ -1,22 +1,23 @@
 'use strict';
 /* ---------- AI 누적 정리 (실험 기능, 기본 꺼짐) ----------
-   켜면 이 논문의 메모만 Google Gemini로 보내 "확인한 것 · 남은 질문 · 다음 할 일"로 정리한다.
-   - 키와 설정은 이 브라우저의 localStorage에만 저장한다(팀 테스트용).
+   켜면 이 논문의 메모만 OpenAI로 보내 "확인한 것 · 남은 질문 · 다음 할 일"로 정리한다.
+   - API 키는 로컬 서버에만 두며, 브라우저에는 전송 동의와 켜짐 상태만 저장한다.
    - 모델이 돌려준 각 줄은 실제 메모 id를 근거로 달아야 화면에 남는다. 근거가 없는 줄은 버린다.
    - 다음 할 일은 자동 저장하지 않는다. 사용자가 "다음 할 일로 저장"을 눌러야 p.todo가 바뀐다. */
-var AI_KEY='researchtrail.ai';
-var AI_ENDPOINT='https://generativelanguage.googleapis.com/v1beta';
-var AI_MODEL='gemini-3.5-flash-lite';
+var AI_KEY='researchtrail.ai.openai';
+var AI_ENDPOINT='/api/openai';
+var AI_MODEL='gpt-6-luna';
 var AI_FALLBACK_MODEL=AI_MODEL;
 var AI_TIMEOUT_MS=45000;
 var AI_RETRY_DELAY_MS=1000;
 var AI_RT={pid:null,st:'idle',err:'',token:0,timer:null,setup:false,requestHash:null,todoEdit:null,recentMemo:null};
 
 function aiCfg(){
-  try{var o=JSON.parse(localStorage.getItem(AI_KEY)||'null');if(o&&typeof o==='object')return {on:!!o.on,key:String(o.key||''),model:String(o.model||''),consent:!!o.consent}}catch(e){}
-  return {on:false,key:'',model:'',consent:false};
+  try{var o=JSON.parse(localStorage.getItem(AI_KEY)||'null');if(o&&typeof o==='object')return {on:!!o.on,key:'server',model:AI_MODEL,consent:!!o.consent}}catch(e){}
+  return {on:false,key:'server',model:AI_MODEL,consent:false};
 }
-function aiSaveCfg(c){try{localStorage.setItem(AI_KEY,JSON.stringify({on:!!c.on,key:c.key||'',model:c.model||'',consent:!!c.consent}));return true}catch(e){return false}}
+function aiSaveCfg(c){try{localStorage.setItem(AI_KEY,JSON.stringify({on:!!c.on,consent:!!c.consent}));return true}catch(e){return false}}
+
 function aiOn(){var c=aiCfg();return c.on&&!!c.key&&c.consent}
 
 /* 정리에 쓸 메모 모음. id는 화면의 기록 id와 같다. */
@@ -120,39 +121,36 @@ function aiParseText(text){
   return JSON.parse(t);
 }
 
-function aiFetch(url,opts){
+function aiFetch(url,opts,timeoutMs){
   var ctl=typeof AbortController==='function'?new AbortController():null,timer;
-  if(ctl){opts.signal=ctl.signal;timer=setTimeout(function(){ctl.abort()},AI_TIMEOUT_MS)}
+  if(ctl){opts.signal=ctl.signal;timer=setTimeout(function(){ctl.abort()},timeoutMs||AI_TIMEOUT_MS)}
   return fetch(url,opts).then(function(r){
-    if(timer)clearTimeout(timer);
     return r.text().then(function(body){
+      if(timer)clearTimeout(timer);
       if(!r.ok){var msg='';try{msg=JSON.parse(body).error.message}catch(e){}var err=new Error(msg||('HTTP '+r.status));err.status=r.status;throw err}
       return body?JSON.parse(body):{};
     });
-  },function(e){if(timer)clearTimeout(timer);if(e&&e.name==='AbortError'){var t=new Error('TIMEOUT');t.timeout=true;throw t}throw e});
+  }).catch(function(e){if(timer)clearTimeout(timer);if(e&&e.name==='AbortError'){var t=new Error('TIMEOUT');t.timeout=true;throw t}throw e});
 }
-function aiCheckModel(key){
-  return aiFetch(AI_ENDPOINT+'/models/'+AI_MODEL,{headers:{'x-goog-api-key':key}});
+function aiCheckModel(){
+  return aiFetch(AI_ENDPOINT+'/models/'+encodeURIComponent(AI_MODEL),{}).then(function(status){
+    if(!status.configured)throw new Error('SERVER_KEY_MISSING');
+    AI_MODEL=status.model||AI_MODEL;
+    return status;
+  });
 }
-function aiPickModel(key){
-  return aiCheckModel(key).then(function(){return AI_MODEL});
+function aiPickModel(){
+  return aiCheckModel().then(function(){return AI_MODEL});
 }
-/* 메모 정리는 깊은 추론이 필요 없어서 생각(thinking)을 최소로 줄여 응답 시간을 줄인다.
-   Gemini 3 이상은 thinkingLevel, 2.5는 thinkingBudget을 쓴다. 모델이 거부하면 설정 없이 한 번 더 보낸다. */
-function aiThinking(model){
-  var m=String(model||'').match(/gemini-(\d+)(?:\.(\d+))?/);if(!m)return null;
-  var major=+m[1],minor=+(m[2]||0);
-  if(major>=3)return {thinkingLevel:'low'};
-  if(major===2&&minor>=5)return {thinkingBudget:0};
-  return null;
-}
+// The local server converts the existing structured envelope to OpenAI Responses.
+function aiThinking(){return null}
 function aiCall(cfg,prompt,stillCurrent){
   var model=AI_MODEL;
   function send(thinking){
     var gen={temperature:0.2,responseMimeType:'application/json',responseSchema:AI_SCHEMA};
     if(thinking)gen.thinkingConfig=thinking;
     return aiFetch(AI_ENDPOINT+'/models/'+encodeURIComponent(model)+':generateContent',{
-      method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':cfg.key},
+      method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:gen})
     });
   }
@@ -176,13 +174,13 @@ function aiCall(cfg,prompt,stillCurrent){
 }
 
 function aiErrorText(e){
-  if(e&&e.timeout)return 'Gemini 응답이 45초 안에 오지 않았어요. 잠시 뒤 "다시 정리"를 눌러 주세요.';
-  if(e&&e.status===503)return 'Gemini가 일시적으로 응답할 수 없어요. 잠시 뒤 "다시 정리"를 눌러 주세요.';
-  if(e&&(e.status===400||e.status===401||e.status===403))return 'API 키를 확인해 주세요. ('+(e.message||e.status)+')';
-  if(e&&e.status===429)return '요청 한도를 넘었어요. 1분쯤 뒤 다시 정리해 주세요.';
-  if(e&&e.status===404)return 'Gemini Flash-Lite 모델을 사용할 수 없어요. 이 키의 프로젝트에서 모델 접근 권한을 확인해 주세요.';
+  if(e&&e.message==='SERVER_KEY_MISSING')return '서버를 시작할 때 OpenAI API 키를 입력해 주세요.';
+  if(e&&(e.status===504||e.timeout))return 'OpenAI 응답이 45초 안에 오지 않았어요. 잠시 뒤 "다시 정리"를 눌러 주세요.';
+  if(e&&e.status===503)return 'OpenAI가 일시적으로 응답할 수 없어요. 잠시 뒤 "다시 정리"를 눌러 주세요.';
+  if(e&&(e.status===400||e.status===401||e.status===403||e.status===429))return e.message||'서버의 OpenAI 설정을 확인해 주세요.';
+  if(e&&e.status===404)return 'OpenAI 서버를 먼저 켜 주세요. python3 scripts/serve_openai.py 명령을 사용해 주세요.';
   if(e instanceof SyntaxError||(e&&e.message==='EMPTY'))return '정리 결과를 읽지 못했어요. 다시 정리해 주세요.';
-  return '정리하지 못했어요. 인터넷 연결을 확인하고 다시 정리해 주세요.';
+  return 'OpenAI 서버 연결을 확인해 주세요. python3 scripts/serve_openai.py로 실행한 화면에서 다시 시도해 주세요.';
 }
 
 function aiRun(p,force){
@@ -275,12 +273,12 @@ function aiEditTodo(p,field){
 
 function aiSetupHtml(c){
   return '<div class="ai-setup">'+
-    '<label class="field"><span>Gemini API 키</span><input type="password" id="aiKey" autocomplete="off" spellcheck="false" placeholder="AIza…" value="'+esc(c.key)+'"></label>'+
-    '<p class="reader-hint">키는 Google AI Studio(aistudio.google.com)에서 만들 수 있어요. 이 브라우저에만 저장되고, 다른 사람과 같은 컴퓨터를 쓰면 보일 수 있어요.</p>'+
-    '<label class="ai-consent"><input type="checkbox" id="aiConsent"'+(c.consent?' checked':'')+'> 정리할 때마다 이 논문의 메모와 제목이 Google Gemini로 전송되는 것에 동의해요.</label>'+
-    '<div class="ai-row"><button type="button" class="btn pri sm" id="aiSave">저장하고 켜기</button><button type="button" class="btn sm" id="aiCancel">취소</button></div>'+
+    '<p class="reader-hint">OpenAI 키는 서버에 설정해요. 서버를 켠 뒤 전송에 동의하면 사용할 수 있어요.</p>'+
+    '<label class="ai-consent"><input type="checkbox" id="aiConsent"'+(c.consent?' checked':'')+'> 정리할 때마다 이 논문의 메모와 제목이 OpenAI로 전송되는 것에 동의해요.</label>'+
+    '<div class="ai-row"><button type="button" class="btn pri sm" id="aiSave">동의하고 켜기</button><button type="button" class="btn sm" id="aiCancel">취소</button></div>'+
     '<p class="ai-msg" id="aiMsg" role="status"></p></div>';
 }
+
 function aiRender(p){
   var box=$('#rAi'),reader=$('#reader');if(!box||!p)return;
   var details=$('#aiSummaryDetails'),expanded=details&&details.open;
@@ -349,10 +347,10 @@ function aiWireSetup(p){
   var cancel=$('#aiCancel');if(cancel)cancel.addEventListener('click',function(){AI_RT.setup=false;aiRender(p)});
   var sv=$('#aiSave');if(!sv)return;
   sv.addEventListener('click',function(){
-    var key=($('#aiKey').value||'').trim(),consent=$('#aiConsent').checked,msg=$('#aiMsg');
+    var key='server',consent=$('#aiConsent').checked,msg=$('#aiMsg');
     if(!key){msg.textContent='API 키를 넣어 주세요.';return}
     if(!consent){msg.textContent='메모 전송에 동의해야 켤 수 있어요.';return}
-    sv.disabled=true;msg.textContent='Gemini Flash-Lite 연결을 확인하는 중…';
+    sv.disabled=true;msg.textContent='OpenAI 연결을 확인하는 중…';
     aiCheckModel(key).then(function(){
       if(!aiSaveCfg({on:true,key:key,model:AI_MODEL,consent:true})){msg.textContent='설정을 저장하지 못했어요. 브라우저 저장 공간을 확인해 주세요.';sv.disabled=false;return}
       AI_RT.setup=false;aiRender(p);aiRun(p,true);
@@ -362,7 +360,7 @@ function aiWireSetup(p){
 function aiWireView(p,n){
   var redo=$('#aiRedo');if(redo)redo.addEventListener('click',function(){aiRun(p,true)});
   var st=$('#aiSettings');if(st)st.addEventListener('click',function(){
-    ask('AI 정리를 끌까요?','끄면 메모가 더 이상 전송되지 않고, 메모마다 "다음 할 일 찾기" 버튼이 다시 보여요. 저장한 키도 이 브라우저에서 지워요.','끄기',function(){
+    ask('AI 정리를 끌까요?','끄면 메모가 더 이상 전송되지 않고, 메모마다 "다음 할 일 찾기" 버튼이 다시 보여요. 전송 동의도 해제해요.','끄기',function(){
       aiSaveCfg({on:false,key:'',model:'',consent:false});++AI_RT.token;AI_RT.st='idle';AI_RT.err='';AI_RT.todoEdit=null;aiRender(p);
     },true);
   });

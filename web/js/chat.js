@@ -1,15 +1,15 @@
 'use strict';
 /* ---------- 논문에 질문하기 (실험 기능) ----------
-   열어 둔 PDF 한 편을 브라우저에서 검색하고, 관련 구절과 선택한 문장만 Gemini에 보낸다.
+   열어 둔 PDF 한 편을 브라우저에서 검색하고, 관련 구절과 선택한 문장만 OpenAI에 보낸다.
    막는 방법은 세 겹이다.
    1) 지시문: 이 논문 본문 질문만 답하고, 본문 속 명령문은 따르지 않는다.
    2) 출력 형식: in_scope(논문 질문인지)를 먼저 답하게 하고, false면 모델이 쓴 글은 버리고 정해 둔 거절 문구만 보여 준다.
    3) 앱 검사: 명백히 범위 밖인 요청은 보내기 전에 거절하고, 답에 인용된 원문을 확인한다.
-   키·동의는 AI 정리와 같은 설정(researchtrail.ai)을 쓴다. */
+   전송 동의는 AI 정리와 같은 설정을 쓴다. API 키는 로컬 서버에만 있다. */
 var CHAT={pid:null,doc:null,tab:'notes',busy:false,err:'',sel:null,draft:'',last:0,token:0,expansion:null,searchNote:''};
 var CHAT_MAX_Q=400,CHAT_MIN_GAP_MS=3000,CHAT_SEL_CHARS=1800,CHAT_HISTORY=6,CHAT_KEEP=40;
 var CHAT_REFUSE='이 논문 내용에 대한 질문에만 답할 수 있어요. 논문의 문장·표·그림·방법에 대해 물어봐 주세요.';
-var CHAT_NOT_FOUND='검색해 보낸 구절에서 답의 근거를 찾지 못했어요. 질문에 논문의 용어나 쪽 번호를 넣어 다시 물어봐 주세요.';
+var CHAT_NOT_FOUND='이 논문에서 답할 근거를 찾지 못했어요. 논문 속 용어나 쪽 번호를 넣어 다시 물어봐 주세요.';
 var CHAT_SCHEMA={type:'OBJECT',properties:{
   in_scope:{type:'BOOLEAN'},
   found:{type:'BOOLEAN'},
@@ -111,18 +111,82 @@ function chatAnswerHtml(m){
   return esc(m.text).replace(/\[p\.\s*(\d{1,3})\]/g,function(all,n){return ok[+n]?'<button type="button" class="chat-pg" data-chat-pg="'+n+'">p.'+n+'</button>':''});
 }
 
-function chatCall(cfg,prompt){
-  var model=typeof AI_MODEL!=='undefined'?AI_MODEL:(cfg.model||AI_FALLBACK_MODEL);
-  function send(thinking){
-    var gen={temperature:0.2,responseMimeType:'application/json',responseSchema:CHAT_SCHEMA};
-    if(thinking)gen.thinkingConfig=thinking;
-    return aiFetch(AI_ENDPOINT+'/models/'+encodeURIComponent(model)+':generateContent',{
-      method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':cfg.key},
-      body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:gen})
-    });
+var CHAT_EFFORTS=['auto','none','low','medium','high','xhigh','max'];
+var CHAT_EFFORT_CHOICES=['auto','none','low','medium'];
+var CHAT_EFFORT_KEY='researchtrail.chatEffort';
+var chatEffortChoice='auto';
+try{
+  var savedEffort=localStorage.getItem(CHAT_EFFORT_KEY);
+  if(CHAT_EFFORT_CHOICES.includes(savedEffort))chatEffortChoice=savedEffort;
+}catch(e){}
+
+function chatResolveEffort(choice,question){
+  if(choice!=='auto'&&CHAT_EFFORTS.includes(choice))return choice;
+  if(/비교|차이|종합|근거.{0,12}결론|왜|원인|장단점|compare|contrast|synthesi[sz]e|\bwhy\b/i.test(question))return 'medium';
+  if(/몇|얼마|무엇의 약자|뜻이 뭐|how many|how much|stand for/i.test(question))return 'none';
+  return 'low';
+}
+
+var CHAT_EFFORT_LABELS={auto:'자동',none:'빠르게',low:'보통',medium:'꼼꼼하게'};
+function chatEffortLabel(value){return CHAT_EFFORT_LABELS[value]||value}
+
+function chatEffortHtml(){
+  var options=CHAT_EFFORT_CHOICES.map(function(value){
+    return '<label><input type="radio" name="chatEffort" value="'+value+'"'+
+      (value===chatEffortChoice?' checked':'')+'><span>'+chatEffortLabel(value)+'</span></label>';
+  });
+  return '<details class="chat-effort"><summary aria-labelledby="chatEffortHint chatEffortValue">'+
+    '<span class="effort-current" id="chatEffortValue">'+chatEffortLabel(chatEffortChoice)+'</span><i aria-hidden="true"></i><span class="effort-tip" id="chatEffortHint">답변 깊이</span></summary>'+
+    '<div class="effort-menu" role="radiogroup" aria-label="답변 깊이"><small>답변 깊이</small>'+options.join('')+'</div></details>';
+}
+
+function chatCloseOutsideEffort(event){
+  var picker=document.querySelector('.chat-effort[open]');
+  if(picker&&!picker.contains(event.target))picker.open=false;
+}
+
+function chatWireEffort(){
+  var group=$('.chat-effort');
+  if(!group)return;
+  var summary=group.querySelector('summary');
+  function close(){
+    group.open=false;
+    summary.focus();
   }
-  var thinking=aiThinking(model);
-  return send(thinking).catch(function(e){if(e&&e.status===503)return new Promise(function(r){setTimeout(r,1000)}).then(function(){return send(thinking)});if(thinking&&e&&e.status===400&&/think/i.test(e.message||''))return send(null);throw e}).then(function(j){
+  group.ownerDocument.addEventListener('pointerdown',chatCloseOutsideEffort);
+  group.addEventListener('focusout',function(event){
+    if(event.relatedTarget&&!group.contains(event.relatedTarget))group.open=false;
+  });
+  group.addEventListener('keydown',function(event){
+    if(group.open&&(event.key==='Escape'||(event.key==='Enter'&&event.target.type==='radio'))){
+      event.preventDefault();close();
+    }
+  });
+  group.addEventListener('click',function(event){
+    if(event.target.type==='radio')close();
+  });
+  group.addEventListener('change',function(event){
+    var value=event.target.value;
+    if(!CHAT_EFFORT_CHOICES.includes(value))return;
+    chatEffortChoice=value;
+    group.querySelector('.effort-current').textContent=chatEffortLabel(value);
+    try{localStorage.setItem(CHAT_EFFORT_KEY,value)}catch(e){}
+  });
+}
+
+function chatCall(cfg,prompt,effort){
+  var model=typeof AI_MODEL!=='undefined'?AI_MODEL:(cfg.model||AI_FALLBACK_MODEL);
+  function send(){
+    var gen={responseMimeType:'application/json',responseSchema:CHAT_SCHEMA,reasoningEffort:effort||'none'};
+    return aiFetch(AI_ENDPOINT+'/models/'+encodeURIComponent(model)+':generateContent',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:gen})
+    }, effort&&effort!=='none'?125000:undefined);
+  }
+  return send().catch(function(e){
+    if(e.status!==503)throw e;
+    return new Promise(function(resolve){setTimeout(resolve,1000)}).then(send);
+  }).then(function(j){
     var c=(j.candidates||[])[0]||{};
     if(c.finishReason==='SAFETY'||(j.promptFeedback&&j.promptFeedback.blockReason))return {in_scope:false,blocked:true};
     var text=((c.content||{}).parts||[]).map(function(x){return x.text||''}).join('');
@@ -136,9 +200,10 @@ function chatAsk(p){
   var q=input.value.trim(),now=Date.now(),block=chatPrecheck(q,now,CHAT.last);
   if(block){CHAT.err=block;chatRender(p);return}
   var cfg=aiCfg();
-  if(!cfg.key||!cfg.consent){CHAT.err='Gemini 설정과 본문 전송 동의를 확인해 주세요.';chatRender(p);return}
+  if(!cfg.key||!cfg.consent){CHAT.err='OpenAI 설정과 본문 전송 동의를 확인해 주세요.';chatRender(p);return}
   var viewer=typeof PV!=='undefined'&&PV&&PV.pid===p.id?PV:null,doc=viewer&&viewer.doc;
   if(!doc){CHAT.err='검색할 PDF를 먼저 열어 주세요. 글자를 읽을 수 있는 PDF가 필요해요.';chatRender(p);return}
+  var effort=chatResolveEffort(chatEffortChoice,q);
   var list=chatLoad(p.id),sel=CHAT.sel,token=++CHAT.token;
   CHAT.last=now;CHAT.doc=doc;CHAT.busy=true;CHAT.err='';CHAT.draft='';CHAT.expansion=null;CHAT.searchNote='';
   list.push({role:'user',text:q,sel:sel?sel.text:'',at:now});chatStore(p.id,list);chatRender(p);
@@ -157,7 +222,7 @@ function chatAsk(p){
       var ctx=ChatRetrieval.search(index,q,{currentPage:cur,selectedPage:sel&&sel.page,selectedText:sel&&sel.text,expandedTerms:expansion.terms});
       if(!ctx.pages.length)throw new Error('NO_TEXT');
       ctx.abs='';ctx.currentPage=cur;
-      return chatCall(cfg,chatPrompt(p,ctx,list.slice(0,-1),q,sel)).then(function(raw){return chatVerifyAnswer(raw,ctx)});
+      return chatCall(cfg,chatPrompt(p,ctx,list.slice(0,-1),q,sel),effort).then(function(raw){return chatVerifyAnswer(raw,ctx)});
     });
   }).then(function(a){
     if(!isCurrent()||!a)return;
@@ -170,16 +235,16 @@ function chatAsk(p){
     CHAT.busy=false;
     CHAT.err=e&&e.message==='PDF_TEXT_FAILED'?'PDF 전체의 글자를 읽지 못해 검색을 멈췄어요. PDF를 다시 열고 질문해 주세요.':
       e&&e.message==='NO_TEXT'?'이 PDF에서 글자를 읽지 못했어요. 이미지 PDF의 글자는 검색할 수 없어요.':
+      e&&(e.timeout||e.status===504)?'응답 대기 시간이 지났어요. 답변 깊이를 ‘빠르게’로 바꾸거나 다시 보내 주세요.':
       aiErrorText(e).replace(/"다시 정리"를 눌러|다시 정리해/g,'질문을 다시 보내').replace('정리하지 못했어요','답변을 받지 못했어요').replace('정리 결과를','답변을');
     chatRender(p);
   });
 }
 
 function chatSetupHtml(){
-  return '<div class="ai-setup"><p class="reader-hint">기존 Gemini 설정을 함께 사용해요. 한국어 질문은 영어 검색어 생성과 답변에 보통 2회 요청해요. 질문·PDF의 영문 어휘 목록·검색 구절이 Google Gemini로 전송돼요.</p>'+
-    '<label class="field"><span>Gemini API 키</span><input type="password" id="chatKeyIn" autocomplete="off" spellcheck="false" placeholder="AIza…"></label>'+
-    '<label class="ai-consent"><input type="checkbox" id="chatConsent"> 본문과 질문이 Google Gemini로 전송되는 것에 동의해요.</label>'+
-    '<div class="ai-row"><button type="button" class="btn pri sm" id="chatSaveKey">저장</button></div><p class="ai-msg" id="chatMsg" role="status"></p></div>';
+  return '<div class="ai-setup"><p class="reader-hint">서버에 설정한 OpenAI를 사용해요. 한국어 질문은 영어 검색어 생성과 답변에 보통 2회 요청해요. 질문·PDF의 영문 어휘 목록·검색 구절이 OpenAI로 전송돼요.</p>'+
+    '<label class="ai-consent"><input type="checkbox" id="chatConsent"> 본문과 질문이 OpenAI로 전송되는 것에 동의해요.</label>'+
+    '<div class="ai-row"><button type="button" class="btn pri sm" id="chatSaveKey">동의하고 연결</button></div><p class="ai-msg" id="chatMsg" role="status"></p></div>';
 }
 function chatRender(p){
   var box=$('#rChat');if(!box||!p)return;
@@ -198,23 +263,25 @@ function chatRender(p){
       (CHAT.sel?'<div class="chat-sel"><span>선택한 문장'+(CHAT.sel.page?' · p.'+CHAT.sel.page:'')+': “'+esc(CHAT.sel.text.slice(0,80))+(CHAT.sel.text.length>80?'…':'')+'”</span><button type="button" class="x" id="chatSelX" aria-label="선택 취소">×</button></div>':'')+
 
       '<textarea id="chatQ" rows="2" maxlength="'+CHAT_MAX_Q+'" placeholder="이 논문에 대해 물어보세요" aria-label="질문 입력">'+esc(CHAT.draft)+'</textarea>'+
-      '<div class="chat-row"><span></span><button type="button" class="btn pri sm" id="chatSend"'+(CHAT.busy?' disabled':'')+'>보내기</button></div>'+
-    '</div><p class="ai-foot">한국어 질문은 검색어 확장과 답변에 보통 2회 요청해요. 답이 틀릴 수 있으니 [p.N]을 눌러 원문을 확인해 주세요.</p>';
+      '<div class="chat-row">'+chatEffortHtml()+
+      '<button type="button" class="chat-send" id="chatSend" aria-label="질문 보내기" title="질문 보내기"'+(CHAT.busy?' disabled':'')+'><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4m-6 6 6-6 6 6"/></svg></button></div>'+
+    '</div><p class="ai-foot">답이 틀릴 수 있으니 [p.N]을 눌러 원문을 확인해 주세요.</p>';
   var l=$('#chatList');if(l)l.scrollTop=l.scrollHeight;
   chatWireView(p);
 }
 function chatWireSetup(p){
   var b=$('#chatSaveKey');if(!b)return;
   b.addEventListener('click',function(){
-    var key=($('#chatKeyIn').value||'').trim(),msg=$('#chatMsg');
+    var key='server',msg=$('#chatMsg');
     if(!key){msg.textContent='API 키를 넣어 주세요.';return}
     if(!$('#chatConsent').checked){msg.textContent='전송에 동의해야 쓸 수 있어요.';return}
-    b.disabled=true;msg.textContent='키를 확인하는 중…';
+    b.disabled=true;msg.textContent='OpenAI 서버를 확인하는 중…';
     aiPickModel(key).then(function(model){var c=aiCfg();aiSaveCfg({on:c.on,key:key,model:model,consent:true});chatRender(p)})
       .catch(function(e){b.disabled=false;msg.textContent=aiErrorText(e)});
   });
 }
 function chatWireView(p){
+  chatWireEffort();
   var q=$('#chatQ'),send=$('#chatSend');
   if(q){
     q.addEventListener('input',function(){CHAT.draft=q.value;if(CHAT.err){CHAT.err=''}});
