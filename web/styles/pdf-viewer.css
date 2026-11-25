@@ -1,0 +1,293 @@
+/* PDF 페이지, 텍스트 선택, 하이라이트와 캡처 */
+
+/* PDF 페이지와 텍스트 레이어 */
+
+.pvwrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pvbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+
+.pvbar > * {
+  flex: none;
+  white-space: nowrap;
+}
+
+.pvpg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--mute);
+}
+
+.pvpg input {
+  width: 54px;
+  height: 26px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.pvz {
+  font-size: 12px;
+  color: var(--mute);
+  min-width: 40px;
+  text-align: center;
+}
+
+.pvscroll {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  padding: 16px 20px;
+  background: #e9ebef;
+}
+
+.pgbox {
+  position: relative;
+  margin: 0 auto 14px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(20, 20, 30, 0.15);
+}
+
+.pgbox canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.hlayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.hlayer i {
+  position: absolute;
+  background: rgba(255, 214, 64, 0.55);
+  border-radius: 2px;
+}
+
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+}
+
+.textLayer span,
+.textLayer br {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+.textLayer ::selection {
+  background: rgba(47, 155, 238, 0.35);
+}
+
+.textLayer br::selection {
+  background: transparent;
+}
+
+.hlbar {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  gap: 2px;
+  background: #1d1d22;
+  border-radius: 9px;
+  padding: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.hlbar button {
+  border: 0;
+  background: none;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.hlbar button:hover {
+  background: #34343b;
+}
+
+#pvSnap[aria-pressed="true"] {
+  background: #e6f3fe;
+  color: #0f5da8;
+}
+
+.pvwrap,
+.pvscroll {
+  min-height: 0;
+}
+
+.pvbar .icbtn {
+  margin-left: auto;
+}
+
+.pvscroll.capmode {
+  cursor: crosshair;
+}
+
+.pvscroll.capmode .textLayer {
+  pointer-events: none;
+}
+
+#pvCap[aria-pressed="true"] {
+  background: var(--bl);
+  color: #fff;
+}
+
+.caprect {
+  position: absolute;
+  border: 2px solid var(--bl);
+  background: rgba(47, 155, 238, 0.12);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.hlbar .stk {
+  background: #ff8a3d;
+  color: #1d1d22;
+  font-weight: 700;
+}
+
+.hlbar .stk:hover {
+  background: #ff9d5c;
+}
+
+.hlbar .hlq {
+  color: #c8c8d0;
+  font-size: 12px;
+  padding: 6px 8px;
+  align-self: center;
+}
+
+.hlbar .mute {
+  color: #9a9aa5;
+}
+
+.hlayer i.stk {
+  background: rgba(255, 138, 61, 0.5);
+}
+
+/* 선택 도구와 하이라이트 */
+
+.pvbar #rdDl {
+  margin-left: auto;
+}
+
+.pvbar #rdDl + .icbtn {
+  margin-left: 4px;
+}
+
+.dlbtn {
+  display: inline-flex;
+  background: none;
+  color: #7a808c;
+  cursor: pointer;
+}
+
+.dlbtn:hover,
+.dlbtn:focus-visible {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.dlbtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.dlbtn[hidden] {
+  display: none;
+}
+
+.dlbtn {
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  flex: none;
+  position: relative;
+}
+
+.dlbtn::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  white-space: nowrap;
+  background: #1d1d22;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition:
+    opacity 0.12s,
+    transform 0.12s;
+}
+
+.dlbtn:hover::after,
+.dlbtn:focus-visible::after {
+  opacity: 1;
+  transform: none;
+}
+@media (max-width: 600px) {
+  .pvbar {
+    gap: 6px;
+    padding: 0 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .pvbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pvbar #pvCap,
+  .pvbar [data-tog] {
+    display: none;
+  }
+
+  .pvbar .btn.sm {
+    min-width: 36px;
+  }
+}
+
+/* 클립보드 API를 사용할 수 없는 브라우저의 임시 복사 입력칸 */
+.clipboard-copy-field {
+  position: fixed;
+  opacity: 0;
+}

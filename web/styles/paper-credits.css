@@ -1,0 +1,27 @@
+/* 예시 논문 출처와 이용 조건 */
+body {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 24px;
+  font: 15px/1.7 system-ui;
+  color: #24242b;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 19px;
+}
+section {
+  border-top: 1px solid #ddd;
+  margin-top: 28px;
+  padding-top: 16px;
+}
+.hash {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  color: #666;
+}
+a {
+  color: #166ea7;
+}

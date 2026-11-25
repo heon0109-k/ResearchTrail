@@ -132,14 +132,14 @@ function renderPanel(){
   if(S.linking&&S.linking.from===p.id){
     var to=S.linking.to?paperBy(S.linking.to):null;
     if(!to){linkArea='<div class="linkbox"><div class="pair"><span>FROM</span> '+esc(p.title.slice(0,40))+'</div><div>이 논문에서 이동한 논문을 '+(S.view==='card'?'타임라인':'그래프')+'에서 클릭하세요. 태그가 달라도 돼요.</div>'+(S.linking.err?'<div class="lkerr" role="alert">⚠ '+esc(S.linking.err)+'</div>':'')+'<div><button type="button" class="btn sm" id="lkCancel">취소</button></div></div>'}
-    else{linkArea='<div class="linkbox"><div class="pair">'+esc(p.title.slice(0,34))+(p.title.length>34?'…':'')+' <span>→</span> '+esc(to.title.slice(0,34))+(to.title.length>34?'…':'')+'</div><label class="field"><span>왜 이 논문으로 넘어갔나요?</span><input type="text" id="lkWhy" placeholder="예: 의료 도메인 적용 사례를 찾으려고" autocomplete="off"></label><div style="display:flex;gap:8px"><button type="button" class="btn pri sm" id="lkOk">연결 저장</button><button type="button" class="btn sm" id="lkCancel">취소</button></div></div>'}
+    else{linkArea='<div class="linkbox"><div class="pair">'+esc(p.title.slice(0,34))+(p.title.length>34?'…':'')+' <span>→</span> '+esc(to.title.slice(0,34))+(to.title.length>34?'…':'')+'</div><label class="field"><span>왜 이 논문으로 넘어갔나요?</span><input type="text" id="lkWhy" placeholder="예: 의료 도메인 적용 사례를 찾으려고" autocomplete="off"></label><div class="paper-form-actions"><button type="button" class="btn pri sm" id="lkOk">연결 저장</button><button type="button" class="btn sm" id="lkCancel">취소</button></div></div>'}
   }else{linkArea='<button type="button" class="btn" id="lkStart">연결 추가: 이 논문에서 이동</button>'}
   pin.innerHTML='<div class="ph"><span>논문</span><button type="button" class="btn sm ghost" id="pClose">닫기</button></div><div class="pb">'+
   '<button type="button" class="btn pri" id="pRead">'+(p.state==='reading'?'이어 읽기':'읽기 화면 열기')+'</button>'+
-  '<div class="tagrow"><i style="background:'+t.color+'"></i><select id="pTag" aria-label="태그">'+tagOpts+'</select></div>'+
+  '<div class="tagrow"><i style="--c:'+t.color+'"></i><select id="pTag" aria-label="태그">'+tagOpts+'</select></div>'+
   '<label class="field"><span>읽은 정도</span><select id="pState">'+stateOpts(p.state)+'</select></label>'+
   '<label class="field"><span>저장 이유</span><textarea id="pMemo" class="big" rows="4">'+esc(p.memo)+'</textarea></label>'+
-  '<label class="field"><span>논문 제목</span><textarea id="pTitle" rows="2" class="mono" style="font-size:12px">'+esc(p.title)+'</textarea></label>'+
+  '<label class="field"><span>논문 제목</span><textarea id="pTitle" rows="2" class="mono">'+esc(p.title)+'</textarea></label>'+
   '<div class="two"><label class="field"><span>읽은 날짜</span><input type="date" id="pDate" value="'+esc(p.date)+'"></label><label class="field"><span>링크</span><input type="text" id="pLink" value="'+esc(p.link)+'" placeholder="https://"></label></div>'+
   paperResourcesHtml('pResources')+
   '<div><h4>이동 경로</h4>'+((outs.length||ins.length)?'<ul class="lklist">'+outs.map(function(l){return li(l,'out')}).join('')+ins.map(function(l){return li(l,'in')}).join('')+'</ul>':'<p class="empty">아직 연결이 없어요.</p>')+'</div>'+
@@ -192,8 +192,8 @@ function renderAddPanel(pin){
   '<label class="field"><span>태그 <em class="opt">(선택)</em></span><select id="aTag">'+tagOpts+'</select></label></div>'+
   '<label class="field"><span>읽은 정도</span><select id="aState">'+stateOpts('reading')+'</select></label>'+
   '<label class="field"><span>저장 이유 <b>*</b></span><textarea id="aMemo" rows="4" class="big" placeholder="이 논문을 왜 저장했나요?"></textarea></label>'+
-  '<p class="empty" id="aErr" style="color:var(--c3)" hidden></p>'+
-  '<div style="display:flex;gap:8px"><button type="submit" class="btn pri">타임라인에 추가</button><button type="button" class="btn" id="aCancel">취소</button></div></form>';
+  '<p class="empty" id="aErr" hidden></p>'+
+  '<div class="paper-form-actions"><button type="submit" class="btn pri">타임라인에 추가</button><button type="button" class="btn" id="aCancel">취소</button></div></form>';
   $('#pClose').addEventListener('click',function(){S.panel='none';renderAll()});
   $('#aCancel').addEventListener('click',function(){S.panel='none';renderAll()});
   S.draftMeta=null;S.draftFile=null;

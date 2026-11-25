@@ -1,0 +1,363 @@
+/* 논문 목록과 읽기 상태 필터 */
+
+.paper-list {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px 28px 36px;
+  background: #fff;
+  scrollbar-gutter: stable;
+}
+
+.paper-list[hidden] {
+  display: none;
+}
+
+.paper-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.paper-list-toolbar > div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.paper-list-toolbar h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  white-space: nowrap;
+  letter-spacing: -0.025em;
+}
+
+#paperListCount {
+  font-size: 11.5px;
+  color: #8a929e;
+  white-space: nowrap;
+}
+
+#paperListQuery {
+  flex: 0 1 250px;
+  min-width: 130px;
+  max-width: 45%;
+  height: 36px;
+  border: 1px solid #e1e5ea;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 12px;
+}
+
+#paperListQuery:focus {
+  border-color: #2f9bee;
+  outline: 2px solid #e2f1ff;
+}
+
+.paper-list-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.paper-list-table th {
+  padding: 11px 12px;
+  background: #f3f5f7;
+  color: #69717e;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.paper-list-table td {
+  padding: 18px 12px;
+  border-bottom: 1px solid #e9ecf0;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+.paper-list-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+.paper-list-title {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #252b33;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  width: 100%;
+}
+
+.paper-list-title:hover {
+  color: #2389d4;
+}
+
+.paper-list-title:focus-visible {
+  outline: 2px solid #2f9bee;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.paper-list-state {
+  display: inline-block;
+  background: #f0f2f5;
+  color: #6d7580;
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.paper-list-state.is-reading {
+  background: #e8f4ff;
+  color: #248bd8;
+}
+
+.paper-list-todo {
+  color: #57616e;
+}
+
+.paper-list-missing {
+  color: #a0a6af;
+}
+
+.paper-list-table .paper-list-empty {
+  text-align: center;
+  color: #9299a3;
+  padding: 48px 16px;
+}
+@media (max-width: 1000px) {
+  .paper-list {
+    padding: 20px 18px;
+  }
+
+  .paper-list-toolbar > div {
+    display: block;
+  }
+
+  #paperListCount {
+    display: block;
+    margin-top: 5px;
+  }
+
+  .paper-list-table td {
+    padding: 15px 9px;
+    font-size: 12px;
+  }
+
+  .paper-list-table th {
+    padding: 10px 9px;
+  }
+}
+@media (max-width: 600px) {
+  .paper-list {
+    padding: 14px 14px 32px;
+    background: #f6f7f9;
+  }
+
+  .paper-list-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .paper-list-toolbar > div {
+    display: flex !important;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  #paperListCount {
+    margin: 0 !important;
+  }
+
+  .paper-list-toolbar #paperListQuery {
+    width: 100% !important;
+    max-width: none !important;
+    height: 42px !important;
+    min-height: 0;
+    flex: none !important;
+    box-sizing: border-box;
+    font-size: 15px;
+  }
+
+  .paper-list-table,
+  .paper-list-table tbody {
+    display: block;
+  }
+
+  .paper-list-table colgroup,
+  .paper-list-table thead {
+    display: none;
+  }
+
+  .paper-list-table tr {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+
+  .paper-list-table tbody tr:hover {
+    background: #fff;
+  }
+
+  .paper-list-table td {
+    display: block;
+    padding: 0 !important;
+    border: 0 !important;
+    font-size: 13px;
+  }
+
+  .paper-list-table td:nth-child(2) {
+    order: 1;
+  }
+
+  .paper-list-table td:first-child {
+    order: 2;
+  }
+
+  .paper-list-title {
+    font-size: 15.5px;
+    font-weight: 650;
+    line-height: 1.4;
+    color: #1d1d22;
+  }
+
+  .paper-list-title::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+  }
+
+  .paper-list-state {
+    font-size: 11.5px;
+    padding: 2px 8px;
+  }
+
+  .paper-list-table td.paper-list-todo {
+    order: 3;
+    background: #f1f7fe;
+    border-radius: 9px;
+    padding: 9px 11px !important;
+    color: #1d1d22 !important;
+    line-height: 1.5;
+  }
+
+  .paper-list-todo::before {
+    content: "다음";
+    font-weight: 700;
+    color: #2f7fc4;
+    margin-right: 6px;
+  }
+
+  .paper-list-todo:has(.paper-list-missing) {
+    display: none !important;
+  }
+
+  .paper-list-table .paper-list-empty {
+    background: none;
+    border: 0;
+  }
+
+  .paper-list {
+    padding-bottom: 96px !important;
+  }
+}
+
+.pl-state {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: -4px 0 16px;
+}
+
+.pl-state button {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #e1e5ea;
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #5a616c;
+  cursor: pointer;
+}
+
+.pl-state button em {
+  font-style: normal;
+  font-weight: 500;
+  color: #9aa1ab;
+  margin-left: 2px;
+}
+
+.pl-state button:hover {
+  background: #f6f7f9;
+}
+
+.pl-state button[aria-pressed="true"] {
+  background: #1d1d22;
+  border-color: #1d1d22;
+  color: #fff;
+}
+
+.pl-state button[aria-pressed="true"] em {
+  color: #c9ccd3;
+}
+@media (max-width: 600px) {
+  .pl-state {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 -14px 12px;
+    padding: 0 14px;
+    scrollbar-width: none;
+  }
+
+  .pl-state::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pl-state button {
+    flex: none;
+    height: 36px;
+    font-size: 13.5px;
+  }
+
+  #paperListCount {
+    display: none !important;
+  }
+}
+
+.paper-title-column {
+  width: 52%;
+}
+
+.paper-state-column {
+  width: 16%;
+}
+
+.paper-action-column {
+  width: 32%;
+}

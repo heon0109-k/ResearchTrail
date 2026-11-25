@@ -1,0 +1,451 @@
+/* 논문 등록·상세 패널과 논문 사이 연결 */
+
+.panel {
+  display: none;
+}
+
+.panel.open {
+  display: block;
+  background: #fff;
+  overflow: hidden;
+}
+
+.pin {
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ph {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px 0 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mute);
+}
+
+.pb {
+  padding: 12px 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pb .big {
+  font-size: 15px;
+  line-height: 1.55;
+  background: transparent;
+  padding: 8px 10px;
+  margin: 0 -10px;
+}
+
+.pb .big:hover {
+  background: var(--softer);
+}
+
+.pb .big:focus {
+  background: #fff;
+}
+
+.pb h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mute);
+}
+
+.paper-resources {
+  border-block: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.paper-resources ul {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.paper-resources ul:empty,
+.paper-resources [role="status"]:empty {
+  display: none;
+}
+
+.paper-resources li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--softer);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.paper-resources li a {
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.paper-resources li small {
+  grid-column: 1;
+  color: var(--mute);
+  font-size: 11px;
+}
+
+.paper-resources li button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.paper-resource-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.paper-resources form:not([hidden]) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.paper-resources form input {
+  width: 100%;
+  min-width: 0;
+}
+
+.paper-resources h5 {
+  margin: 10px 0 6px;
+  color: var(--mute);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.paper-resources [role="status"] {
+  margin: 6px 0 0;
+}
+
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tagrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tagrow i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+}
+
+.tagrow select {
+  width: auto;
+  min-width: 120px;
+}
+
+.lklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lklist li {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  gap: 2px 6px;
+  padding: 10px 12px;
+  background: var(--softer);
+  border-radius: 10px;
+  align-items: start;
+}
+
+.lklist .arr {
+  color: var(--faint);
+}
+
+.lklist .go {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.lklist .go:hover {
+  text-decoration: underline;
+}
+
+.lklist .why {
+  grid-column: 2;
+  color: var(--mute);
+  font-size: 12px;
+}
+
+.lklist .x {
+  border: 0;
+  background: none;
+  font-size: 11px;
+  color: var(--faint);
+  padding: 0;
+}
+
+.lklist .x:hover {
+  color: var(--ink);
+}
+
+.linkbox {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--soft);
+  border-radius: 12px;
+}
+
+.linkbox .pair {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.linkbox .pair span {
+  color: var(--faint);
+}
+
+.lkerr {
+  font-size: 12px;
+  color: #8a3a12;
+  background: #fff1e8;
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+
+.paper-delete-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+#pDel {
+  color: #b3321b;
+}
+
+.panel.open {
+  position: relative;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  flex: none;
+  width: 340px;
+  max-width: none;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  z-index: auto;
+}
+@media (max-width: 860px) {
+  .panel.open {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 50;
+    max-width: 92vw;
+    box-shadow: 0 0 40px rgba(20, 20, 30, 0.2);
+  }
+}
+
+.srcbox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #f3f6fb;
+  border: 1px dashed #b9dcf8;
+  border-radius: 10px;
+}
+
+.srcbox .sl2 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mute);
+}
+
+.srcrow {
+  display: flex;
+  gap: 6px;
+}
+
+.srcrow input {
+  flex: 1;
+  min-width: 0;
+}
+
+.filebtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.filebtn em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.filebtn .btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 태그 삭제 확인 */
+.tag-delete-dialog {
+  position: relative;
+  width: min(420px, calc(100% - 32px));
+  padding: 24px;
+}
+
+.tag-dialog-close {
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  border: 0;
+  background: none;
+  color: #90959c;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.tag-delete-options {
+  border: 0;
+  padding: 0;
+  margin: 18px 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.tag-delete-options label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #dce0e6;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.tag-delete-options label:has(input:checked) {
+  border-color: #2f9bee;
+  background: #eef7ff;
+}
+
+.tag-delete-options input {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin: 0;
+  accent-color: #2f9bee;
+}
+
+.tag-delete-options b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #252b33;
+}
+
+.tag-delete-options small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #7c8490;
+}
+
+.tag-delete-dialog .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.tag-delete-options input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1.5px solid #c5cbd4;
+  border-radius: 50%;
+  background: #fff;
+  padding: 0;
+  display: grid;
+  place-content: center;
+  outline: none;
+}
+
+.tag-delete-options input[type="radio"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2f9bee;
+  transform: scale(0);
+}
+
+.tag-delete-options input[type="radio"]:checked {
+  border-color: #2f9bee;
+  background: #fff;
+}
+
+.tag-delete-options input[type="radio"]:checked::before {
+  transform: scale(1);
+}
+
+.tag-delete-options input[type="radio"]:focus-visible {
+  outline: 2px solid #a8d7ff;
+  outline-offset: 3px;
+}
+
+.tagrow i {
+  background: var(--c, #2f9bee) !important;
+}
+
+.paper-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+#pTitle {
+  font-size: 12px;
+}
+
+#aErr {
+  color: var(--c3);
+}
