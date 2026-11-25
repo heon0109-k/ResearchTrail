@@ -71,6 +71,7 @@ function openPv(p,src,page){
       var tm=0;sc.addEventListener('scroll',function(){clearTimeout(tm);tm=setTimeout(function(){trackPage(p)},120)});
       sc.addEventListener('mouseup',function(e){setTimeout(function(){onSel(p,e)},10)});
       sc.addEventListener('mousedown',function(){var b=$('#hlbar');if(b)b.remove()});
+      sc.addEventListener('mousemove',pvKeepSelectionAtLineEnd);
       $('#pvPrev').addEventListener('click',function(){pvGo(PV.cur-1)});
       $('#pvNext').addEventListener('click',function(){pvGo(PV.cur+1)});
       $('#pvNum').addEventListener('change',function(e){pvGo(+e.target.value)});
@@ -81,6 +82,24 @@ function openPv(p,src,page){
       setTimeout(function(){pvGo(start,true)},0);
     });
   });
+}
+/* In the margin beside a PDF text run, keep the caret on the visible line. */
+function pvKeepSelectionAtLineEnd(event){
+  if(event.buttons!==1||event.currentTarget.classList.contains('capmode'))return;
+  var layer=event.target.closest('.textLayer'),selection=window.getSelection();
+  if(!layer||event.target!==layer||!selection||!layer.contains(selection.anchorNode))return;
+  var nearest=null,gap=24;
+  layer.querySelectorAll('span').forEach(function(span){
+    var node=span.firstChild;
+    if(!node||node.nodeType!==3||!node.length)return;
+    var box=span.getBoundingClientRect();
+    if(event.clientY<box.top||event.clientY>box.bottom)return;
+    var distance=event.clientX-box.right;
+    if(distance>=0&&distance<gap){nearest=node;gap=distance}
+  });
+  if(!nearest)return;
+  event.preventDefault();
+  selection.setBaseAndExtent(selection.anchorNode,selection.anchorOffset,nearest,nearest.length);
 }
 function buildPages(p){
   var sc=$('#pvs');if(!sc||!PV)return;
@@ -109,7 +128,7 @@ function renderPage(p,n){
     var ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
     page.render({canvasContext:ctx,viewport:vp}).promise.then(function(){return page.getTextContent()}).then(function(tc){
       return pdfjsLib.renderTextLayer({textContentSource:tc,container:tl,viewport:vp,textDivs:[]}).promise;
-    }).then(function(){var eoc=document.createElement('div');eoc.className='endOfContent';tl.appendChild(eoc);pg.done=true;pg.busy=false;drawHl(p,n)}).catch(function(){pg.busy=false});
+    }).then(function(){pg.done=true;pg.busy=false;drawHl(p,n)}).catch(function(){pg.busy=false});
   });
 }
 function drawHl(p,n){
@@ -224,7 +243,7 @@ function highlightQuestion(p,h){
     '\n선택한 내용과 내 메모를 바탕으로 핵심 의미와 이해에 필요한 배경을 쉽게 설명해 주세요. 원문에서 확인할 수 있는 내용과 추가 설명을 구분하고, 확실하지 않은 내용은 모른다고 말해 주세요.';
 }
 function copyText(t,done){
-  function fb(){var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();var ok=false;try{ok=document.execCommand('copy')}catch(e){}a.remove();done(ok)}
+  function fb(){var a=document.createElement('textarea');a.value=t;a.className='clipboard-copy-field';document.body.appendChild(a);a.select();var ok=false;try{ok=document.execCommand('copy')}catch(e){}a.remove();done(ok)}
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){done(true)},fb);else fb();
 }
 var KIND_OUTSIDE_BOUND=false;

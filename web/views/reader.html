@@ -1,0 +1,43 @@
+<div class="rdbar">
+  <button type="button" class="icbtn rdside-tog" data-side-tog="1"></button>
+  <button type="button" class="btn sm" id="rdBack">← 타임라인</button>
+  <div class="rdt" id="rdTitle"></div>
+  <span class="sp"></span>
+  <button type="button" class="dlbtn" id="rdDl" aria-label="PDF 다운로드" data-tip="PDF 다운로드" hidden>
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12" />
+    </svg>
+  </button>
+  <span class="rdtog1">
+    <button type="button" class="icbtn" data-tog="1" aria-label="메모 패널 접기/펴기"></button>
+  </span>
+</div>
+<div class="rdmtabs" role="tablist" aria-label="읽기 화면 보기">
+  <button type="button" role="tab" data-mtab="pdf">PDF</button>
+  <button type="button" role="tab" data-mtab="notes">기록</button>
+  <button type="button" role="tab" data-mtab="chat">질문하기</button>
+</div>
+<div class="rdbody">
+  <div class="rdsrc" id="rdsrc"></div>
+  <div
+    class="rdresize"
+    id="rdResize"
+    role="separator"
+    aria-orientation="vertical"
+    aria-label="메모 패널 너비 조절 (드래그하거나 좌우 화살표, 더블클릭하면 기본 너비)"
+    aria-valuemin="280"
+    aria-valuemax="900"
+    tabindex="0"
+  ></div>
+  <aside class="rdnotes" id="rdnotes"></aside>
+</div>

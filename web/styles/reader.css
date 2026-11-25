@@ -1,0 +1,447 @@
+/* 읽기 화면의 배치, 패널 너비와 모바일 탭 */
+
+.reader {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f4f5f7;
+}
+
+.reader[hidden] {
+  display: none;
+}
+
+.rdbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+  padding: 0 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+
+.rdt {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rdbody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.rdsrc {
+  flex: 1;
+  min-width: 0;
+  background: #e9ebef;
+  display: flex;
+}
+
+.rdframe {
+  flex: 1;
+  border: 0;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+}
+
+.rdempty {
+  margin: auto;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 24px;
+  font-size: 13px;
+  color: var(--mute);
+  line-height: 1.5;
+}
+
+.rdempty b {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.rdempty .srcrow {
+  width: 100%;
+}
+
+.rdnotes {
+  width: 360px;
+  flex: none;
+  background: #fff;
+  border-left: 1px solid var(--line);
+  overflow: auto;
+  padding: 16px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rdnotes textarea {
+  width: 100%;
+}
+
+.rfoot {
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.rfoot .btn {
+  width: 100%;
+}
+
+.rdtoast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(20px);
+  background: #1d1d22;
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.25s;
+  z-index: 80;
+  max-width: 90vw;
+}
+
+.rdtoast.on {
+  opacity: 1;
+  transform: translateX(-50%);
+}
+
+.reader,
+.rdbody,
+.rdsrc {
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .rdbody {
+    flex-direction: column;
+  }
+
+  .rdsrc {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .rdnotes {
+    flex: none;
+    width: auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+@media (max-width: 860px) {
+  .rdbar {
+    padding: 0 10px;
+    gap: 8px;
+  }
+}
+
+.icbtn {
+  display: inline-flex;
+}
+
+.reader.notes-closed .rdnotes {
+  display: none;
+}
+
+.rdbar .sp {
+  flex: 1;
+}
+
+.icbtn {
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  width: 26px;
+  height: 24px;
+  border-radius: 6px;
+  color: #a3a9b5;
+}
+
+.icbtn:hover {
+  background: var(--soft);
+  color: #5a5a66;
+}
+
+.icbtn[aria-pressed="true"] {
+  color: #a3a9b5;
+}
+
+.reader.has-pv .rdtog1 {
+  display: none;
+}
+
+.rdtog1 {
+  margin-left: auto;
+  display: inline-flex;
+}
+
+.rdbar .icbtn {
+  margin-left: 0;
+}
+
+/* 리더 너비 조절 */
+
+.rdside-tog {
+  flex: none;
+}
+
+.rdresize {
+  flex: none;
+  width: 7px;
+  margin: 0 -3px;
+  position: relative;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+  background: transparent;
+}
+
+.rdresize::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition:
+    background 0.12s,
+    width 0.12s,
+    left 0.12s;
+}
+
+.rdresize:hover::after,
+.rdresize:focus-visible::after,
+.reader.resizing .rdresize::after {
+  left: 2px;
+  width: 3px;
+  background: #2f9bee;
+}
+
+.rdresize:focus-visible {
+  outline: none;
+}
+
+.reader.resizing,
+.reader.resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+.reader.resizing .rdsrc {
+  pointer-events: none;
+}
+
+.reader.notes-closed .rdresize {
+  display: none;
+}
+@media (max-width: 900px) {
+  .rdresize {
+    display: none;
+  }
+
+  .rdnotes {
+    max-height: 42%;
+    width: auto !important;
+  }
+}
+@media (max-width: 860px) {
+  .rdside-tog {
+    display: none;
+  }
+}
+
+.reader.ai-on .record-candidate {
+  display: none !important;
+}
+
+.reader.ai-on .reader-records > .reader-hint {
+  display: none;
+}
+
+.rtabs {
+  display: flex;
+  gap: 4px;
+  background: var(--soft);
+  border-radius: 9px;
+  padding: 3px;
+  flex: none;
+}
+
+.rtabs button {
+  flex: 1;
+  height: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--mute);
+  cursor: pointer;
+}
+
+.rtabs button.on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.rdnotes.chat-mode > :not(.rtabs):not(#rChat) {
+  display: none !important;
+}
+
+.rdnotes.chat-mode {
+  overflow: hidden;
+}
+
+.rdbar .dlbtn {
+  margin-left: auto;
+}
+
+.rdnotes #rHistory {
+  display: none;
+}
+
+.rdnotes.show-history #rHistory {
+  display: block;
+}
+
+.rdnotes .sample-source {
+  order: 95;
+}
+
+.rdnotes #rHistToggle {
+  order: 0;
+}
+
+.rdnotes .rfoot {
+  order: 99;
+}
+
+.reader.ai-on .record-selected {
+  display: none !important;
+}
+
+.reader.ai-on .reading-card.is-selected {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  animation: rec-flash 1.4s ease-out 1;
+}
+
+/* 휴대폰 읽기 탭 */
+
+.rdmtabs {
+  display: none;
+}
+@media (max-width: 600px) {
+  .rdbar .rdtog1,
+  .rdbar .rdside-tog {
+    display: none;
+  }
+
+  .rdbar .rdt {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rdmtabs {
+    display: flex;
+    gap: 4px;
+    flex: none;
+    padding: 6px 10px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .rdmtabs button {
+    flex: 1;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--mute);
+  }
+
+  .rdmtabs button.on {
+    background: var(--bl-bg);
+    color: #1f6fb5;
+  }
+
+  .rdbody {
+    flex-direction: column;
+  }
+
+  .rdresize {
+    display: none;
+  }
+
+  .reader.m-pdf .rdnotes {
+    display: none !important;
+  }
+
+  .reader.m-notes .rdsrc,
+  .reader.m-chat .rdsrc {
+    display: none;
+  }
+
+  .reader.m-notes .rdnotes,
+  .reader.m-chat .rdnotes {
+    display: flex !important;
+    flex: 1 1 0;
+    width: auto !important;
+    max-height: none;
+    min-height: 0;
+    border: 0;
+    overflow: auto;
+  }
+
+  .rdnotes .rtabs {
+    display: none;
+  }
+
+  .rdmtabs button {
+    height: 38px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 36px;
+  }
+
+  .app.reading .rdmtabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    height: calc(60px + env(safe-area-inset-bottom));
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+    border-bottom: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .app.reading .rdmtabs button {
+    height: 44px;
+    font-size: 14px;
+  }
+}

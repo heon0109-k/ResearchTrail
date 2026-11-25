@@ -8,7 +8,7 @@ p.hl[0].mine='메모 변경';c.NA={pid:'p',st:'idle'};assert.equal(c.naRestoreDr
 c.naDropDraft(p);assert.equal(c.naRestoreDraft(p),false);
 Object.assign(c.NA,{pid:'p',st:'cand',cand:'삭제된 기록의 후보',sourceId:'h',noteText:'표 확인하기',candidateId:'a'});c.naStoreDraft(p);p.hl=[];assert.equal(c.naRestoreDraft(p),false);
 p.hl=[{id:'h',mine:'메모 변경'}];c.naStoreDraft(p);p.actionHistory.push({kind:'confirmed',candidate_id:'a'});assert.equal(c.naRestoreDraft(p),false);
-assert.match(fs.readFileSync('web/style.css','utf8'),/\.record-candidate\{display:inline-flex/);
+assert.match(fs.readFileSync('web/styles/reading-records.css','utf8'),/\.record-candidate\s*\{\s*display:\s*inline-flex\s*;/);
 assert.match(fs.readFileSync('web/js/pdf-viewer.js','utf8'),/이 메모를 삭제할까요/);
 assert.match(fs.readFileSync('web/js/next-action.js','utf8'),/수정한 메모로 다시 찾기/);
 console.log('PASS: draft recovery, unchanged confirmed action, changed/deleted sources, confirmation cleanup and visible controls.');

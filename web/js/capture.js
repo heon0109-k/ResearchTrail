@@ -45,9 +45,7 @@ function pvHitInit(p){
   function rm(){var b=$('#hldel');if(b)b.remove()}
   sc.addEventListener('mousedown',function(e){
     if(!e.target.closest||!e.target.closest('#hldel'))rm();
-    var tl=e.target.closest&&e.target.closest('.textLayer');if(tl)tl.classList.add('selecting');
   });
-  document.addEventListener('mouseup',function(){$$('.textLayer.selecting').forEach(function(t){t.classList.remove('selecting')})});
   sc.addEventListener('scroll',rm);
   sc.addEventListener('click',function(e){
     rm();if(sc.classList.contains('capmode'))return;

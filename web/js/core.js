@@ -1,6 +1,6 @@
 'use strict';
 var LABELW=120,AXISH=52,CW=184,CH=98,CMW=104,CMH=50,GAP=10;
-var PAL=['#7c6bf0','#2fa598','#ee7a58','#4a9be8','#d9638c','#d9a032'];
+var PAL=['#7c6bf0','#2fa598','#ee7a58','#4a9be8','#d9638c','#d9a032','#eeafca'];
 var PX={B:'#2f9bee',D:'#1a6fb5',L:'#cfe9ff',K:'#0d2a40'};
 var CHARS=[
  {id:'page',name:'페이지',rows:["............","..BBBBBB....","..BBBBBBDD..","..BBBBBBBLD.","..BKBBBBKBB.","..BKBBBBKBB.","..BBBBBBBBB.","..BLLLLLLBB.","..BBBBBBBBB.","..BLLLLBBBB.","..BBBBBBBBB.","...BB..BB...","...BB..BB..."]},
@@ -8,7 +8,7 @@ var CHARS=[
  {id:'mark',name:'책갈피',rows:["............","...BBBBBB...","...BBBBBB...","...BKBBKB...","...BKBBKB...","...BBBBBB...","...BBLLBB...","...BBBBBB...","...BBBBBB...","...BBBBBB...","...BB..BB...","...B....B..."]}];
 var ME=(function(){try{var o=JSON.parse(localStorage.getItem('researchtrail.me')||'null');if(o&&o.c>=0&&o.c<CHARS.length)return {c:o.c,nick:String(o.nick||'').slice(0,12)}}catch(e){}return {c:0,nick:''}})();
 function saveMe(){try{localStorage.setItem('researchtrail.me',JSON.stringify(ME))}catch(e){}}
-function curChar(){return CHARS[ME.c]||CHARS[0]}
+function curChar(){return CHARS[0]}
 function chPick(sel,sc){return CHARS.map(function(c,i){return '<button type="button" class="chp" data-c="'+i+'" aria-pressed="'+(i===sel)+'" aria-label="'+c.name+'">'+spr(c.rows,sc,'')+'<span>'+c.name+'</span></button>'}).join('')}
 
 function spr(rows,sc,cls){var out='';rows.forEach(function(r,y){for(var x=0;x<r.length;x++){var c=r[x];if(c!=='.'&&PX[c])out+='<rect x="'+x+'" y="'+y+'" width="1.02" height="1.02" fill="'+PX[c]+'"/>'}});return '<svg class="spr '+(cls||'')+'" width="'+rows[0].length*sc+'" height="'+rows.length*sc+'" viewBox="0 0 '+rows[0].length+' '+rows.length+'" shape-rendering="crispEdges" aria-hidden="true">'+out+'</svg>'}

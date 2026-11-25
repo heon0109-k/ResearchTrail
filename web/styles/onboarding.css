@@ -1,0 +1,204 @@
+/* 첫 설정과 화면 사용법 */
+
+.ob {
+  height: 100%;
+  overflow: auto;
+  padding-block: 64px 64px;
+  padding-left: var(--gl);
+  padding-right: var(--gr);
+}
+
+.ob-in {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 72px;
+  align-items: start;
+}
+
+.ob h1 {
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1.25;
+  margin: 40px 0 12px;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.ob .sub {
+  color: var(--mute);
+  margin: 0 0 44px;
+  max-width: 36ch;
+  font-size: 14px;
+}
+
+.pvlab {
+  font-size: 12px;
+  color: var(--faint);
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.pvcard {
+  --tc: var(--c1);
+  background: color-mix(in srgb, var(--tc) 8%, #fff);
+  border: 1px solid color-mix(in srgb, var(--tc) 22%, #fff);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 92px;
+  margin-left: 18.18%;
+  width: 81.8%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pvcard .m {
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.pvcard .f {
+  display: flex;
+  gap: 8px;
+  font-size: 10.5px;
+  color: var(--mute);
+}
+
+.pvcard .t {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pvax {
+  display: flex;
+  margin-top: 12px;
+}
+
+.pvax div {
+  flex: 1;
+  height: 26px;
+  padding-top: 4px;
+  font-size: 11px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--line);
+}
+
+.pvax div.on {
+  color: var(--ink);
+  font-weight: 600;
+  border-top: 2px solid var(--ink);
+}
+
+.fgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 14px;
+}
+
+.fgrid .full {
+  grid-column: 1/-1;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.actions .btn {
+  height: 38px;
+  padding: 0 18px;
+}
+@media (max-width: 760px) {
+  .ob-in {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+  }
+}
+
+.ob .chp svg {
+  width: 42px;
+  height: auto;
+}
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.tour-hole {
+  position: fixed;
+  border: 2px solid var(--bl);
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(15, 22, 32, 0.58);
+  pointer-events: none;
+  transition:
+    left 0.22s,
+    top 0.22s,
+    width 0.22s,
+    height 0.22s;
+}
+
+.tour-tip {
+  position: fixed;
+  width: 300px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px 16px 12px;
+  box-shadow: 0 12px 40px rgba(10, 20, 40, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tt-n {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1a6fb5;
+}
+
+.tt-t {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.tt-d {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--mute);
+}
+
+.tt-b {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.tt-b .sp {
+  flex: 1;
+}
+
+#oErr {
+  margin-top: 12px;
+  color: var(--c3);
+}
+
+/* 가리킬 요소가 없는 안내 단계 */
+.tour-hole.is-centered {
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+}
