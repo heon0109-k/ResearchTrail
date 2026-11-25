@@ -53,7 +53,7 @@ var ChatQueryExpansion=(function(){
       // This deadline covers headers and body. No retry; the original search remains available.
       var deadline=new Promise(function(_,reject){timer=setTimeout(function(){if(ctl)ctl.abort();reject(new Error('EXPANSION_TIMEOUT'))},TIMEOUT_MS)});
       var request=fetch(cfg.endpoint+'/models/'+encodeURIComponent(cfg.model)+':generateContent',{
-        method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':cfg.key},signal:ctl?ctl.signal:undefined,
+        method:'POST',headers:{'Content-Type':'application/json'},signal:ctl?ctl.signal:undefined,
         body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt(q,vocabulary(pages))}]}],generationConfig:gen})
       }).then(function(r){if(!r.ok)throw new Error('EXPANSION_HTTP');return r.json()}).then(function(j){
         var text=((((j.candidates||[])[0]||{}).content||{}).parts||[]).filter(function(p){return !p.thought}).map(function(p){return p.text||''}).join('');
