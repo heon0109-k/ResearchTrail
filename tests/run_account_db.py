@@ -1,15 +1,27 @@
 """Run the account migration and isolation cases on a disposable PostgreSQL cluster."""
+import argparse
 import os
 from pathlib import Path
+import secrets
+import socket
 import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BIN = Path(subprocess.check_output(["pg_config", "--bindir"], text=True).strip())
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--concurrent", action="store_true", help="also race two sessions using PostgreSQL's isolationtester")
+options = parser.parse_args()
 with tempfile.TemporaryDirectory(prefix="researchtrail-pg-") as tmp:
     data = Path(tmp) / "pg"
+    auth = ["--auth=trust"]  # Standalone mode has no listener.
+    if options.concurrent:
+        password = secrets.token_hex(24)
+        password_file = Path(tmp) / "init-password"
+        password_file.write_text(password + "\n")
+        auth = ["--auth=scram-sha-256", "--pwfile", password_file]
     subprocess.run([BIN / "initdb", "-D", data, "--no-locale", "--encoding=UTF8",
-                    "--no-sync", "--auth=trust"], stdout=subprocess.DEVNULL, check=True)
+                    "--no-sync", *auth], stdout=subprocess.DEVNULL, check=True)
     # A postmaster normally advances beyond bootstrap OIDs. PostgreSQL exempts catalog OIDs
     # below 16384 from RLS. Set the normal starting OID on this unused temporary cluster.
     subprocess.run([BIN / "pg_resetwal", "-o", "16384", data], stdout=subprocess.DEVNULL, check=True)
@@ -35,3 +47,25 @@ insert into auth.users values ('aaaaaaaa-0000-4000-8000-000000000001'), ('bbbbbb
         execute(migration.read_text())
     execute((ROOT / "tests/sql/account_workspace.sql").read_text())
     print("PASS: PostgreSQL task and paper registration, retries, isolation, privileges and rollback")
+    execute((ROOT / "tests/sql/account_records.sql").read_text())
+    print("PASS: record content, context links, corrections, retries and atomic rollback")
+
+    if options.concurrent:
+        pkglib = subprocess.check_output(["pg_config", "--pkglibdir"], text=True).strip()
+        tester = Path(pkglib) / "pgxs/src/test/isolation/isolationtester"
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+        pg_ctl = [BIN / "pg_ctl", "-D", data, "-w"]
+        flags = f"-p {port} -h 127.0.0.1 -c unix_socket_directories=''"
+        subprocess.run([*pg_ctl, "start", "-o", flags, "-l", Path(tmp) / "postgres.log"], check=True)
+        try:
+            result = subprocess.run([tester, f"host=127.0.0.1 port={port} dbname=postgres"],
+                                    input=(ROOT / "tests/sql/account_record_retry.spec").read_text(),
+                                    env={**os.environ, "PGPASSWORD": password}, capture_output=True, text=True, timeout=45)
+            output = result.stdout + result.stderr
+            if result.returncode or "ERROR:" in output or output.count("<waiting ...>") != 2 or output.count("<... completed>") != 2:
+                raise SystemExit(output)
+            print("PASS: overlapping retries waited and returned one record and question after either commit or rollback")
+        finally:
+            subprocess.run([*pg_ctl, "stop", "-m", "fast"], check=True)
