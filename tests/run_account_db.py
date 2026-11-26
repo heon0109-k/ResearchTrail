@@ -49,6 +49,8 @@ insert into auth.users values ('aaaaaaaa-0000-4000-8000-000000000001'), ('bbbbbb
     print("PASS: PostgreSQL task and paper registration, retries, isolation, privileges and rollback")
     execute((ROOT / "tests/sql/account_records.sql").read_text())
     print("PASS: record content, context links, corrections, retries and atomic rollback")
+    execute((ROOT / "tests/sql/account_resume.sql").read_text())
+    print("PASS: read-only task resume, stored context, confirmation, ordering and account isolation")
 
     if options.concurrent:
         pkglib = subprocess.check_output(["pg_config", "--pkglibdir"], text=True).strip()

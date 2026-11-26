@@ -90,6 +90,12 @@ Google 로그인을 사용할 때는 Supabase Auth에서 Google 제공자를 설
 
 성공 응답은 `record_id`와 `context_refs`입니다. `context_refs`의 `question_ids`, `decision_ids`, `document_ids`, `document_use_ids`, `artifact_ids`, `excerpt_ids`는 이 기록에 연결된 ID 목록이며 빈 목록은 `[]`입니다. 정정은 새 UUID와 같은 과업의 `revises_record_id`로 저장합니다. 잘못된 연결이 있으면 원문과 맥락 모두 저장되지 않습니다. 브라우저 편집기는 계속 로컬에 저장합니다.
 
+#### 계정 과업 재개 조회
+
+`GET /tasks/{task_id}/resume`은 로그인한 계정에서 선택한 과업의 `task_id`, `task`, `records`, `context`, `next_actions`를 반환합니다. 각 기록의 원문은 `record.content_text`에 있고 정정 대상은 `revises_record_id`로 구분합니다. `context`에는 `questions`, `decisions`, `document_contexts` 목록이 있습니다. 각 문헌 사용 맥락의 `artifacts`와 그 안의 `excerpts`에서 저장된 판본·위치·구절을 확인할 수 있습니다. 재개 조회는 원문 사이트나 AI를 호출하지 않습니다.
+
+`next_actions`에는 사용자가 명시적으로 확인한 작업의 `source_record_id`, `saved_action`, 선택한 `links`가 들어갑니다. 현재 계정 API는 작업 조회만 지원하므로 새 과업의 `next_actions`는 `[]`입니다. 저장 시각이 최신인 항목부터 반환하고, 시각이 같으면 ID 오름차순입니다. 미기록 속성은 `null`, 등록된 항목이 없는 목록은 `[]`로 반환합니다. 접근 권한이 없는 과업과 존재하지 않는 과업은 모두 `404 RESOURCE_UNAVAILABLE`로 응답합니다.
+
 ---
 
 ### 3. 핵심 기능 체험 순서

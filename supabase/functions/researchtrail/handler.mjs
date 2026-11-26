@@ -27,14 +27,17 @@ export async function handleResearchTrail(request, backend) {
     if (!(await verified.json())?.id) return fail(401, 'RESOURCE_UNAVAILABLE');
 
     const path = new URL(request.url).pathname.replace(/^\/(?:functions\/v1\/)?researchtrail(?=\/|$)/, '');
-    const match = /^\/tasks\/([^/]+)\/(papers|records)$/.exec(path);
+    const match = /^\/tasks\/([^/]+)\/(papers|records|resume)$/.exec(path);
     const post = request.method === 'POST';
     let rpc;
     const args = {};
     if (path === '/tasks') rpc = post ? 'rt_create_task' : 'rt_tasks';
     else if (path === '/documents' && !post) rpc = 'rt_documents';
     else if (match && uuid.test(match[1])) {
-      if (match[2] === 'records') {
+      if (match[2] === 'resume') {
+        if (request.method !== 'GET') return fail(405, 'INVALID_INPUT');
+        rpc = 'rt_resume';
+      } else if (match[2] === 'records') {
         if (!post) return fail(405, 'INVALID_INPUT');
         rpc = 'rt_save_record';
       } else rpc = post ? 'rt_register_paper' : 'rt_papers';
