@@ -412,3 +412,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[functions.researchtrail]
+entrypoint = "./functions/researchtrail/index.mjs"
+# The function verifies each data request with Supabase Auth before dispatching it.
+# This also accepts sessions from projects using asymmetric signing keys.
+verify_jwt = false

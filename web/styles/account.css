@@ -25,3 +25,14 @@
 .account-workspace:empty { flex: 0; }
 .account-workspace iframe { display: block; width: 100%; height: 100%; border: 0; }
 .account-page [hidden] { display: none; }
+
+.account-projects { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
+.account-projects header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.account-projects #tName { max-width: 72%; overflow-wrap: anywhere; }
+.account-projects #tName::after { content: ' ▾'; }
+.account-projects #projectStatus { color: var(--mute); font-size: 14px; }
+.account-projects #pin { border: 1px solid var(--line); border-radius: 12px; }
+.account-projects ul { padding: 0; list-style: none; }
+.account-projects li { border-bottom: 1px solid var(--line); padding: 12px 0; overflow-wrap: anywhere; }
+.account-projects li p { margin: 4px 0; white-space: pre-wrap; }
+.account-projects li small { color: var(--mute); }

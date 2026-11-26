@@ -17,6 +17,8 @@
   let auth;
   let ready = false;
   let accountId = null;
+  let accessToken = null;
+  let accountRequests;
   let generation = 0;
   let receivedChange = false;
 
@@ -25,6 +27,7 @@
   });
 
   function closeLocal() {
+    accountRequests?.abort();
     // Let the existing change handler finish the focused memo's local edit history.
     workspace.firstElementChild?.contentDocument?.activeElement?.blur();
     workspace.replaceChildren();
@@ -50,8 +53,10 @@
     back.hidden = true;
   }
 
-  function applySession(user) {
+  function applySession(session) {
+    const user = session?.user;
     const id = user?.id || null;
+    accessToken = id ? session.access_token : null;
     identity.textContent = id ? (user.email || id) : '';
     identity.hidden = !id;
     if (ready && id === accountId) return;
@@ -69,6 +74,42 @@
   }
 
   byId('authOpenLocal').addEventListener('click', () => showLocal());
+  byId('authProjects').addEventListener('click', () => {
+    if (!accountId || !accessToken) return;
+    closeLocal();
+    const frame = document.createElement('iframe');
+    const started = generation;
+    accountRequests = new AbortController();
+    const { signal } = accountRequests;
+    frame.title = '계정 프로젝트';
+    frame.src = 'views/account-projects.html';
+    frame.addEventListener('load', () => {
+      if (signal.aborted || started !== generation) return;
+      if (typeof frame.contentWindow.startAccountProjects !== 'function') {
+        showAccount();
+        message.textContent = '프로젝트 화면을 열지 못했어요. 다시 시도해 주세요.';
+        return;
+      }
+      frame.contentWindow.startAccountProjects(async (path, body) => {
+        if (signal.aborted || started !== generation) throw new Error('계정이 변경되었어요.');
+        const config = window.RESEARCHTRAIL_CONFIG;
+        const result = await fetch(config.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/researchtrail' + path, {
+          method: body ? 'POST' : 'GET', signal,
+          headers: { apikey: config.SUPABASE_PUBLISHABLE_KEY, Authorization: 'Bearer ' + accessToken,
+            'Content-Type': 'application/json' },
+          body: body ? JSON.stringify(body) : undefined,
+        });
+        const data = await result.json();
+        if (signal.aborted || started !== generation) throw new Error('계정이 변경되었어요.');
+        if (!result.ok) throw new Error(data.error?.message || '계정 자료에 접근하지 못했어요.');
+        return data;
+      });
+    }, { once: true });
+    workspace.appendChild(frame);
+    byId('authHome').hidden = true;
+    byId('authMode').textContent = '계정 프로젝트';
+    back.hidden = false;
+  });
   back.addEventListener('click', showAccount);
 
   login.addEventListener('click', async () => {
@@ -117,11 +158,11 @@
     auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
         receivedChange = true;
-        applySession(event === 'SIGNED_OUT' ? null : session?.user);
+        applySession(event === 'SIGNED_OUT' ? null : session);
       } else if (event === 'INITIAL_SESSION') {
-        if (!receivedChange) applySession(session?.user);
+        if (!receivedChange) applySession(session);
       } else if (accountId && session?.user?.id === accountId) {
-        applySession(session.user);
+        applySession(session);
       }
     });
     // The SDK initializes once and reports callback errors separately from INITIAL_SESSION.

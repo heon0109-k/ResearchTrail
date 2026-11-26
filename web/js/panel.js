@@ -179,21 +179,24 @@ function renderPanel(){
     },true);
   });
 }
-function renderAddPanel(pin){
+function renderAddPanel(pin,account){
   var d=S.draft||{};var date=(d.date&&/^20\d\d-\d\d-\d\d$/.test(d.date))?d.date:todayStr();
   var tagOpts='<option value="">태그 없음</option>'+S.tags.map(function(x){return '<option value="'+x.id+'"'+(x.id===d.tag?' selected':'')+'>'+esc(x.name)+'</option>'}).join('');
   pin.innerHTML='<div class="ph"><span>새 논문</span><button type="button" class="btn sm ghost" id="pClose">닫기</button></div><form class="pb" id="addForm" novalidate>'+
   '<div class="srcbox"><div class="sl2">링크 또는 PDF <em class="opt">(선택)</em></div>'+
-  '<div class="srcrow"><input type="text" id="aSrc" placeholder="논문 링크를 붙여넣기 (arXiv·DOI면 제목 자동 입력)" autocomplete="off"><button type="button" class="btn" id="aFetch">불러오기</button></div>'+
-  '<label class="filebtn"><input type="file" id="aFile" accept="application/pdf,.pdf" hidden><span class="btn">PDF 파일 선택</span><em id="aFname"></em></label>'+
+  '<div class="srcrow"><input type="text" id="aSrc" placeholder="'+(account?'논문 링크, DOI 또는 arXiv':'논문 링크를 붙여넣기 (arXiv·DOI면 제목 자동 입력)')+'" autocomplete="off">'+(account?'':'<button type="button" class="btn" id="aFetch">불러오기</button>')+'</div>'+
+  '<label class="filebtn"><input type="file" id="aFile" accept="application/pdf,.pdf" hidden><span class="btn">'+(account?'PDF 파일명 등록':'PDF 파일 선택')+'</span><em id="aFname"></em></label>'+
+  (account?'<p class="empty">PDF는 파일명만 계정에 기록해요.</p>':'')+
   '<p class="empty" id="aSrcMsg" hidden></p></div>'+
+  (account&&account.documents.length?'<label class="field"><span>등록한 논문 사용</span><select id="aDocument"><option value="">새 논문</option>'+account.documents.map(function(d){return '<option value="'+esc(d.document_id)+'">'+esc(d.title||'제목 미기록')+'</option>'}).join('')+'</select></label>':'')+
   '<label class="field"><span>논문 제목 <b>*</b></span><input type="text" id="aTitle" autocomplete="off" placeholder="논문 제목"></label>'+
-  '<div class="two"><label class="field"><span>읽은 날짜 <b>*</b></span><input type="date" id="aDate" value="'+esc(date)+'"></label>'+
-  '<label class="field"><span>태그 <em class="opt">(선택)</em></span><select id="aTag">'+tagOpts+'</select></label></div>'+
-  '<label class="field"><span>읽은 정도</span><select id="aState">'+stateOpts('reading')+'</select></label>'+
-  '<label class="field"><span>저장 이유 <b>*</b></span><textarea id="aMemo" rows="4" class="big" placeholder="이 논문을 왜 저장했나요?"></textarea></label>'+
+  '<div class="two"><label class="field"><span>읽은 날짜 '+(account?'':'<b>*</b>')+'</span><input type="date" id="aDate" value="'+(account?'':esc(date))+'"></label>'+
+  (account?'':'<label class="field"><span>태그 <em class="opt">(선택)</em></span><select id="aTag">'+tagOpts+'</select></label>')+'</div>'+
+  '<label class="field"><span>읽은 정도</span><select id="aState">'+stateOpts(account?'':'reading')+'</select></label>'+
+  '<label class="field"><span>저장 이유 '+(account?'<em class="opt">(선택)</em>':'<b>*</b>')+'</span><textarea id="aMemo" rows="4" class="big" placeholder="이 논문을 왜 저장했나요?"></textarea></label>'+
   '<p class="empty" id="aErr" hidden></p>'+
-  '<div class="paper-form-actions"><button type="submit" class="btn pri">타임라인에 추가</button><button type="button" class="btn" id="aCancel">취소</button></div></form>';
+  '<div class="paper-form-actions"><button type="submit" class="btn pri">'+(account?'프로젝트에 추가':'타임라인에 추가')+'</button><button type="button" class="btn" id="aCancel">취소</button></div></form>';
+  if(account){wireAccountPaperForm(account);return}
   $('#pClose').addEventListener('click',function(){S.panel='none';renderAll()});
   $('#aCancel').addEventListener('click',function(){S.panel='none';renderAll()});
   S.draftMeta=null;S.draftFile=null;
