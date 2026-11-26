@@ -1,12 +1,12 @@
 'use strict';
 /* ---------- PDF.js viewer with highlights ---------- */
-var PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+var PDFJS='vendor/pdfjs-3.11.174/';
 var pdfJsLoading=null;
 function loadPdfJs(){
   if(window.pdfjsLib&&pdfjsLib.GlobalWorkerOptions.workerSrc)return Promise.resolve();
   if(pdfJsLoading)return pdfJsLoading;
   pdfJsLoading=new Promise(function(res,rej){
-    var go=function(){fetch(PDFJS+'pdf.worker.min.js').then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(t){pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t],{type:'text/javascript'}));res()}).catch(rej)};
+    var go=function(){pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';res()};
     if(window.pdfjsLib)return go();
     var sc=document.createElement('script');sc.src=PDFJS+'pdf.min.js';sc.onload=go;sc.onerror=rej;document.head.appendChild(sc);
   }).finally(function(){pdfJsLoading=null});

@@ -62,7 +62,21 @@ python3 -m http.server 5500 --bind 127.0.0.1 --directory web
 - 지원 환경: 데스크톱 Chrome 최신 버전 (모바일 화면은 확인하지 않았습니다)
 - 계정: 가입 없이 바로 사용합니다.
 - VS Code를 쓴다면 Live Server 확장으로 `web/index.html`을 열어도 됩니다.
-- 메모와 다음 할 일의 저장·재개는 오프라인에서도 동작합니다. OpenAI AI 정리와 질문하기, 외부 글꼴·논문 정보 조회, PDF 뷰어의 첫 로딩에는 인터넷이 필요합니다. 예시 PDF 7편은 앱에 포함되어 있습니다.
+- 메모와 다음 할 일의 저장·재개는 오프라인에서도 동작합니다. 예시 PDF 7편과 PDF.js 3.11.174 뷰어는 앱에 포함되어 있습니다. OpenAI AI 정리와 질문하기, 외부 글꼴·논문 정보 조회에는 인터넷이 필요합니다.
+
+#### 정적 빌드
+
+Node.js 22 이상과 npm으로 저장소 루트에서 실행합니다.
+
+```bash
+npm ci
+npm run build
+python3 -m http.server 5500 --bind 127.0.0.1 --directory dist
+```
+
+`SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY`를 모두 비워 두면 기존 브라우저 데모를 사용할 수 있습니다. 두 변수를 설정하면 빌드가 공개 프로젝트 URL과 게시용 키만 `dist/js/browser-config.js`에 기록합니다. 설정은 빌드 시점에 적용됩니다. 로컬 Supabase 설정은 `supabase/config.toml`에 있으며 데모 실행에 Supabase 서버나 로그인이 필요하지 않습니다.
+
+`npm run test:build`로 빌드 결과와 공개 설정을 검사합니다. 빌드 후 `npx playwright-core install chromium`으로 테스트용 브라우저를 준비한 뒤 `npm run test:pdf`를 실행하면 예시 논문이 읽기 화면에 렌더링되는지 확인할 수 있습니다.
 
 ---
 

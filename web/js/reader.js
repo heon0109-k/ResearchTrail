@@ -72,7 +72,7 @@ function readerSrc(p,page){
   var bundled=typeof samplePdfUrl==='function'?samplePdfUrl(p):null;
   if(bundled){
     box.innerHTML='<div class="rdempty">예시 PDF 불러오는 중…</div>';
-    openPv(p,{url:bundled},page).catch(function(){if(RD.id!==p.id)return;frame(bundled);toast('기본 PDF 뷰어로 열었어요. 형광펜 기능을 쓰려면 인터넷 연결을 확인하고 다시 열어 주세요.')});
+    openPv(p,{url:bundled},page).catch(function(){if(RD.id!==p.id)return;frame(bundled);toast('기본 PDF 뷰어로 열었어요. 형광펜 기능을 쓰려면 읽기 화면을 다시 열어 주세요.')});
     return;
   }
   var pu=pdfUrlOf(p.link);
