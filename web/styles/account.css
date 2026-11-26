@@ -50,3 +50,11 @@
 #accountMemos .na-q, #accountActions dd { white-space: pre-wrap; overflow-wrap: anywhere; }
 #accountMemos #naBox fieldset label { display: block; }
 #accountMemos #naBox textarea { width: 100%; }
+.account-pdf-attach { display: block; margin-top: 8px; font-size: 13px; }
+.account-pdf-attach input { max-width: 100%; }
+.account-file-input { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); }
+.account-file-input:focus-visible + .btn { outline: 2px solid currentColor; }
+#accountPdfReader { margin: 12px 0; border-top: 1px solid var(--line); }
+#accountPdfTitle { font-size: 17px; overflow-wrap: anywhere; }
+.account-pdf-pages { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+#accountPdfPage { display: block; max-width: 100%; height: auto; }

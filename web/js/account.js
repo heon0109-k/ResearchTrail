@@ -92,16 +92,18 @@
         message.textContent = '프로젝트 화면을 열지 못했어요. 다시 시도해 주세요.';
         return;
       }
-      frame.contentWindow.startAccountProjects(async (path, body) => {
+      frame.contentWindow.startAccountProjects(async (path, body, {pdf = false, artifactId} = {}) => {
         if (!current()) throw new Error('계정이 변경되었어요.');
         const config = window.RESEARCHTRAIL_CONFIG;
         const result = await fetch(config.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/researchtrail' + path, {
           method: body ? 'POST' : 'GET', signal,
           headers: { apikey: config.SUPABASE_PUBLISHABLE_KEY, Authorization: 'Bearer ' + accessToken,
-            'Content-Type': 'application/json' },
-          body: body ? JSON.stringify(body) : undefined,
+            'Content-Type': pdf ? 'application/pdf' : 'application/json',
+            ...(pdf && body ? {'X-PDF-Name': encodeURIComponent(body.name)} : {}),
+            ...(pdf && body && artifactId ? {'X-PDF-Artifact':artifactId} : {}) },
+          body: pdf ? body : body ? JSON.stringify(body) : undefined,
         });
-        const data = await result.json();
+        const data = pdf && !body && result.ok ? await result.blob() : await result.json();
         if (!current()) throw new Error('계정이 변경되었어요.');
         if (!result.ok) {
           const error = new Error(data.error?.message || '계정 자료에 접근하지 못했어요.');

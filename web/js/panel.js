@@ -185,8 +185,8 @@ function renderAddPanel(pin,account){
   pin.innerHTML='<div class="ph"><span>새 논문</span><button type="button" class="btn sm ghost" id="pClose">닫기</button></div><form class="pb" id="addForm" novalidate>'+
   '<div class="srcbox"><div class="sl2">링크 또는 PDF <em class="opt">(선택)</em></div>'+
   '<div class="srcrow"><input type="text" id="aSrc" placeholder="'+(account?'논문 링크, DOI 또는 arXiv':'논문 링크를 붙여넣기 (arXiv·DOI면 제목 자동 입력)')+'" autocomplete="off">'+(account?'':'<button type="button" class="btn" id="aFetch">불러오기</button>')+'</div>'+
-  '<label class="filebtn"><input type="file" id="aFile" accept="application/pdf,.pdf" hidden><span class="btn">'+(account?'PDF 파일명 등록':'PDF 파일 선택')+'</span><em id="aFname"></em></label>'+
-  (account?'<p class="empty">PDF는 파일명만 계정에 기록해요.</p>':'')+
+  '<label class="filebtn"><input type="file" id="aFile" accept="application/pdf,.pdf" '+(account?.uploadPdf?'class="account-file-input"':'hidden')+'><span class="btn">'+(account&&!account.uploadPdf?'PDF 파일명 등록':'PDF 파일 선택')+'</span><em id="aFname"></em></label>'+
+  (account?'<p class="empty">'+(account.uploadPdf?'계정에 비공개로 저장해요. PDF 한 개당 최대 10 MiB예요.':'PDF는 파일명만 계정에 기록해요.')+'</p>':'')+
   '<p class="empty" id="aSrcMsg" hidden></p></div>'+
   (account&&account.documents.length?'<label class="field"><span>등록한 논문 사용</span><select id="aDocument"><option value="">새 논문</option>'+account.documents.map(function(d){return '<option value="'+esc(d.document_id)+'">'+esc(d.title||'제목 미기록')+'</option>'}).join('')+'</select></label>':'')+
   '<label class="field"><span>논문 제목 <b>*</b></span><input type="text" id="aTitle" autocomplete="off" placeholder="논문 제목"></label>'+

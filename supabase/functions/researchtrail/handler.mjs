@@ -1,7 +1,9 @@
+import { paperPdf } from './paper-pdf.mjs';
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info, idempotency-key',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info, idempotency-key, x-pdf-name, x-pdf-artifact',
   'Cache-Control': 'no-store',
 };
 const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -24,9 +26,29 @@ export async function handleResearchTrail(request, backend) {
   try {
     const verified = await backend.fetch(backend.url + '/auth/v1/user', { headers });
     if (!verified.ok) return verified.status >= 500 ? fail(503, 'STORAGE_FAILURE') : fail(401, 'RESOURCE_UNAVAILABLE');
-    if (!(await verified.json())?.id) return fail(401, 'RESOURCE_UNAVAILABLE');
+    const owner = (await verified.json())?.id;
+    if (!owner) return fail(401, 'RESOURCE_UNAVAILABLE');
 
     const path = new URL(request.url).pathname.replace(/^\/(?:functions\/v1\/)?researchtrail(?=\/|$)/, '');
+    // Every database operation uses the verified caller's bearer, including PDF reservations.
+    async function callRpc(rpc,args) {
+      const result = await backend.fetch(backend.url + '/rest/v1/rpc/' + rpc, {
+        method: 'POST', headers, body: JSON.stringify(args),
+      });
+      if (!result.ok) {
+        const { code } = await result.json();
+        if (code === 'RT001') return fail(400, 'INVALID_LINK');
+        if (['P0002','23503','42501'].includes(code) || [401,403].includes(result.status)) return fail(404, 'RESOURCE_UNAVAILABLE');
+        if (code?.startsWith('22') || ['23502','23514'].includes(code)) return fail(400, 'INVALID_INPUT');
+        return fail(500, 'STORAGE_FAILURE');
+      }
+      return result;
+    }
+    const pdfRoute = /^\/tasks\/([^/]+)\/(papers|artifacts)\/([^/]+)\/pdf$/.exec(path);
+    if (pdfRoute && uuid.test(pdfRoute[1]) && uuid.test(pdfRoute[3])) {
+      return await paperPdf(request,{task:pdfRoute[1].toLowerCase(),kind:pdfRoute[2],id:pdfRoute[3].toLowerCase()},
+        {backend,owner,headers,rpc:callRpc,cors,fail});
+    }
     const match = /^\/tasks\/([^/]+)\/(papers|records|resume|next-actions)$/.exec(path);
     const post = request.method === 'POST';
     let rpc;
@@ -67,17 +89,8 @@ export async function handleResearchTrail(request, backend) {
       if (typeof request_id !== 'string' || !uuid.test(request_id)) return fail(400, 'INVALID_INPUT');
       Object.assign(args, { request_id, payload });
     }
-    // PostgREST verifies this same bearer and supplies auth.uid() inside the transaction.
-    const result = await backend.fetch(backend.url + '/rest/v1/rpc/' + rpc, {
-      method: 'POST', headers, body: JSON.stringify(args),
-    });
-    if (!result.ok) {
-      const { code } = await result.json();
-      if (code === 'RT001') return fail(400, 'INVALID_LINK');
-      if (['P0002','23503','42501'].includes(code) || [401,403].includes(result.status)) return fail(404, 'RESOURCE_UNAVAILABLE');
-      if (code?.startsWith('22') || ['23502','23514'].includes(code)) return fail(400, 'INVALID_INPUT');
-      return fail(500, 'STORAGE_FAILURE');
-    }
+    const result = await callRpc(rpc,args);
+    if (!result.ok) return result;
     return Response.json(await result.json(), { status: post ? 201 : 200, headers: cors });
   } catch {
     return fail(503, 'STORAGE_FAILURE');

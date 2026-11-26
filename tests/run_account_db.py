@@ -40,8 +40,16 @@ create schema auth;
 create table auth.users (id uuid primary key);
 create function auth.uid() returns uuid language sql stable as
 $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
-grant usage on schema auth to authenticated;
+grant usage on schema auth to authenticated,anon;
 insert into auth.users values ('aaaaaaaa-0000-4000-8000-000000000001'), ('bbbbbbbb-0000-4000-8000-000000000002');
+-- Stand in for Storage's catalog. File bytes are exercised separately at the HTTP boundary.
+create schema storage;
+create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+create table storage.objects(bucket_id text references storage.buckets(id),name text,metadata jsonb,primary key(bucket_id,name));
+alter table storage.objects enable row level security;
+grant usage on schema storage to authenticated,anon;
+grant select,insert,update,delete on storage.objects to authenticated,anon;
+create policy fixture_permissive on storage.objects for all to public using(true) with check(true);
 """)
     for migration in sorted((ROOT / "supabase/migrations").glob("*.sql")):
         execute(migration.read_text())
@@ -53,6 +61,8 @@ insert into auth.users values ('aaaaaaaa-0000-4000-8000-000000000001'), ('bbbbbb
     print("PASS: read-only task resume, stored context, confirmation, ordering and account isolation")
     execute((ROOT / "tests/sql/account_actions.sql").read_text())
     print("PASS: explicit action confirmation, original candidate, manual entry, retries, links and rollback")
+    execute((ROOT / "tests/sql/account_pdfs.sql").read_text())
+    print("PASS: private PDF bucket, ownership, artifact identity, upload retries and preserved memo")
 
     if options.concurrent:
         pkglib = subprocess.check_output(["pg_config", "--pkglibdir"], text=True).strip()
@@ -67,6 +77,7 @@ insert into auth.users values ('aaaaaaaa-0000-4000-8000-000000000001'), ('bbbbbb
             cases = [
                 ("account_record_retry.spec", "one record and question"),
                 ("account_action_retry.spec", "one confirmed action and its selected link"),
+                ("account_pdf_retry.spec", "one PDF artifact and its stable Storage path"),
             ]
             for spec, expected in cases:
                 result = subprocess.run([tester, f"host=127.0.0.1 port={port} dbname=postgres"],

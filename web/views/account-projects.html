@@ -20,6 +20,15 @@
     <p id="projectStatus" role="status"></p>
     <button type="button" class="btn sm" id="projectRetry" hidden>다시 불러오기</button>
     <section id="accountPapers" aria-label="논문 목록"></section>
+    <section id="accountPdfReader" aria-labelledby="accountPdfTitle" hidden>
+      <header><h2 id="accountPdfTitle">PDF</h2><button type="button" class="btn sm" id="accountPdfClose">닫기</button></header>
+      <div class="account-pdf-pages">
+        <button type="button" class="btn sm" id="accountPdfPrev">이전 쪽</button>
+        <span id="pdfPageStatus" role="status"></span>
+        <button type="button" class="btn sm" id="accountPdfNext">다음 쪽</button>
+      </div>
+      <canvas id="accountPdfPage" aria-label="PDF 페이지"></canvas>
+    </section>
     <aside id="pin" aria-label="논문 등록" hidden></aside>
     <section id="accountMemos" aria-label="읽기 기록" hidden>
       <header><h2>읽기 기록</h2><button type="button" class="btn sm" id="rAddNote">+ 새 메모</button></header>
@@ -46,6 +55,8 @@
   <script src="js/next-action.js"></script>
   <script src="js/account-actions.js"></script>
   <script src="js/account-memos.js"></script>
+  <script src="js/pdf-viewer.js"></script>
+  <script src="js/account-pdfs.js"></script>
   <script src="js/account-projects.js"></script>
 </body>
 </html>

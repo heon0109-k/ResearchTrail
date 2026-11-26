@@ -4,10 +4,12 @@
 async function startAccountProjects(request, account) {
   const memos = account ? createAccountMemos(request,account) : null;
   const connected = () => !account || account.current();
+  const pdfReader = account ? createAccountPdfReader(request,connected) : null;
   let tasks = [];
   let active = memos?.lastTask() || null;
   let selection = 0;
   let formVersion = 0;
+  let catalogRead = 0;
   let createKey = {};
   const title = $('#tName'), add = $('#addBtn'), pin = $('#pin');
   const status = $('#projectStatus'), retry = $('#projectRetry'), list = $('#accountPapers');
@@ -23,19 +25,73 @@ async function startAccountProjects(request, account) {
     retry.hidden = false;
   }
   function draw(papers) {
-    list.innerHTML = '<ul>' + papers.map(p => {
-      const details = [p.date, p.use.reading_state_text, ...p.artifacts.map(a => a.label_text || a.access_locator_text)].filter(Boolean);
+    // A memo can cite an already listed paper, sometimes with a different edition.
+    const registered = new Map();
+    for (const p of papers.filter(p=>!p.record_id)) {
+      if (!registered.has(p.document_id)) registered.set(p.document_id,new Set());
+      for (const a of p.artifacts) registered.get(p.document_id).add(a.artifact_id);
+    }
+    const visible = papers.filter(p=>{
+      if (!p.record_id) return true;
+      const known = registered.get(p.document_id);
+      if (known && p.artifacts.every(a=>known.has(a.artifact_id))) return false;
+      const ids = known || new Set();
+      for (const a of p.artifacts) ids.add(a.artifact_id);
+      registered.set(p.document_id,ids);
+      return true;
+    });
+    list.innerHTML = '<ul>' + visible.map(p => {
+      const details = [p.date, p.use.reading_state_text].filter(Boolean);
       return '<li><strong>'+esc(p.document.title || '제목 미기록')+'</strong>'+
         (p.use.purpose_text ? '<p>'+esc(p.use.purpose_text)+'</p>' : '')+
-        '<small>'+details.map(esc).join(' · ')+'</small></li>';
+        '<small>'+details.map(esc).join(' · ')+'</small>'+
+        p.artifacts.map(a=>{
+          if (pdfReader && a.pdf) {
+            const sameName=p.artifacts.some(other=>other!==a && other.pdf && other.label_text===a.label_text);
+            return accountPdfArtifactHtml(p.document_use_id,a,sameName);
+          }
+          if (pdfReader && a.can_attach_pdf) return '<p>'+esc(a.label_text)+'</p>'+accountPdfAttachHtml(p.document_use_id,null,a.artifact_id);
+          const url=safeExternalUrl(a.access_locator_text);
+          return url ? '<p><a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(a.label_text || url)+'</a></p>' :
+            '<p>'+esc(a.label_text || a.access_locator_text || '')+'</p>';
+        }).join('')+
+        (pdfReader && p.document_use_id ? accountPdfAttachHtml(p.document_use_id) : '')+'</li>';
     }).join('') + '</ul>';
     status.textContent = papers.length ? '' : '아직 이 프로젝트에 등록한 논문이 없어요.';
+  }
+  if (pdfReader) {
+    list.addEventListener('click',event=>{
+      const button=event.target.closest('[data-open-pdf]');
+      if (button && connected()) return pdfReader.open(active,button.dataset.openPdf,button.dataset.label);
+    });
+    list.addEventListener('change',async event=>{
+      const input=event.target, use=input.dataset.attachPdf, file=input.files?.[0];
+      if (!use || !file || input.disabled) return;
+      const selected=active, version=selection;
+      const current=()=>connected() && version===selection;
+      input.disabled=true;
+      try {
+        await validateAccountPdf(file,input.dataset.expectedSha);
+        if (!current()) return;
+        status.textContent='PDF를 업로드하는 중…';
+        await request('/tasks/'+selected+'/papers/'+use+'/pdf',file,{pdf:true,artifactId:input.dataset.artifactId});
+        if (!current()) return;
+        const read=++catalogRead;
+        const snapshot=await request('/tasks/'+selected+'/resume');
+        if (!current() || read!==catalogRead) return;
+        draw(snapshot.context.document_contexts);
+        status.textContent='계정에 PDF를 저장했어요.';
+      } catch (error) {
+        if (current()) status.textContent=(error.message || 'PDF를 저장하지 못했어요.')+' 파일을 다시 선택해 주세요.';
+      } finally { input.disabled=false; input.value=''; }
+    });
   }
   async function select(id) {
     const task = tasks.find(t => t.task_id === id);
     if (!task || !connected()) return;
     const current = ++selection;
     active = id;
+    pdfReader?.close();
     closeForm();
     title.textContent = task.task.goal_text;
     list.innerHTML = '';
@@ -45,19 +101,13 @@ async function startAccountProjects(request, account) {
     try {
       const papers = memos ? await memos.open(id) : (await request('/tasks/'+id+'/papers')).papers;
       if (current !== selection || !connected()) return;
-      // A memo can cite a registered paper in another use. Show that paper once in the catalog.
-      const registered = new Set(papers.filter(p=>!p.record_id).map(p=>p.document_id));
-      draw(papers.filter(p=>{
-        if (!p.record_id) return true;
-        if (registered.has(p.document_id)) return false;
-        registered.add(p.document_id);
-        return true;
-      }));
+      draw(papers);
       add.disabled = false;
     } catch (error) { if (current === selection && connected()) report(error); }
   }
   async function load() {
     const current = ++selection;
+    pdfReader?.close();
     memos?.clear();
     closeForm();
     title.disabled = add.disabled = true;
@@ -106,9 +156,20 @@ async function startAccountProjects(request, account) {
       pin.hidden = false;
       list.hidden = true;
       status.textContent = '';
-      renderAddPanel(pin, {documents, close: closeForm, current, register: async body => {
+      let receipt;
+      const dismiss = () => receipt ? select(selected) : closeForm();
+      renderAddPanel(pin, {documents, uploadPdf:!!pdfReader, close: dismiss, current, register: async (body,file) => {
         if (!current()) return;
-        await request('/tasks/'+selected+'/papers', body);
+        if (!receipt) receipt=await request('/tasks/'+selected+'/papers', body);
+        if (!current()) return;
+        if (file && pdfReader) {
+          for (const id of ['aTitle','aSrc','aDate','aMemo','aState','aDocument']) {
+            const field=$('#'+id);
+            if (field) field.disabled=true;
+          }
+          try { await request('/tasks/'+selected+'/papers/'+receipt.document_use_id+'/pdf',file,{pdf:true}); }
+          catch { throw new Error('논문은 등록됐어요. 같은 PDF를 다시 제출하거나 논문 목록에서 첨부해 주세요.'); }
+        }
         if (current()) await select(selected);
       }});
       $('#aTitle').focus();
@@ -148,7 +209,7 @@ function wireAccountPaperForm(account) {
     const file = $('#aFile').files[0];
     const artifacts = [];
     if (locator) artifacts.push({access_locator_text:locator});
-    if (file) artifacts.push({label_text:file.name});
+    if (file && !account.uploadPdf) artifacts.push({label_text:file.name});
     const state = $('#aState').value;
     const body = {
       ...(documentId ? {document_id:documentId} : {document:{title:name,material_kind_text:'논문'}}),
@@ -160,7 +221,10 @@ function wireAccountPaperForm(account) {
     pending = true;
     form.inert = true;
     form.setAttribute('aria-busy','true');
-    try { await account.register({...body, request_id:requestId}); }
+    try {
+      if (file && account.uploadPdf) await validateAccountPdf(file);
+      if (account.current()) await account.register({...body, request_id:requestId},file);
+    }
     catch (failure) {
       if (account.current()) { error.hidden=false; error.textContent=failure.message || '논문을 저장하지 못했어요. 다시 시도해 주세요.'; }
     } finally {
