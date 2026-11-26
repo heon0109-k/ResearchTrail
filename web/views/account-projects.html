@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles/paper-panel.css">
   <link rel="stylesheet" href="styles/account.css">
 </head>
-<body>
+<body class="account-project-page">
   <main id="accountProjects" class="account-projects">
     <header>
       <button type="button" class="btn" id="tName" aria-haspopup="dialog" aria-expanded="false" aria-label="프로젝트 바꾸기" disabled>프로젝트 선택</button>
@@ -20,11 +20,26 @@
     <button type="button" class="btn sm" id="projectRetry" hidden>다시 불러오기</button>
     <section id="accountPapers" aria-label="논문 목록"></section>
     <aside id="pin" aria-label="논문 등록" hidden></aside>
+    <section id="accountMemos" aria-label="읽기 기록" hidden>
+      <header><h2>읽기 기록</h2><button type="button" class="btn sm" id="rAddNote">+ 새 메모</button></header>
+      <label class="field" id="memoPaperField"><span>연결할 논문 (선택)</span><select id="memoPaper"></select></label>
+      <label class="field"><span id="memoLabel">새 메모</span><textarea id="rNote" rows="3" aria-label="읽기 기록 메모" placeholder="메모를 남겨 보세요"></textarea></label>
+      <div class="memo-controls">
+        <button type="button" class="btn pri" id="memoFinish">편집 완료</button>
+        <span id="memoStatus" role="status"></span>
+      </div>
+      <div id="accountRecords"></div>
+      <p id="memoReadStatus" role="status"></p>
+      <div id="accountContext"></div>
+      <div id="accountActions"></div>
+    </section>
   </main>
   <script src="js/core.js"></script>
   <script src="js/import.js"></script>
   <script src="js/projects.js"></script>
   <script src="js/panel.js"></script>
+  <script src="js/reader.js"></script>
+  <script src="js/account-memos.js"></script>
   <script src="js/account-projects.js"></script>
 </body>
 </html>

@@ -275,12 +275,10 @@ function drawHlList(){
 
   $$('[data-hq]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hq);if(!h)return;copyText(highlightQuestion(p,h),function(ok){toast(ok?(h.img?'질문을 복사했어요. 챗봇에 붙여넣고 캡처 이미지도 함께 첨부해 주세요.':'질문을 복사했어요. 원하는 챗봇에 붙여넣어 주세요.'):'복사하지 못했어요. 브라우저 권한을 확인해 주세요.')})})});
   $$('[data-hm]',el).forEach(function(i){
-    var editing=false;
-    i.addEventListener('input',function(){var h=hb(i.dataset.hm);if(!h)return;
-      if(!editing&&typeof rememberReadingMemo==='function'){rememberReadingMemo(p,h.id,h.mine||'');editing=true}
-      h.mine=i.value;save();if(typeof NA!=='undefined'&&NA.pid===p.id&&NA.sourceId===h.id&&NA.st==='cand')naRender(p,true);
-    });
-    i.addEventListener('change',function(){var h=hb(i.dataset.hm);if(!h)return;if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');editing=false;save();if(typeof renderHistory==='function')renderHistory(p)});
+    wireMemoEditor(i,function(text,first){var h=hb(i.dataset.hm);if(!h)return;
+      if(first&&typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');
+      h.mine=text;save();if(typeof NA!=='undefined'&&NA.pid===p.id&&NA.sourceId===h.id&&NA.st==='cand')naRender(p,true);
+    },function(){var h=hb(i.dataset.hm);if(!h)return;if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');save();if(typeof renderHistory==='function')renderHistory(p)});
   });
   $$('[data-hd]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hd);if(!h)return;
     function del(){if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});if(typeof RR!=='undefined'&&RR.pid===p.id&&RR.selected===h.id)clearReadingSelection(p);save();drawHl(p,h.page);drawHlList();if(typeof renderHistory==='function')renderHistory(p)}

@@ -69,29 +69,31 @@
     login.disabled = logout.disabled = false;
     login.hidden = !!id;
     logout.hidden = !id;
-    if (id) showAccount();
+    if (id && accessToken) showProjects();
+    else if (id) showAccount();
     else showLocal(first && window.performance?.getEntriesByType('navigation')[0]?.type === 'reload');
   }
 
   byId('authOpenLocal').addEventListener('click', () => showLocal());
-  byId('authProjects').addEventListener('click', () => {
+  function showProjects() {
     if (!accountId || !accessToken) return;
     closeLocal();
     const frame = document.createElement('iframe');
     const started = generation;
-    accountRequests = new AbortController();
-    const { signal } = accountRequests;
     frame.title = '계정 프로젝트';
     frame.src = 'views/account-projects.html';
     frame.addEventListener('load', () => {
-      if (signal.aborted || started !== generation) return;
+      if (started !== generation || workspace.firstElementChild !== frame) return;
+      accountRequests = new AbortController();
+      const { signal } = accountRequests;
+      const current = () => !signal.aborted && started === generation;
       if (typeof frame.contentWindow.startAccountProjects !== 'function') {
         showAccount();
         message.textContent = '프로젝트 화면을 열지 못했어요. 다시 시도해 주세요.';
         return;
       }
       frame.contentWindow.startAccountProjects(async (path, body) => {
-        if (signal.aborted || started !== generation) throw new Error('계정이 변경되었어요.');
+        if (!current()) throw new Error('계정이 변경되었어요.');
         const config = window.RESEARCHTRAIL_CONFIG;
         const result = await fetch(config.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/researchtrail' + path, {
           method: body ? 'POST' : 'GET', signal,
@@ -100,16 +102,17 @@
           body: body ? JSON.stringify(body) : undefined,
         });
         const data = await result.json();
-        if (signal.aborted || started !== generation) throw new Error('계정이 변경되었어요.');
+        if (!current()) throw new Error('계정이 변경되었어요.');
         if (!result.ok) throw new Error(data.error?.message || '계정 자료에 접근하지 못했어요.');
         return data;
-      });
+      }, {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current});
     }, { once: true });
     workspace.appendChild(frame);
     byId('authHome').hidden = true;
     byId('authMode').textContent = '계정 프로젝트';
     back.hidden = false;
-  });
+  }
+  byId('authProjects').addEventListener('click',showProjects);
   back.addEventListener('click', showAccount);
 
   login.addEventListener('click', async () => {

@@ -36,3 +36,13 @@
 .account-projects li { border-bottom: 1px solid var(--line); padding: 12px 0; overflow-wrap: anywhere; }
 .account-projects li p { margin: 4px 0; white-space: pre-wrap; }
 .account-projects li small { color: var(--mute); }
+.account-project-page { overflow-y: auto; }
+.account-projects:has(#pin:not([hidden])) #accountMemos { display: none; }
+#accountMemos { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 12px; }
+#accountMemos h2 { font-size: 18px; }
+#accountMemos h3 { margin: 20px 0 4px; font-size: 15px; }
+#accountMemos .field { margin: 8px 0; }
+#accountMemos .memo-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+#memoStatus, #memoReadStatus { color: var(--mute); }
+#memoReadStatus:empty { display: none; }
+#accountMemos button:disabled { opacity: .6; cursor: default; }

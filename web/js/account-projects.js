@@ -1,9 +1,11 @@
 'use strict';
 
 // A request is bound to one account frame by account.js. Selecting a task invalidates old list/form responses.
-async function startAccountProjects(request) {
+async function startAccountProjects(request, account) {
+  const memos = account ? createAccountMemos(request,account) : null;
+  const connected = () => !account || account.current();
   let tasks = [];
-  let active = null;
+  let active = memos?.lastTask() || null;
   let selection = 0;
   let formVersion = 0;
   let createKey = {};
@@ -31,24 +33,32 @@ async function startAccountProjects(request) {
   }
   async function select(id) {
     const task = tasks.find(t => t.task_id === id);
-    if (!task) return;
+    if (!task || !connected()) return;
     const current = ++selection;
     active = id;
     closeForm();
     title.textContent = task.task.goal_text;
     list.innerHTML = '';
-    status.textContent = '논문 목록을 불러오는 중…';
+    status.textContent = '프로젝트 기록을 불러오는 중…';
     retry.hidden = true;
     add.disabled = true;
     try {
-      const data = await request('/tasks/'+id+'/papers');
-      if (current !== selection) return;
-      draw(data.papers);
+      const papers = memos ? await memos.open(id) : (await request('/tasks/'+id+'/papers')).papers;
+      if (current !== selection || !connected()) return;
+      // A memo can cite a registered paper in another use. Show that paper once in the catalog.
+      const registered = new Set(papers.filter(p=>!p.record_id).map(p=>p.document_id));
+      draw(papers.filter(p=>{
+        if (!p.record_id) return true;
+        if (registered.has(p.document_id)) return false;
+        registered.add(p.document_id);
+        return true;
+      }));
       add.disabled = false;
-    } catch (error) { if (current === selection) report(error); }
+    } catch (error) { if (current === selection && connected()) report(error); }
   }
   async function load() {
     const current = ++selection;
+    memos?.clear();
     closeForm();
     title.disabled = add.disabled = true;
     retry.hidden = true;
@@ -56,7 +66,7 @@ async function startAccountProjects(request) {
     status.textContent = '프로젝트를 불러오는 중…';
     try {
       const data = await request('/tasks');
-      if (current !== selection) return;
+      if (current !== selection || !connected()) return;
       tasks = data.tasks;
       title.disabled = false;
       if (tasks.length) {
@@ -66,7 +76,7 @@ async function startAccountProjects(request) {
         title.textContent = '프로젝트 선택';
         status.textContent = '프로젝트 선택에서 새 프로젝트를 만들어 주세요.';
       }
-    } catch (error) { if (current === selection) report(error); }
+    } catch (error) { if (current === selection && connected()) report(error); }
   }
   projAccountMenu = {
     catalog: () => ({active, list:tasks.map(t => ({id:t.task_id, name:t.task.goal_text}))}),
@@ -75,6 +85,7 @@ async function startAccountProjects(request) {
       const current = selection;
       if (createKey.name !== name) createKey = {name, id:crypto.randomUUID()};
       const task = await request('/tasks',{goal_text:name, request_id:createKey.id});
+      if (!connected()) return;
       createKey = {};
       if (!tasks.some(t => t.task_id === task.task_id)) tasks.unshift(task);
       if (current === selection) await select(task.task_id);
@@ -86,7 +97,7 @@ async function startAccountProjects(request) {
     if (!active || !pin.hidden) return;
     const selected = active;
     const version = ++formVersion;
-    const current = () => selected === active && version === formVersion;
+    const current = () => connected() && selected === active && version === formVersion;
     status.textContent = '등록 양식을 여는 중…';
     add.disabled = true;
     try {
