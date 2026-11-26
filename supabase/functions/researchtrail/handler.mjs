@@ -27,7 +27,7 @@ export async function handleResearchTrail(request, backend) {
     if (!(await verified.json())?.id) return fail(401, 'RESOURCE_UNAVAILABLE');
 
     const path = new URL(request.url).pathname.replace(/^\/(?:functions\/v1\/)?researchtrail(?=\/|$)/, '');
-    const match = /^\/tasks\/([^/]+)\/(papers|records|resume)$/.exec(path);
+    const match = /^\/tasks\/([^/]+)\/(papers|records|resume|next-actions)$/.exec(path);
     const post = request.method === 'POST';
     let rpc;
     const args = {};
@@ -37,9 +37,9 @@ export async function handleResearchTrail(request, backend) {
       if (match[2] === 'resume') {
         if (request.method !== 'GET') return fail(405, 'INVALID_INPUT');
         rpc = 'rt_resume';
-      } else if (match[2] === 'records') {
+      } else if (match[2] === 'records' || match[2] === 'next-actions') {
         if (!post) return fail(405, 'INVALID_INPUT');
-        rpc = 'rt_save_record';
+        rpc = match[2] === 'records' ? 'rt_save_record' : 'rt_confirm_action';
       } else rpc = post ? 'rt_register_paper' : 'rt_papers';
       args.task_id = match[1];
     } else return fail(404, 'RESOURCE_UNAVAILABLE');
@@ -48,6 +48,7 @@ export async function handleResearchTrail(request, backend) {
       let body;
       try { body = await request.json(); } catch { return fail(400, 'INVALID_INPUT'); }
       const fields = {
+        rt_confirm_action: ['source_record_id', 'confirmed', 'reviewed_action', 'original_candidate', 'links', 'request_id'],
         rt_save_record: ['record', 'context', 'revises_record_id', 'request_id'],
         rt_register_paper: ['document', 'document_id', 'use', 'artifacts', 'date', 'request_id'],
         rt_create_task: ['goal_text', 'scope_text', 'target_output_text', 'progress_text', 'request_id'],
@@ -56,7 +57,8 @@ export async function handleResearchTrail(request, backend) {
           Object.keys(body).some(key => !fields.includes(key))) return fail(400, 'INVALID_INPUT');
       const { request_id: bodyKey, ...payload } = body;
       let request_id = bodyKey;
-      if (rpc === 'rt_save_record') {
+      if (rpc === 'rt_confirm_action' && payload.confirmed !== true) return fail(400, 'INVALID_INPUT');
+      if (rpc === 'rt_save_record' || rpc === 'rt_confirm_action') {
         const headerKey = request.headers.get('Idempotency-Key');
         if (headerKey !== null && bodyKey !== undefined &&
             (typeof bodyKey !== 'string' || headerKey.toLowerCase() !== bodyKey.toLowerCase())) return fail(400, 'INVALID_INPUT');

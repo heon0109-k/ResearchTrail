@@ -7,6 +7,7 @@ function createAccountMemos(request, account) {
   const prefix = 'researchtrail.account.' + account.projectUrl + '.' + account.accountId + '.';
   const drafts = new Map();
   let view = null;
+  const actions = createAccountActionReview(request,{current,refresh,read,store});
 
   function read(key) {
     try { return JSON.parse(sessionStorage.getItem(prefix + key)); } catch { return null; }
@@ -52,18 +53,21 @@ function createAccountMemos(request, account) {
     paper.value = v.draft.documentId;
     $('#memoPaperField').hidden = !titles.size;
     v.records = data.records;
+    v.snapshot = data;
     recordList.innerHTML = v.records.length ? '<h3>저장된 메모</h3><ul>'+v.records.map(r=>{
       const names = (r.context_refs.document_ids || []).map(id=>titles.get(id)).filter(Boolean);
       const detail = [r.revises_record_id ? '정정 기록' : '', ...names].filter(Boolean).map(esc).join(' · ');
       return '<li>'+(detail ? '<small>'+detail+'</small>' : '')+'<p>'+esc(r.record.content_text)+'</p>'+
-        '<button type="button" class="btn sm" data-edit-record="'+esc(r.record_id)+'">수정</button></li>';
+        '<button type="button" class="btn sm" data-edit-record="'+esc(r.record_id)+'">수정</button> '+
+        '<button type="button" class="btn sm" data-review-record="'+esc(r.record_id)+'" data-mode="candidate">다음 할 일 찾기 →</button> '+
+        '<button type="button" class="btn sm" data-review-record="'+esc(r.record_id)+'" data-mode="manual">다음 작업 직접 입력</button></li>';
     }).join('')+'</ul>' : '<p>저장된 메모가 없어요.</p>';
     function group(label, values) {
       return values.length ? '<h3>'+label+'</h3><ul>'+values.map(value=>'<li>'+esc(value)+'</li>').join('')+'</ul>' : '';
     }
     $('#accountContext').innerHTML = group('질문',data.context.questions.map(q=>q.question_text)) +
       group('판단',data.context.decisions.map(d=>d.decision_text));
-    $('#accountActions').innerHTML = group('확인한 다음 작업',data.next_actions.map(n=>n.saved_action.action_text));
+    $('#accountActions').innerHTML = accountActionHistory(data.next_actions,v.records);
     readStatus.textContent = '';
   }
   async function refresh(v) {
@@ -75,6 +79,7 @@ function createAccountMemos(request, account) {
   }
   function clear() {
     view = null;
+    actions.clear();
     section.hidden = true;
     field.value = '';
     status.textContent = readStatus.textContent = '';
@@ -173,9 +178,11 @@ function createAccountMemos(request, account) {
   }
   add.addEventListener('click',()=>edit(null));
   recordList.addEventListener('click',e=>{
-    const button = e.target.closest('[data-edit-record]');
+    const button = e.target.closest('[data-edit-record], [data-review-record]');
     if (!button || !current(view)) return;
-    const record = view.records.find(r=>r.record_id===button.dataset.editRecord);
+    const {editRecord,reviewRecord,mode}=button.dataset;
+    const record = view.records.find(r=>r.record_id===(editRecord || reviewRecord));
+    if (record && reviewRecord) return actions.open(view,record,mode);
     if (record) edit(record);
   });
   return {open,clear,lastTask:()=>read('task')};

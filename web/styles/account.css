@@ -46,3 +46,7 @@
 #memoStatus, #memoReadStatus { color: var(--mute); }
 #memoReadStatus:empty { display: none; }
 #accountMemos button:disabled { opacity: .6; cursor: default; }
+#accountMemos #naBox[hidden], #accountActionStatus:empty { display: none; }
+#accountMemos .na-q, #accountActions dd { white-space: pre-wrap; overflow-wrap: anywhere; }
+#accountMemos #naBox fieldset label { display: block; }
+#accountMemos #naBox textarea { width: 100%; }

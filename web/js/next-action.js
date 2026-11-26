@@ -63,6 +63,22 @@ function naInput(p){
 }
 function naSourceFields(){return NA.sourceId?{source_highlight_id:NA.sourceId,source_page:NA.sourcePage}:{};}
 function naFocusTodo(){var t=$('#rTodo');if(t)t.focus()}
+// Both workspaces use the same editable review and explicit confirm/cancel controls.
+function naReviewControls(value, source, multiline, confirmLabel, extra=''){
+  var quote=source==null?'':'<div><span class="k">내 메모에서</span><div class="na-q">'+esc(source)+'</div></div>';
+  var field=multiline?'<textarea id="naCand" rows="2">'+esc(value)+'</textarea>':'<input type="text" id="naCand" value="'+esc(value)+'">';
+  return '<div class="na-cmp">'+quote+'<label><span class="k">다음에 할 일 (고쳐도 돼요)</span>'+field+'</label>'+extra+'</div>'+
+    '<div class="na-row"><button type="button" class="btn pri" id="naOk">'+confirmLabel+'</button><button type="button" class="btn" id="naCancel">취소</button></div>';
+}
+function wireActionConfirmation(confirm,cancel){
+  var button=$('#naOk'), field=$('#naCand'), back=$('#naCancel');
+  if(back)back.addEventListener('click',function(){if($('#naCancel')===back)return cancel()});
+  if(button&&field)button.addEventListener('click',function(){
+    if($('#naOk')!==button)return;
+    if(!field.value.trim()){field.focus();return}
+    return confirm(field.value);
+  });
+}
 function naRender(p,keep){
   var box=$('#naBox');if(!box)return;
   naStoreDraft(p);
@@ -83,8 +99,7 @@ function naRender(p,keep){
     h+='<p class="na-s" id="naDraftStatus" role="status">'+naDraftStatus()+'</p>';
     if(NA.sourceId)h+='<p class="na-s">'+(NA.sourcePage?'p.'+esc(NA.sourcePage)+' 메모에서 찾았어요':'선택한 메모에서 찾았어요')+'</p>';
     if(NA.saveError)h+='<p class="na-s warn" role="alert">'+esc(NA.saveError)+'</p>';
-    h+='<div class="na-cmp">'+(unified?'':'<div><span class="k">내 메모에서</span><div class="na-q">'+esc(NA.src)+'</div></div>')+'<label><span class="k">다음에 할 일 (고쳐도 돼요)</span>'+(NA.sourceId?'<textarea id="naCand" rows="2">'+esc(NA.cand)+'</textarea>':'<input type="text" id="naCand" value="'+esc(NA.cand)+'">')+'</label></div>'+
-      '<div class="na-row"><button type="button" class="btn pri" id="naOk">'+(NA.saveError?'다시 저장':NA.sourceId?'다음 할 일로 저장':'확인하고 저장')+'</button><button type="button" class="btn" id="naCancel">취소</button></div>';
+    h+=naReviewControls(NA.cand,unified?null:NA.src,NA.sourceId,NA.saveError?'다시 저장':NA.sourceId?'다음 할 일로 저장':'확인하고 저장');
   }else if(NA.st==='unclear'){
     h+='<p class="na-s warn" role="status">메모에서 다음 할 일을 분명하게 찾지 못했어요. 메모는 그대로 남겨 뒀어요. "다음에 할 일"에 직접 적어 주세요.</p><button type="button" class="btn" id="naBack">닫기</button>';
   }else if(NA.st==='fail'){
@@ -102,12 +117,10 @@ function naRender(p,keep){
   g('naRetry',function(){naRun(p)});
   g('naRefresh',function(){naStart(p)});
   g('naBack',function(){NA.st='idle';naRender(p);naFocusTodo()});
-  g('naCancel',function(){naDropDraft(p);NA.previousDraft=null;NA.st='idle';NA.cand='';NA.saveError='';naRender(p)});
-  g('naOk',function(){
+  wireActionConfirmation(function(value){
     if(NA.pid!==p.id||NA.st!=='cand')return;
     if(NA.sourceId&&!naInput(p)){NA.st='idle';naRender(p);return}
-    var v=($('#naCand').value||'').trim();
-    if(!v){$('#naCand').focus();return}
+    var v=value.trim();
     NA.cand=v;
     var oldTodo=p.todo,oldSource=p.todoSrc;
     if(!NA.confirmationId)NA.confirmationId=nid('cf');
@@ -123,7 +136,7 @@ function naRender(p,keep){
     naDropDraft(p);NA.previousDraft=null;NA.saveError='';NA.st='idle';
     var t=$('#rTodo');if(t){t.value=v;if(typeof resizeReaderTodo==='function')resizeReaderTodo()}
     naRender(p);renderHistory(p);
-  });
+  },function(){naDropDraft(p);NA.previousDraft=null;NA.st='idle';NA.cand='';NA.saveError='';naRender(p)});
   var ci=$('#naCand');if(ci){ci.addEventListener('input',function(){NA.cand=ci.value;naStoreDraft(p);var status=$('#naDraftStatus');if(status)status.textContent=naDraftStatus()});if(!keep)ci.focus()}
 }
 function naRestorePrevious(p){

@@ -51,6 +51,8 @@ insert into auth.users values ('aaaaaaaa-0000-4000-8000-000000000001'), ('bbbbbb
     print("PASS: record content, context links, corrections, retries and atomic rollback")
     execute((ROOT / "tests/sql/account_resume.sql").read_text())
     print("PASS: read-only task resume, stored context, confirmation, ordering and account isolation")
+    execute((ROOT / "tests/sql/account_actions.sql").read_text())
+    print("PASS: explicit action confirmation, original candidate, manual entry, retries, links and rollback")
 
     if options.concurrent:
         pkglib = subprocess.check_output(["pg_config", "--pkglibdir"], text=True).strip()
@@ -62,12 +64,17 @@ insert into auth.users values ('aaaaaaaa-0000-4000-8000-000000000001'), ('bbbbbb
         flags = f"-p {port} -h 127.0.0.1 -c unix_socket_directories=''"
         subprocess.run([*pg_ctl, "start", "-o", flags, "-l", Path(tmp) / "postgres.log"], check=True)
         try:
-            result = subprocess.run([tester, f"host=127.0.0.1 port={port} dbname=postgres"],
-                                    input=(ROOT / "tests/sql/account_record_retry.spec").read_text(),
-                                    env={**os.environ, "PGPASSWORD": password}, capture_output=True, text=True, timeout=45)
-            output = result.stdout + result.stderr
-            if result.returncode or "ERROR:" in output or output.count("<waiting ...>") != 2 or output.count("<... completed>") != 2:
-                raise SystemExit(output)
-            print("PASS: overlapping retries waited and returned one record and question after either commit or rollback")
+            cases = [
+                ("account_record_retry.spec", "one record and question"),
+                ("account_action_retry.spec", "one confirmed action and its selected link"),
+            ]
+            for spec, expected in cases:
+                result = subprocess.run([tester, f"host=127.0.0.1 port={port} dbname=postgres"],
+                                        input=(ROOT / "tests/sql" / spec).read_text(),
+                                        env={**os.environ, "PGPASSWORD": password}, capture_output=True, text=True, timeout=45)
+                output = result.stdout + result.stderr
+                if result.returncode or "ERROR:" in output or output.count("<waiting ...>") != 2 or output.count("<... completed>") != 2:
+                    raise SystemExit(output)
+                print(f"PASS: overlapping retries waited and returned {expected} after either commit or rollback")
         finally:
             subprocess.run([*pg_ctl, "stop", "-m", "fast"], check=True)

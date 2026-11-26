@@ -103,7 +103,11 @@
         });
         const data = await result.json();
         if (!current()) throw new Error('계정이 변경되었어요.');
-        if (!result.ok) throw new Error(data.error?.message || '계정 자료에 접근하지 못했어요.');
+        if (!result.ok) {
+          const error = new Error(data.error?.message || '계정 자료에 접근하지 못했어요.');
+          error.code = data.error?.code;
+          throw error;
+        }
         return data;
       }, {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current});
     }, { once: true });
