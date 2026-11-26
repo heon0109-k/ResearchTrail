@@ -36,6 +36,11 @@ try {
   await mkdir(vendor);
   await copyFile(path.join(sdk, 'dist/umd/supabase.js'), path.join(vendor, 'supabase.js'));
   await copyFile(path.join(sdk, 'LICENSE'), path.join(vendor, 'LICENSE'));
+  if (url) {
+    // The account page owns Auth. The local workspace keeps its original document and storage.
+    await rename(path.join(staging, 'index.html'), path.join(staging, 'browser.html'));
+    await copyFile(path.join(source, 'views/account.html'), path.join(staging, 'index.html'));
+  }
   await writeFile(path.join(staging, 'js/browser-config.js'),
     'window.RESEARCHTRAIL_CONFIG = Object.freeze(' + JSON.stringify(config, null, 2) + ');\n');
   await chmod(staging, 0o755);

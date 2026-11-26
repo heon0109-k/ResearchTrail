@@ -1,0 +1,27 @@
+.account-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.account-brand { margin-right: auto; }
+.account-brand i { color: var(--bl); }
+#authIdentity { overflow-wrap: anywhere; }
+.account-message { margin: 0; padding: 8px 16px; color: var(--mute); }
+.account-message:empty { display: none; }
+.account-home { margin: auto; padding: 24px; }
+.account-home h1 { margin: 0; font-size: 24px; }
+.account-home p { margin: 8px 0 20px; }
+.account-workspace { flex: 1; min-height: 0; }
+.account-workspace:empty { flex: 0; }
+.account-workspace iframe { display: block; width: 100%; height: 100%; border: 0; }
+.account-page [hidden] { display: none; }
