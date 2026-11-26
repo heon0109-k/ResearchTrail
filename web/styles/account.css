@@ -63,3 +63,7 @@
 #accountPdfSheet canvas { position: static; width: 100%; }
 #accountPdfSheet[hidden], #pdfReaderRetry[hidden], #pdfMarkStatus:empty, #pdfSelectionText:empty, #pdfReadingLocator:empty { display: none; }
 #pdfMarks p { white-space: pre-wrap; }
+
+.account-save-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; overflow-wrap: anywhere; }
+.account-save-feedback:not(:has(#memoStatus:empty)) { margin: 12px 0; }
+.account-save-feedback button[hidden], #memoFinish[hidden] { display: none; }

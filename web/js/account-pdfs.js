@@ -25,11 +25,10 @@ async function validateAccountPdf(file,expectedSha) {
   const [header,tail]=await Promise.all([file.slice(0,10).text(),file.slice(-1024).text()]);
   if (!/^%PDF-(?:1\.[0-7]|2\.0)[\r\n]/.test(header) || !/%%EOF[\x00\t\n\f\r ]*$/.test(tail))
     throw new Error('PDF 파일 내용을 확인해 주세요.');
-  if (expectedSha) {
-    const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()));
-    if (Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('')!==expectedSha)
-      throw new Error('이 판본을 다시 올리려면 처음 선택한 PDF가 필요해요.');
-  }
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()));
+  const sha256=Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
+  if (expectedSha && sha256!==expectedSha) throw new Error('이 판본을 다시 올리려면 처음 선택한 PDF가 필요해요.');
+  return sha256;
 }
 
 function createAccountPdfReader(request, connected, records = () => []) {

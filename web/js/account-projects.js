@@ -2,20 +2,25 @@
 
 // A request is bound to one account frame by account.js. Selecting a task invalidates old list/form responses.
 async function startAccountProjects(request, account) {
-  const memos = account ? createAccountMemos(request,account) : null;
   const connected = () => !account || account.current();
+  const saves = account ? createAccountSaveStatus(request,connected) : null;
+  const memos = account ? createAccountMemos(request,account,saves,draw) : null;
   const pdfReader = account ? createAccountPdfReader(request,connected,memos.records) : null;
   let tasks = [];
   let active = memos?.lastTask() || null;
   let selection = 0;
   let formVersion = 0;
-  let catalogRead = 0;
+  let retryCatalog = false;
+  let catalogHtml = null;
+  let discardFormPreparation;
   let createKey = {};
   const title = $('#tName'), add = $('#addBtn'), pin = $('#pin');
   const status = $('#projectStatus'), retry = $('#projectRetry'), list = $('#accountPapers');
 
   function closeForm() {
     formVersion++;
+    discardFormPreparation?.();
+    discardFormPreparation = null;
     pin.hidden = true;
     pin.innerHTML = '';
     list.hidden = false;
@@ -40,7 +45,7 @@ async function startAccountProjects(request, account) {
       registered.set(p.document_id,ids);
       return true;
     });
-    list.innerHTML = '<ul>' + visible.map(p => {
+    const html = '<ul>' + visible.map(p => {
       const details = [p.date, p.use.reading_state_text].filter(Boolean);
       return '<li><strong>'+esc(p.document.title || '제목 미기록')+'</strong>'+
         (p.use.purpose_text ? '<p>'+esc(p.use.purpose_text)+'</p>' : '')+
@@ -57,7 +62,29 @@ async function startAccountProjects(request, account) {
         }).join('')+
         (pdfReader && p.document_use_id ? accountPdfAttachHtml(p.document_use_id) : '')+'</li>';
     }).join('') + '</ul>';
+    if (html !== catalogHtml) {
+      list.innerHTML = html;
+      catalogHtml = html;
+    }
+    retryCatalog = false;
+    retry.hidden = true;
     status.textContent = papers.length ? '' : '아직 이 프로젝트에 등록한 논문이 없어요.';
+  }
+  async function refreshPapers(id) {
+    if (id !== active || !connected()) return;
+    const version = selection;
+    try {
+      if (memos) await memos.reload();
+      else {
+        const data = await request('/tasks/'+id+'/papers');
+        if (version === selection && connected()) draw(data.papers);
+      }
+    } catch {
+      if (version === selection && connected()) {
+        retryCatalog = true;
+        report(new Error('논문 목록을 다시 불러와 주세요.'));
+      }
+    }
   }
   if (pdfReader) {
     list.addEventListener('click',event=>{
@@ -66,24 +93,24 @@ async function startAccountProjects(request, account) {
     });
     list.addEventListener('change',async event=>{
       const input=event.target, use=input.dataset.attachPdf, file=input.files?.[0];
-      if (!use || !file || input.disabled) return;
-      const selected=active, version=selection;
-      const current=()=>connected() && version===selection;
-      input.disabled=true;
+      if (!use || !file || input.disabled || !connected()) return;
+      const task = active, version = selection, {artifactId,expectedSha} = input.dataset;
+      const job = saves.prepare(task,use+'/'+(artifactId || ''),file);
+      input.disabled = true;
       try {
-        await validateAccountPdf(file,input.dataset.expectedSha);
-        if (!current()) return;
-        status.textContent='PDF를 업로드하는 중…';
-        await request('/tasks/'+selected+'/papers/'+use+'/pdf',file,{pdf:true,artifactId:input.dataset.artifactId});
-        if (!current()) return;
-        const read=++catalogRead;
-        const snapshot=await request('/tasks/'+selected+'/resume');
-        if (!current() || read!==catalogRead) return;
-        draw(snapshot.context.document_contexts);
-        status.textContent='계정에 PDF를 저장했어요.';
+        job.sha256 = await validateAccountPdf(file,expectedSha);
+        if (connected() && version === selection)
+          await saves.upload(job,file,use,artifactId,()=>refreshPapers(task));
+        else saves.discard(job);
       } catch (error) {
-        if (current()) status.textContent=(error.message || 'PDF를 저장하지 못했어요.')+' 파일을 다시 선택해 주세요.';
-      } finally { input.disabled=false; input.value=''; }
+        if (connected() && version === selection) {
+          saves.block(job);
+          status.textContent = error.message;
+        } else saves.discard(job);
+      } finally {
+        input.disabled = false;
+        input.value = '';
+      }
     });
   }
   async function select(id) {
@@ -91,27 +118,34 @@ async function startAccountProjects(request, account) {
     if (!task || !connected()) return;
     const current = ++selection;
     active = id;
+    retryCatalog = false;
+    saves?.focus(id);
     pdfReader?.close();
     closeForm();
     title.textContent = task.task.goal_text;
+    catalogHtml = null;
     list.innerHTML = '';
     status.textContent = '프로젝트 기록을 불러오는 중…';
     retry.hidden = true;
     add.disabled = true;
     try {
-      const papers = memos ? await memos.open(id) : (await request('/tasks/'+id+'/papers')).papers;
-      if (current !== selection || !connected()) return;
-      draw(papers);
-      add.disabled = false;
+      if (memos) await memos.open(id);
+      else {
+        const {papers} = await request('/tasks/'+id+'/papers');
+        if (current === selection && connected()) draw(papers);
+      }
+      if (current === selection && connected()) add.disabled = false;
     } catch (error) { if (current === selection && connected()) report(error); }
   }
   async function load() {
     const current = ++selection;
     pdfReader?.close();
+    saves?.focus(null);
     memos?.clear();
     closeForm();
     title.disabled = add.disabled = true;
     retry.hidden = true;
+    catalogHtml = null;
     list.innerHTML = '';
     status.textContent = '프로젝트를 불러오는 중…';
     try {
@@ -142,7 +176,7 @@ async function startAccountProjects(request, account) {
     },
   };
   title.addEventListener('click', projMenuToggle);
-  retry.addEventListener('click', load);
+  retry.addEventListener('click', () => retryCatalog ? refreshPapers(active) : load());
   add.addEventListener('click', async () => {
     if (!active || !pin.hidden) return;
     const selected = active;
@@ -156,21 +190,51 @@ async function startAccountProjects(request, account) {
       pin.hidden = false;
       list.hidden = true;
       status.textContent = '';
-      let receipt;
-      const dismiss = () => receipt ? select(selected) : closeForm();
-      renderAddPanel(pin, {documents, uploadPdf:!!pdfReader, close: dismiss, current, register: async (body,file) => {
-        if (!current()) return;
-        if (!receipt) receipt=await request('/tasks/'+selected+'/papers', body);
-        if (!current()) return;
+      let receipt, job;
+      discardFormPreparation = () => {
+        if (job && ['selected','blocked','preparing'].includes(job.phase)) saves.discard(job);
+      };
+      const dismiss = () => {
+        closeForm();
+        if (receipt) return refreshPapers(selected);
+      };
+      function fileChanged(file) {
+        if (!saves || !current() || job?.phase === 'uploading') return;
+        discardFormPreparation();
+        job = file ? saves.prepare(selected,version,file,'selected') : null;
+      }
+      renderAddPanel(pin, {documents, uploadPdf:!!pdfReader, close:dismiss, current, fileChanged, register:async (body,file) => {
+        if (!current() || job?.phase === 'uploading') return;
+        if (file && pdfReader) job = saves.prepare(selected,version,file);
+        else if (job?.phase === 'blocked') saves.discard(job);
+        try {
+          if (file && pdfReader) job.sha256 = await validateAccountPdf(file);
+          if (current() && !receipt) {
+            const result = await request('/tasks/'+selected+'/papers',body);
+            if (file && pdfReader && !result?.document_use_id) throw new Error('논문 등록을 확인하지 못했어요.');
+            receipt = result;
+          }
+        } catch (error) {
+          if (job) saves.block(job);
+          throw error;
+        }
+        if (!current()) {
+          if (job) saves.discard(job);
+          return;
+        }
+        const submitted = job;
+        const finish = () => {
+          if (current() && submitted === job) closeForm();
+          return refreshPapers(selected);
+        };
         if (file && pdfReader) {
           for (const id of ['aTitle','aSrc','aDate','aMemo','aState','aDocument']) {
             const field=$('#'+id);
             if (field) field.disabled=true;
           }
-          try { await request('/tasks/'+selected+'/papers/'+receipt.document_use_id+'/pdf',file,{pdf:true}); }
-          catch { throw new Error('논문은 등록됐어요. 같은 PDF를 다시 제출하거나 논문 목록에서 첨부해 주세요.'); }
-        }
-        if (current()) await select(selected);
+          const saved = await saves.upload(job,file,receipt.document_use_id,undefined,finish);
+          if (!saved) throw new Error('논문은 등록됐어요. PDF 업로드를 다시 시도해 주세요.');
+        } else await finish();
       }});
       $('#aTitle').focus();
     } catch (error) { if (current()) report(error); }
@@ -184,7 +248,11 @@ function wireAccountPaperForm(account) {
   let pending = false, lastBody, requestId;
   $('#pClose').addEventListener('click',account.close);
   $('#aCancel').addEventListener('click',account.close);
-  $('#aFile').addEventListener('change',() => { $('#aFname').textContent = $('#aFile').files[0]?.name || ''; });
+  $('#aFile').addEventListener('change',() => {
+    const file = $('#aFile').files[0];
+    $('#aFname').textContent = file?.name || '';
+    account.fileChanged(file);
+  });
   if (doc) doc.addEventListener('change',() => {
     const selected = account.documents.find(d => d.document_id === doc.value);
     title.disabled = !!selected;
@@ -222,7 +290,6 @@ function wireAccountPaperForm(account) {
     form.inert = true;
     form.setAttribute('aria-busy','true');
     try {
-      if (file && account.uploadPdf) await validateAccountPdf(file);
       if (account.current()) await account.register({...body, request_id:requestId},file);
     }
     catch (failure) {

@@ -1,8 +1,8 @@
 'use strict';
 
-function createAccountMemos(request, account) {
+function createAccountMemos(request, account, saves, drawPapers) {
   const section = $('#accountMemos'), field = $('#rNote'), paper = $('#memoPaper');
-  const finish = $('#memoFinish'), add = $('#rAddNote'), status = $('#memoStatus');
+  const finish = $('#memoFinish'), add = $('#rAddNote');
   const recordList = $('#accountRecords'), readStatus = $('#memoReadStatus');
   const prefix = 'researchtrail.account.' + account.projectUrl + '.' + account.accountId + '.';
   const drafts = new Map();
@@ -33,13 +33,18 @@ function createAccountMemos(request, account) {
     else drafts.delete(v.id);
     store('draft.'+v.id, unfinished ? d : null);
   }
-  function controls(v, message) {
+  function controls(v) {
     const d = v.draft;
     $('#memoLabel').textContent = d.recordId ? '메모 수정' : '새 메모';
-    status.textContent = message;
+    let phase = 'idle';
+    if (v.sending) phase = 'saving';
+    else if (d.operations.length) phase = 'failed';
+    else if (d.text !== d.original) phase = d.text.trim() ? 'draft' : 'empty';
+    else if (v.acknowledged) phase = 'saved';
+    saves.memo(v.id,phase);
     const edited = hasNewVersion(d);
     const retry = d.operations.length && !v.sending && !edited;
-    finish.textContent = retry ? '다시 시도' : '편집 완료';
+    finish.hidden = !!retry;
     finish.disabled = !retry && !edited;
     add.disabled = !!d.operations.length || !!(d.text.trim() && d.text !== d.original);
     paper.disabled = !!d.operations.length || !!d.recordId;
@@ -69,20 +74,25 @@ function createAccountMemos(request, account) {
       group('판단',data.context.decisions.map(d=>d.decision_text));
     $('#accountActions').innerHTML = accountActionHistory(data.next_actions,v.records);
     readStatus.textContent = '';
+    drawPapers(docs);
   }
   async function refresh(v) {
     const seq = ++v.read;
-    const data = await request('/tasks/'+v.id+'/resume');
-    if (!current(v) || seq !== v.read) return [];
+    let data;
+    try { data = await request('/tasks/'+v.id+'/resume'); }
+    catch (error) {
+      if (current(v) && seq === v.read) throw error;
+      return;
+    }
+    if (!current(v) || seq !== v.read) return;
     render(v,data);
-    return data.context.document_contexts;
   }
   function clear() {
     view = null;
     actions.clear();
     section.hidden = true;
     field.value = '';
-    status.textContent = readStatus.textContent = '';
+    readStatus.textContent = '';
     recordList.innerHTML = $('#accountContext').innerHTML = $('#accountActions').innerHTML = '';
     paper.innerHTML = '';
   }
@@ -92,16 +102,12 @@ function createAccountMemos(request, account) {
     const v = view = {id,draft,read:0,sending:false,records:[]};
     store('task',id);
     field.value = draft.text;
-    const papers = await refresh(v);
-    if (current(v)) {
-      section.hidden = false;
-      controls(v,draft.operations.length ? '저장 결과를 확인하려면 다시 시도해 주세요.' :
-        draft.text !== draft.original ? '작성 중인 메모를 복원했어요.' : '');
-    }
-    return papers;
+    controls(v);
+    await refresh(v);
+    if (current(v)) section.hidden = false;
   }
 
-  function complete() {
+  function complete(explicitRetry = false) {
     const v = view;
     if (!current(v) || section.hidden) return;
     const d = v.draft;
@@ -113,8 +119,8 @@ function createAccountMemos(request, account) {
       if (d.documentId) op.context = {document_contexts:[{document_ref:{document_id:d.documentId},use:{}}]};
       queue.push(op);
       keep(v);
-      if (v.sending) controls(v,'계정에 저장 중…');
-    }
+      if (v.sending) controls(v);
+    } else if (!explicitRetry) return;
     return sendCompleted(v);
   }
   async function sendCompleted(v) {
@@ -122,7 +128,7 @@ function createAccountMemos(request, account) {
     const d = v.draft, queue = d.operations;
     if (v.sending || !queue.length) return;
     v.sending = true;
-    controls(v,'계정에 저장 중…');
+    controls(v);
     try {
       while (queue.length) {
         const op = queue[0];
@@ -131,6 +137,7 @@ function createAccountMemos(request, account) {
         const ack = await request('/tasks/'+v.id+'/records',op);
         if (!current(v)) return;
         if (!ack || typeof ack.record_id !== 'string' || !ack.record_id) throw new Error();
+        v.acknowledged = true;
         d.recordId = ack.record_id;
         d.original = op.record.content_text;
         queue.shift();
@@ -139,12 +146,12 @@ function createAccountMemos(request, account) {
     } catch {
       if (current(v)) {
         v.sending = false;
-        controls(v,'저장을 확인하지 못했어요. 다시 시도해 주세요.');
+        controls(v);
       }
       return;
     }
     v.sending = false;
-    controls(v, d.text !== d.original ? '작성 중 · 변경 사항이 있어요.' : '계정에 저장했어요.');
+    controls(v);
     const read = v.read + 1;
     try { await refresh(v); }
     catch { if (current(v) && v.read === read) readStatus.textContent = '저장된 기록 목록을 다시 보려면 프로젝트를 열어 주세요.'; }
@@ -155,10 +162,10 @@ function createAccountMemos(request, account) {
     if (!current(v)) return;
     v.draft.text = text;
     keep(v);
-    controls(v,v.sending ? '계정에 저장 중…' : v.draft.operations.length ? '이전 저장 결과를 확인하려면 다시 시도해 주세요.' :
-      !text.trim() && text ? '메모 내용을 입력해 주세요.' : '작성 중');
-  },complete);
-  finish.addEventListener('click',complete);
+    controls(v);
+  },()=>complete());
+  finish.addEventListener('click',()=>complete(true));
+  $('#memoRetry').addEventListener('click',()=>{ if (current(view)) return sendCompleted(view); });
   paper.addEventListener('change',()=>{ if (current(view)) { view.draft.documentId=paper.value; keep(view); } });
   function edit(record) {
     const v = view;
@@ -173,7 +180,8 @@ function createAccountMemos(request, account) {
     field.value = d.text;
     paper.value = d.documentId;
     keep(v);
-    controls(v,'');
+    v.acknowledged = false;
+    controls(v);
     field.focus();
   }
   add.addEventListener('click',()=>edit(null));
@@ -185,5 +193,5 @@ function createAccountMemos(request, account) {
     if (record && reviewRecord) return actions.open(view,record,mode);
     if (record) edit(record);
   });
-  return {open,clear,lastTask:()=>read('task'),records:()=>view?.records || []};
+  return {open,clear,reload:()=>current(view) && refresh(view),lastTask:()=>read('task'),records:()=>view?.records || []};
 }
