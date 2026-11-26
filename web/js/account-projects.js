@@ -4,7 +4,7 @@
 async function startAccountProjects(request, account) {
   const memos = account ? createAccountMemos(request,account) : null;
   const connected = () => !account || account.current();
-  const pdfReader = account ? createAccountPdfReader(request,connected) : null;
+  const pdfReader = account ? createAccountPdfReader(request,connected,memos.records) : null;
   let tasks = [];
   let active = memos?.lastTask() || null;
   let selection = 0;
@@ -62,7 +62,7 @@ async function startAccountProjects(request, account) {
   if (pdfReader) {
     list.addEventListener('click',event=>{
       const button=event.target.closest('[data-open-pdf]');
-      if (button && connected()) return pdfReader.open(active,button.dataset.openPdf,button.dataset.label);
+      if (button && connected()) return pdfReader.open(active,button.dataset.openPdf,button.dataset.label,button.dataset.available!=='false');
     });
     list.addEventListener('change',async event=>{
       const input=event.target, use=input.dataset.attachPdf, file=input.files?.[0];

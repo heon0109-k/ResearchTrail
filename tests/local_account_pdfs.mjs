@@ -44,7 +44,7 @@ async function check() {
   const task=api+'/'+task_id;
   const {document_use_id}=await post(task+'/papers',{document:{title:'합성 PDF'},artifacts:[{access_locator_text:'https://doi.org/10.0000/synthetic'}],request_id:randomUUID()});
   const memo='  PDF 검사 합성 메모  ';
-  await post(task+'/records',{record:{content_text:memo},request_id:randomUUID()});
+  const {record_id}=await post(task+'/records',{record:{content_text:memo},request_id:randomUUID()});
   const bytes=syntheticPdf(), hash=createHash('sha256').update(bytes).digest('hex');
   const upload=task+'/papers/'+document_use_id+'/pdf';
   const headers={'Content-Type':'application/pdf','X-PDF-Name':encodeURIComponent('합성.pdf')};
@@ -71,6 +71,23 @@ async function check() {
   const extra=object.replace(hash,'f'.repeat(64));
   assert.equal((await call(storage+extra,owner,bytes,headers)).ok,false,'Direct client upload');
   console.log('PASS: private Storage upload, retry, fresh owner session, exact bytes, memo count, second-account and public denial.');
+  if (process.argv.includes('--reader')) {
+    const reader=task+'/artifacts/'+first.artifact_id+'/reader';
+    const highlight={id:randomUUID(),page:1,text:'ResearchTrail PDF fixture',rects:[[0.1,0.2,0.5,0.08]],record_id};
+    await post(reader,{highlight});
+    await post(reader,{highlight});
+    await post(reader,{last_page:1});
+    const state=await json(await call(reader,fresh.access_token),'Fresh owner reader');
+    assert.deepEqual(state,{last_page:1,highlights:[highlight]});
+    const edition=new Uint8Array(bytes.length+1);
+    edition.set(bytes); edition[bytes.length]=10;
+    const another=await json(await call(upload,owner,edition,headers),'Same-name edition');
+    const empty=await json(await call(task+'/artifacts/'+another.artifact_id+'/reader',owner),'Separate edition');
+    assert.deepEqual(empty,{last_page:null,highlights:[]});
+    assert.equal((await call(reader,other)).status,404,'Foreign reader');
+    assert.equal((await call(reader,other,JSON.stringify({last_page:1}))).status,404,'Foreign reading position');
+    console.log('PASS: fresh owner reads the page, normalized anchor and original memo reference. Other editions and accounts are isolated.');
+  }
 }
 try { await check(); }
 catch (error) {

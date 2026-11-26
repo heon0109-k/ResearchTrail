@@ -185,5 +185,5 @@ function createAccountMemos(request, account) {
     if (record && reviewRecord) return actions.open(view,record,mode);
     if (record) edit(record);
   });
-  return {open,clear,lastTask:()=>read('task')};
+  return {open,clear,lastTask:()=>read('task'),records:()=>view?.records || []};
 }

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="styles/projects.css">
   <link rel="stylesheet" href="styles/paper-panel.css">
   <link rel="stylesheet" href="styles/reading-records.css">
+  <link rel="stylesheet" href="styles/pdf-viewer.css">
   <link rel="stylesheet" href="styles/account.css">
 </head>
 <body class="account-project-page">
@@ -27,7 +28,18 @@
         <span id="pdfPageStatus" role="status"></span>
         <button type="button" class="btn sm" id="accountPdfNext">다음 쪽</button>
       </div>
-      <canvas id="accountPdfPage" aria-label="PDF 페이지"></canvas>
+      <p id="pdfReadingLocator"></p>
+      <div class="pgbox" id="accountPdfSheet" hidden>
+        <canvas id="accountPdfPage" aria-label="PDF 페이지"></canvas>
+        <div class="hlayer" id="accountPdfOverlay" aria-hidden="true"></div>
+        <div class="textLayer" id="accountPdfText"></div>
+      </div>
+      <p id="pdfSelectionText"></p>
+      <label class="field"><span>하이라이트에 연결할 메모 (선택)</span><select id="pdfMemoRef"></select></label>
+      <button type="button" class="btn sm" id="pdfMarkButton" disabled>선택한 구절에 형광펜</button>
+      <button type="button" class="btn sm" id="pdfReaderRetry" hidden>다시 저장</button>
+      <p id="pdfMarkStatus" role="status"></p>
+      <div id="pdfMarks" aria-label="저장된 하이라이트"></div>
     </section>
     <aside id="pin" aria-label="논문 등록" hidden></aside>
     <section id="accountMemos" aria-label="읽기 기록" hidden>

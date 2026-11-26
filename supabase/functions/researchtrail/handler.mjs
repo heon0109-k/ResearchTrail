@@ -44,6 +44,16 @@ export async function handleResearchTrail(request, backend) {
       }
       return result;
     }
+    const readerRoute = /^\/tasks\/([^/]+)\/artifacts\/([^/]+)\/reader$/.exec(path);
+    if (readerRoute && uuid.test(readerRoute[1]) && uuid.test(readerRoute[2])) {
+      const args = {task_id:readerRoute[1], artifact_id:readerRoute[2]};
+      const write = request.method === 'POST';
+      if (write) {
+        try { args.payload = await request.json(); } catch { return fail(400,'INVALID_INPUT'); }
+      } else if (request.method !== 'GET') return fail(405,'INVALID_INPUT');
+      const result = await callRpc(write ? 'rt_save_pdf_reader' : 'rt_pdf_reader',args);
+      return result.ok ? Response.json(await result.json(),{headers:cors}) : result;
+    }
     const pdfRoute = /^\/tasks\/([^/]+)\/(papers|artifacts)\/([^/]+)\/pdf$/.exec(path);
     if (pdfRoute && uuid.test(pdfRoute[1]) && uuid.test(pdfRoute[3])) {
       return await paperPdf(request,{task:pdfRoute[1].toLowerCase(),kind:pdfRoute[2],id:pdfRoute[3].toLowerCase()},
