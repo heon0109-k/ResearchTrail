@@ -1,7 +1,7 @@
 'use strict';
 function startResearchTrail(){
   if(typeof S!=='undefined' && S.source==='account'){
-    app.textContent=window.parent===window?'로그인 후 계정 프로젝트에서 타임라인을 열어 주세요.':'계정 프로젝트를 여는 중…';
+    app.textContent=window.parent===window?'계정 타임라인을 보려면 시작 화면에서 로그인해 주세요.':'계정 타임라인을 여는 중…';
     return;
   }
   /* ?demo=1 : 시작 페이지 안에 끼워 넣는 미리보기. 저장된 기록을 읽지도 쓰지도 않고 예시만 보여 준다 */
@@ -9,7 +9,7 @@ function startResearchTrail(){
   else if(!(isPageReload()&&restoreSessionScreen())&&!load({timeline:!isPageReload(),restoreView:isPageReload()})){
     var seenLanding=landingSeen();
     landingMark();
-    if(seenLanding)startEmpty();else showLanding();
+    if(seenLanding||window.name==='rt-device')startEmpty();else showLanding();
   }
 }
 
@@ -169,19 +169,23 @@ async function startAccountTimeline(get, account) {
       accountTimelineActions?.projects(tasks);
       if (editable) $('#workspaceNew').disabled = false;
       if (!tasks.length) {
-        $('#workspaceStatus').textContent = '아직 계정 프로젝트가 없어요.';
+        $('#workspaceStatus').textContent = editable
+          ? '아직 계정 프로젝트가 없어요. 새 프로젝트를 눌러 첫 프로젝트를 만들어 주세요.'
+          : '아직 계정 프로젝트가 없어요.';
         return;
       }
       picker.replaceChildren(...tasks.map(t => new Option(t.task.goal_text, t.task_id)));
       picker.disabled = false;
       let last;
       try { last = JSON.parse(sessionStorage.getItem(key)); } catch { /* Optional tab preference. */ }
-      return selectTask(tasks.find(t => t.task_id === last)?.task_id || tasks[0].task_id);
+      const selected = tasks.find(t => t.task_id === last)?.task_id || tasks[0].task_id;
+      return editable && selected !== last ? choose(selected) : selectTask(selected);
     } catch {
       if (current(version)) $('#workspaceStatus').textContent = '프로젝트 목록을 불러오지 못했어요. 다시 불러와 주세요.';
     }
   }
   function choose(id) {
+    if (!account.current() || !tasks.some(task => task.task_id === id)) return;
     try { sessionStorage.setItem(key, JSON.stringify(id)); } catch { /* Optional tab preference. */ }
     return selectTask(id);
   }
@@ -209,7 +213,7 @@ function renderAccountWorkspace() {
   const dated = card && S.papers.some(p => p.date);
   const undated = card ? S.papers.filter(p => !p.date) : [];
   $('#vCard').setAttribute('aria-pressed', String(card));
-  $('#vList').setAttribute('aria-pressed', String(!card));
+  $('#vList').setAttribute('aria-pressed', String(S.view === 'list'));
   $('#emptyBox').hidden = hasPapers;
   $('#scroller').hidden = $('#timelineMonth').hidden = $('#fcard').hidden = !dated;
   $('#overviewControls').hidden = S.zoom !== 'all';
@@ -242,8 +246,10 @@ function showAccountPaper(id) {
         const sameName=p.artifacts.some(other=>other!==a && other.pdf && other.label_text===a.label_text);
         return '<li>'+accountPdfArtifactHtml(p.id,a,sameName)+'</li>';
       }
-      return '<li>'+esc([a.label_text, a.version_text, a.part_text].filter(Boolean).join(' · ') ||
-        a.access_locator_text || '판본 이름 미기록')+'</li>';
+      const label = esc([a.label_text, a.version_text, a.part_text].filter(Boolean).join(' · ') ||
+        a.access_locator_text || '판본 이름 미기록');
+      const url = a.access_locator_text && safeExternalUrl(a.access_locator_text);
+      return '<li>'+(url ? '<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+label+'</a>' : label)+'</li>';
     }).join('')+'</ul>' : '')+
     (accountTimelineActions ? '<section class="workspace-paper-actions" id="workspacePaperActions"></section>' : '')+
     '<form method="dialog"><button class="btn" autofocus>닫기</button></form>';

@@ -1,12 +1,13 @@
 // Audit an existing static build against the website in this checkout. Print counts, never config values.
 import assert from 'node:assert/strict';
-import {execFileSync} from 'node:child_process';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {readFile, readdir} from 'node:fs/promises';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
 const dist = path.resolve(process.argv[2] || path.join(root, 'dist'));
-const tracked = execFileSync('git', ['ls-files', '-z', '--', 'web/'], {cwd:root, encoding:'utf8'});
+const {stdout:tracked} = await promisify(execFile)('git', ['ls-files', '-z', '--', 'web/'], {cwd:root, encoding:'utf8'});
 const expected = new Map(tracked.split('\0').filter(Boolean).map(name => [name.slice(4), path.join(root,name)]));
 assert.ok(expected.has('index.html'), 'Run this check in the ResearchTrail checkout.');
 

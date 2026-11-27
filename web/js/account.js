@@ -14,6 +14,8 @@
   const login = byId('authLogin');
   const logout = byId('authLogout');
   const back = byId('authBack');
+  const openLocal = byId('authOpenLocal');
+  const deviceTabKey = 'researchtrail.deviceView.' + window.RESEARCHTRAIL_CONFIG?.SUPABASE_URL;
   let auth;
   let ready = false;
   let accountId = null;
@@ -22,49 +24,67 @@
   let generation = 0;
   let receivedChange = false;
   // The landing page's "use another account" link arrives as ?switch=1: sign this browser out, then open Google's account chooser.
-  let switching = new URLSearchParams(window.location.search).get('switch') === '1';
-  if (switching) window.history?.replaceState(null, '', window.location.pathname);
+  const query = new URLSearchParams(window.location.search);
+  const callback = query.has('code') || query.has('error');
+  let switching = !callback && query.get('switch') === '1';
+  let startLogin = !callback && query.get('login') === '1';
+  if (switching || startLogin) window.history?.replaceState(null, '', window.location.pathname);
 
   window.addEventListener('pageshow', event => {
     if (event.persisted) window.location.reload();
   });
 
-  function closeLocal() {
+  function closeWorkspace() {
     accountRequests?.abort();
     // Let the existing change handler finish the focused memo's local edit history.
     workspace.firstElementChild?.contentDocument?.activeElement?.blur();
     workspace.replaceChildren();
   }
 
-  function showLocal(restoreView = false) {
-    closeLocal();
-    const frame = document.createElement('iframe');
-    frame.title = '브라우저 전용 작업공간';
-    frame.src = 'browser.html';
-    if (restoreView) frame.name = 'rt-local-reload';
-    workspace.appendChild(frame);
-    byId('authHome').hidden = true;
-    byId('authMode').textContent = '브라우저 전용';
-    back.hidden = !accountId;
+  function rememberDeviceView(enabled) {
+    try {
+      if (enabled) window.sessionStorage.setItem(deviceTabKey, accountId);
+      else window.sessionStorage.removeItem(deviceTabKey);
+    } catch { /* Storage preferences are optional. */ }
   }
 
-  function showAccount() {
-    // Removing the document also drops its reader, dialogs, timers and pending UI callbacks.
-    closeLocal();
-    byId('authHome').hidden = false;
+  function showLocal(restoreView = false) {
+    closeWorkspace();
+    const frame = document.createElement('iframe');
+    frame.title = '이 브라우저에 저장하는 작업공간';
+    frame.src = 'browser.html';
+    if (restoreView) frame.name = 'rt-local-reload';
+    else if (accountId) frame.name = 'rt-device';
+    workspace.appendChild(frame);
+    byId('authMode').textContent = '이 브라우저에만 저장';
+    message.textContent = '';
+    openLocal.hidden = true;
+    back.textContent = '계정 타임라인으로';
+    back.hidden = !accountId || !accessToken;
+  }
+
+  function accountUnavailable(text) {
+    closeWorkspace();
     byId('authMode').textContent = '현재 계정';
-    back.hidden = true;
+    message.textContent = text;
+    openLocal.hidden = false;
+    back.textContent = '계정 타임라인 다시 열기';
+    back.hidden = !accessToken;
   }
 
   function applySession(session) {
     const user = session?.user;
     const id = user?.id || null;
+    const hadToken = !!accessToken;
     accessToken = id ? session.access_token : null;
     identity.textContent = id ? (user.email || id) : '';
     identity.hidden = !id;
-    if (ready && id === accountId) return;
+    if (ready && id === accountId && hadToken === !!accessToken) return;
 
-    const first = !ready;
+    const reload = !ready && window.performance?.getEntriesByType('navigation')[0]?.type === 'reload';
+    let restoreDevice = false;
+    try { restoreDevice = reload && !callback && id && window.sessionStorage.getItem(deviceTabKey) === id; } catch {}
+    if (!restoreDevice) rememberDeviceView(false);
     ready = true;
     generation++;
     accountId = id;
@@ -72,34 +92,42 @@
     login.disabled = logout.disabled = false;
     login.hidden = !!id;
     logout.hidden = !id;
-    if (id && accessToken) showProjects(new URLSearchParams(window.location.search).get('workspace') === 'timeline');
-    else if (id) showAccount();
-    else showLocal(first && window.performance?.getEntriesByType('navigation')[0]?.type === 'reload');
-    if (switching) {
-      if (id) auth?.signOut({ scope: 'local' }).catch(() => { switching = false; });
-      else login.click();
+    const loginRequested = startLogin;
+    startLogin = false;
+    if (auth && (switching || (loginRequested && !id))) {
+      if (id) accountUnavailable('다른 Google 계정으로 전환하는 중…');
+      else showLocal();
+      // Leave the SDK notification before making another Auth call.
+      const started = generation;
+      window.setTimeout(() => {
+        if (generation !== started) return;
+        if (id) logout.click();
+        else login.click();
+      }, 0);
+      return;
     }
+    if (!id || restoreDevice) showLocal(reload);
+    else if (accessToken) showTimeline();
+    else accountUnavailable('계정 연결을 확인하고 있어요. 계속 열리지 않으면 다시 로그인해 주세요.');
   }
 
-  byId('authOpenLocal').addEventListener('click', () => showLocal());
-  function showProjects(timeline = false) {
+  openLocal.addEventListener('click', () => {
+    rememberDeviceView(true);
+    showLocal();
+  });
+  function showTimeline() {
     if (!accountId || !accessToken) return;
-    closeLocal();
+    rememberDeviceView(false);
+    closeWorkspace();
     const frame = document.createElement('iframe');
     const started = generation;
-    frame.title = timeline ? '계정 타임라인' : '계정 프로젝트';
-    frame.src = timeline ? 'browser.html?workspace=account' : 'views/account-projects.html';
-    frame.addEventListener('load', () => {
+    frame.title = '계정 타임라인';
+    frame.src = 'browser.html?workspace=account';
+    frame.addEventListener('load', async () => {
       if (started !== generation || workspace.firstElementChild !== frame) return;
       accountRequests = new AbortController();
       const { signal } = accountRequests;
       const current = () => !signal.aborted && started === generation;
-      const start = timeline ? frame.contentWindow.startAccountTimeline : frame.contentWindow.startAccountProjects;
-      if (typeof start !== 'function') {
-        showAccount();
-        message.textContent = '프로젝트 화면을 열지 못했어요. 다시 시도해 주세요.';
-        return;
-      }
       const request = async (path, body, {pdf = false, artifactId, method = body ? 'POST' : 'GET'} = {}) => {
         if (!current()) throw new Error('계정이 변경되었어요.');
         const config = window.RESEARCHTRAIL_CONFIG;
@@ -120,16 +148,20 @@
         }
         return data;
       };
-      start.call(frame.contentWindow, timeline ? path => request(path) : request,
-        {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current, write:request});
+      const account = {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current, write:request};
+      try {
+        await frame.contentWindow.startAccountTimeline(path => request(path), account);
+      } catch {
+        if (current()) accountUnavailable('계정 타임라인을 열지 못했어요. 다시 시도해 주세요.');
+      }
     }, { once: true });
     workspace.appendChild(frame);
-    byId('authHome').hidden = true;
-    byId('authMode').textContent = timeline ? '계정 타임라인' : '계정 프로젝트';
-    back.hidden = false;
+    message.textContent = '';
+    byId('authMode').textContent = '계정에 저장';
+    openLocal.hidden = false;
+    back.hidden = true;
   }
-  byId('authProjects').addEventListener('click',() => showProjects());
-  back.addEventListener('click', showAccount);
+  back.addEventListener('click', showTimeline);
 
   login.addEventListener('click', async () => {
     if (!auth) { window.location.reload(); return; }
@@ -149,6 +181,7 @@
       window.location.assign(data.url);
     } catch {
       if (generation !== started) return;
+      switching = false;
       login.disabled = false;
       message.textContent = 'Google 로그인을 시작하지 못했어요. 다시 시도해 주세요.';
     }
@@ -166,6 +199,10 @@
       applySession(null);
     } catch {
       if (generation !== started) return;
+      if (switching) {
+        switching = false;
+        if (accessToken) showTimeline();
+      }
       logout.disabled = false;
       message.textContent = '로그아웃하지 못했어요. 다시 시도해 주세요.';
     }
