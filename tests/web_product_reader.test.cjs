@@ -155,3 +155,49 @@ test('the guided reader step leaves account reading state, recency, and saved pa
   assert.equal(c.RD.guide,false);assert.equal(p.lastReadOrder,5);
   assert.deepEqual(calls.map(call=>({...call[1]})),[{state:'reading'}]);
 });
+
+test('legacy flags and question survive canonical highlight hydration and a document memo appears once across editions',()=>{
+  const root=randomUUID(),mark=randomUUID(),{w,c,p,extras}=setup([
+    {record_id:root,record:{content_text:'논문 공통 메모'},context_refs:{document_ids:[doc],artifact_ids:[]}}
+  ]);
+  extras[edition]={cards:{[mark]:{kind:'수식',blocked:true,stuck:'eq',unsure:'수식 질문',solved:false,at:23}}};
+  w.readerHighlights={[edition]:[{id:mark,page:5,text:'x=y',rects:[[0,.2,.5,.1]]}]};
+  c.accountHydratePaperRecords(p,w.resume);
+  const cards=Array.from(c.accountReaderFindRecords(p)), image=cards.find(r=>r.card.id===mark);
+  assert.equal(image.artifactId,edition);assert.equal(image.card.unsure,'수식 질문');assert.equal(image.card.blocked,true);
+  assert.equal(image.card.solved,false);assert.equal(image.card.stuck,'eq');
+  assert.equal(cards.filter(r=>r.card.id===root).length,1);
+  assert.equal(cards.find(r=>r.card.id===root).artifactId,null);
+});
+test('a selected metadata-only edition never downloads a different PDF from the paper link',()=>{
+  const {c,p}=setup();p.artifacts[0]={artifact_id:edition,label_text:'첨부 대기',can_attach_pdf:true};
+  p.link='https://arxiv.org/abs/1234.56789v2';
+  vm.runInContext(fs.readFileSync('web/js/reader.js','utf8'),c);
+  assert.equal(c.pdfDownloadSource(p),null);
+});
+
+test('search destination waits for the chosen edition, then reveals the requested capture instead of its saved page',()=>{
+  const {c,p}=setup(),id=randomUUID(),calls=[];
+  const h={id,page:3,img:'data:image/png;base64,AAAA',rects:[[.1,.2,.3,.1]]};p.hl=[h];p.page='8';
+  c.chooseReadingRecord=(paper,card)=>calls.push([paper.id,card]);c.pvReveal=card=>calls.push(['reveal',card.page]);
+  c.pvGo=page=>calls.push(['page',page]);
+  const view={p,current:()=>true,ready:true,pdfReady:false,destination:{cardId:id,page:3}};
+  c.accountReaderApplyDestination(view);
+  assert.deepEqual(calls,[[p.id,id]]);assert.equal(view.destination.cardId,id);
+  view.pdfReady=true;c.accountReaderApplyDestination(view);
+  assert.deepEqual(calls.at(-1),['reveal',3]);assert.equal(view.destination,null);
+});
+
+test('a completed clear while its original memo is saving hides the annotation and keeps the earlier revision',async()=>{
+  const {w,c,p,status}=setup(),h={id:randomUUID(),type:'note',mine:'처음 기록',rects:[]};
+  p.hl=[h];const original=Promise.withResolvers(),patches=[];
+  w.write=()=>original.promise;w.patchExtra=async(target,id,patch,options)=>{patches.push({target,id,patch,options});};
+  const first=c.accountReaderCompleteMemo(p,h);
+  h.mine='';c.accountReaderDraftMemo(p,h);const clear=c.accountReaderCompleteMemo(p,h);
+  assert.ok(![...status.values()].includes('saved'));
+  const record=randomUUID();original.resolve({record_id:record});
+  await Promise.all([first,clear]);
+  assert.equal(patches.length,1);assert.equal(patches[0].id,edition);assert.equal(patches[0].patch.cards[h.id].cleared,true);
+  assert.equal(h.cleared,true);assert.equal(h.latestRecordId,record);
+  assert.equal(p.noteHistory[0].content_text,'처음 기록');assert.deepEqual([...status.values()],['saved']);
+});

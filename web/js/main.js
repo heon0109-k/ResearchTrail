@@ -7,12 +7,12 @@ function startResearchTrail(){
   /* ?demo=1 : 시작 페이지 안에 끼워 넣는 미리보기. 저장된 기록을 읽지도 쓰지도 않고 예시만 보여 준다 */
   if(window.name==='rt-demo'||/[?&]demo=1/.test(location.search)){document.documentElement.classList.add('demo');loadSample();S.zoom='month';S.bubble=null;renderAll();lockDemo()}
   else if(/(?:^|[?&])sample=1(?:&|$)/.test(location.search)){
-    history.replaceState(null,'',location.pathname);RET=hasMine();loadSample();
+    history.replaceState(null,'',location.pathname);RET=standaloneProduct||hasMine();loadSample();
   }
   else if(!(isPageReload()&&restoreSessionScreen())&&!load({timeline:!isPageReload(),restoreView:isPageReload()})){
     var seenLanding=landingSeen();
     landingMark();
-    if(seenLanding||window.name==='rt-device')startEmpty();else showLanding();
+    if(seenLanding)startEmpty();else showLanding();
   }
 }
 
@@ -66,7 +66,18 @@ async function startAccountTimeline(get,account) {
       btn.type='button'; btn.className='btn sm';
       const name=api.tasks.find(t=>t.task_id===job.task)?.task.goal_text;
       btn.textContent=(name?name+' · ':'')+job.label+(job.conflict?' · 내 변경으로 다시 저장':' 다시 저장');
-      btn.onclick=()=>store.retry(job.id,!!job.conflict).then(async ack=>{
+      if(job.reviewTag){
+        btn.textContent=(name?name+' · ':'')+'삭제할 논문 다시 확인';
+        btn.onclick=async()=>{
+          try{
+            if(job.task===S.taskId)await refresh();else await selectTask(job.task);
+            if(!account.current() || S.taskId!==job.task)return;
+            store.releaseTagReview(job.id);
+            if(S.tags.some(tag=>tag.id===job.tagRemoval.tag_id))deleteTag(job.tagRemoval.tag_id);
+            else status.textContent='이 태그는 이미 삭제됐어요.';
+          }catch{status.textContent='태그가 붙은 논문을 다시 불러오지 못했어요.';}
+        };
+      }else btn.onclick=()=>store.retry(job.id,!!job.conflict).then(async ack=>{
         if(job.path.endsWith('/reader'))accountReaderRefreshMarks(job,ack);
         if (job.path==='/tasks' || /^\/tasks\/[^/]+$/.test(job.path)) await reloadTasks();
         else if (job.task===S.taskId) await refresh();
@@ -84,16 +95,19 @@ async function startAccountTimeline(get,account) {
     } else saves.track('product.'+job.id,job.task,job.label,phase==='queued'?'saving':phase);
     if(job.volatile && phase!=='saved')status.textContent='이 탭에 재시도 내용을 보관하지 못했어요. 저장이 끝날 때까지 창을 열어 두세요.';
     if(job.conflict)status.textContent='다른 기기에서 같은 항목이 바뀌었어요. 내 변경을 유지하려면 다시 저장해 주세요.';
+    if(job.reviewTag && phase==='failed')status.textContent='태그에 속한 논문이 바뀌었어요. 삭제할 논문을 다시 확인해 주세요.';
     showRetries();
   });
   for(const job of store.pending())saves.track('product.'+job.id,job.task,job.label,job.phase==='failed'?'failed':'saving');
   showRetries();
   api.mutate=store.mutate;
+  api.removeTag=store.removeTag;
   api.extra=(target,id)=>store.read(S.taskId,target,id).data;
   api.extraVersion=(target,id)=>store.read(S.taskId,target,id).version;
   api.pendingSummary=(target,id)=>store.pending().find(job=>job.task===S.taskId && job.edit?.target===target &&
     job.edit.id===id && job.edit.patch?.memoSummary);
   api.patchExtra=(target,id,patch,options)=>store.patch(options?.task||S.taskId,target,id,patch,options);
+  api.editPaper=(id,extras,options)=>api.patchExtra('paper',id,extras,options);
   api.flush=()=>store.flush(S.taskId);
   api.papers=createAccountPaperOperations(api);
 
@@ -142,11 +156,13 @@ async function startAccountTimeline(get,account) {
       throw Error('프로젝트 응답을 확인하지 못했어요.');
     store.load(task,meta);
     api.resume=resume;api.recordRequests=meta.record_requests||{};api.readingPages=meta.reading_pages||{};
+    api.readerHighlights=meta.reader_highlights||{};
     S.name=api.tasks.find(t=>t.task_id===task)?.task.goal_text || '';
     const data=store.projected(task,'project');
     for (const key of preferences) if(Object.hasOwn(data,key)) S[key]=structuredClone(data[key]);
     S.tags=(Array.isArray(S.tags)?S.tags:[]).filter(t=>t && typeof t.name==='string' && /^[a-zA-Z0-9_-]+$/.test(t.id))
       .map(t=>({id:t.id,name:t.name,color:/^#[0-9a-f]{6}$/i.test(t.color)?t.color:PAL[0]}));
+    if(S.filterTag!=null && S.filterTag!=='' && !S.tags.some(tag=>tag.id===S.filterTag))S.filterTag=null;
     if(!['week','month','all'].includes(S.zoom))S.zoom='month';
     if(!Number.isFinite(S.overviewZoom) || S.overviewZoom<1 || S.overviewZoom>4)S.overviewZoom=1;
     if(fresh){
@@ -185,6 +201,7 @@ async function startAccountTimeline(get,account) {
   async function selectTask(id) {
     if(!account.current() || (id && !api.tasks.some(t=>t.task_id===id)))return;
     ++generation; const n=generation;
+    if(typeof resetPaperWorkspaceControls==='function')resetPaperWorkspaceControls();
     if(typeof accountCloseProductReader==='function')accountCloseProductReader();
     recordsDialog?.close();
     loading=true;reset();

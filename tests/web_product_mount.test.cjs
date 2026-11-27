@@ -66,3 +66,17 @@ test('both account clients mount the product frame without a write, share accept
   assert.equal(a.S.taskId,'A');assert.equal(a.S.papers[0].id,'A-use');
   assert.deepEqual(a.mounts,['A','A']);
 });
+
+test('fresh project hydration ignores a removed filter tag and preserves valid and untagged filters',async()=>{
+  const tags=[{id:'active',name:'합성 태그',color:'#234567'}];
+  for(const [stored,expected] of [['removed',null],['active','active'],['','']]){
+    const state={project:{version:3,data:{tags,filterTag:stored}},papers:{},artifacts:{}};
+    const a=client({A:{state}});
+    await a.start();
+    assert.equal(a.S.filterTag,expected);
+    assert.equal(a.S.papers.length,1);
+    assert.equal(a.w.accountWorkspace.saveChanges(),true);
+    assert.equal(a.writes.length,0);
+    assert.equal(state.project.data.filterTag,stored);
+  }
+});

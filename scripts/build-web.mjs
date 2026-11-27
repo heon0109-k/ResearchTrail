@@ -46,7 +46,7 @@ const website = {
   'vendor/pdfjs-3.11.174': ['LICENSE', 'pdf.min.js', 'pdf.worker.min.js'],
   'views': [
     'account-projects.html', 'account.html', 'project-records.html', 'landing.html', 'main.html', 'onboarding.html',
-    'reader.html',
+    'reader.html', 'site-root.html',
   ],
 };
 
@@ -56,6 +56,7 @@ try {
     const target = path.join(staging, directory);
     await mkdir(target, { recursive: true });
     for (const name of files) {
+      if (url && directory==='js' && name==='account-projects.js') continue;
       const file = path.join(source, directory, name);
       if (await realpath(file) !== file) throw new Error('Linked website input: ' + path.join(directory, name));
       await copyFile(file, path.join(target, name));
@@ -70,6 +71,9 @@ try {
     // The account page owns Auth. The local workspace keeps its original document and storage.
     await rename(path.join(staging, 'index.html'), path.join(staging, 'browser.html'));
     await copyFile(path.join(staging, 'views/account.html'), path.join(staging, 'index.html'));
+    for (const legacy of ['account.html', 'account-projects.html']) {
+      await copyFile(path.join(source, 'views/site-root.html'), path.join(staging, 'views', legacy));
+    }
   }
   await writeFile(path.join(staging, 'js/browser-config.js'),
     'window.RESEARCHTRAIL_CONFIG = Object.freeze(' + JSON.stringify(config, null, 2) + ');\n');

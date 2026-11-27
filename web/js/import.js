@@ -29,8 +29,8 @@ function parseRef(v){
   v=String(v||'').trim();
   if(/[\u0000- \u007f]/.test(v)||(/^[a-z][a-z0-9+.-]*:/i.test(v)&&! /^(?:https?:\/\/|arxiv:|doi:)/i.test(v)))return {type:'invalid',url:''};
   /* arXiv 번호가 들어 있는 주소 (arXiv, Hugging Face Papers, alphaXiv 등) */
-  var m=v.match(/(?:arxiv\.org\/(?:abs|pdf|html)|huggingface\.co\/papers|alphaxiv\.org\/(?:abs|overview|pdf))\/([a-z\-]+\/\d{7}|\d{4}\.\d{4,5})(?:v\d+)?/i)||v.match(/^(?:arxiv:)?\s*(\d{4}\.\d{4,5})(?:v\d+)?\s*$/i);
-  if(m)return {type:'arxiv',id:m[1],link:'https://arxiv.org/abs/'+m[1]};
+  var m=v.match(/(?:arxiv\.org\/(?:abs|pdf|html)|huggingface\.co\/papers|alphaxiv\.org\/(?:abs|overview|pdf))\/([a-z\-]+\/\d{7}|\d{4}\.\d{4,5})(v\d+)?/i)||v.match(/^(?:arxiv:)?\s*(\d{4}\.\d{4,5})(v\d+)?\s*$/i);
+  if(m){var edition=m[1]+(m[2]||'');return {type:'arxiv',id:m[1],edition:edition,link:'https://arxiv.org/abs/'+edition};}
   var nat=v.match(/nature\.com\/articles\/(s\d{4,5}-\d{3}-\d{4,5}-[\w]+)/i);
   if(nat)return {type:'doi',doi:'10.1038/'+nat[1],link:'https://doi.org/10.1038/'+nat[1]};
   var d=v.match(/10\.\d{4,9}\/[^\s"<>?#]+/);
@@ -45,7 +45,7 @@ function parseRef(v){
   if((a=url.match(/openreview\.net\/(?:forum|pdf|attachment)\?(?:.*&)?id=([\w\-]+)/i)))return {type:'openreview',id:a[1],link:'https://openreview.net/forum?id='+a[1],url:url};
   return {type:'url',url:url};
 }
-function pdfUrlOf(link){var r=parseRef(link||'');return r.type==='arxiv'?'https://arxiv.org/pdf/'+r.id:''}
+function pdfUrlOf(link){var r=parseRef(link||'');return r.type==='arxiv'?'https://arxiv.org/pdf/'+r.edition:''}
 /* 응답이 10초 넘게 없으면 실패로 보고 다음 방법으로 넘어간다 */
 function tj(u){
   var ctl=typeof AbortController==='function'?new AbortController():null,timer=ctl?setTimeout(function(){ctl.abort()},10000):0;

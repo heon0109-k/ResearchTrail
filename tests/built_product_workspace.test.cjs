@@ -136,13 +136,28 @@ function mockAccount() {
       return json({...row,task_id:task,artifact_ids:[]});
     }
     if (kind==='workspace') {
-      if (method==='GET') return json(meta[task]);
+      if (method==='GET') {
+        const reader_highlights={},reading_pages={};
+        for(const paper of papers[task])for(const artifact of paper.artifacts){
+          const state=reader.get(task+'/'+artifact.artifact_id);
+          if(state){reader_highlights[artifact.artifact_id]=state.highlights;reading_pages[artifact.artifact_id]=state.last_page;}
+        }
+        return json({...meta[task],reader_highlights,reading_pages});
+      }
       assert.equal(method,'PATCH');
       const {target,id,version,patch}=body;
       const head=target==='project'?meta[task].project:(meta[task][target+'s'][id]||={version:0,data:{}});
       if (head.version!==version) return route.fulfill({status:409,json:{error:{code:'STORAGE_FAILURE'}}});
       head.data=merge(head.data,patch);
       head.version++;
+      if(body.paper_fields){
+        const row=papers[task].find(p=>p.document_use_id===id), fields=body.paper_fields;
+        if('title' in fields)row.document.title=fields.title;
+        if('date' in fields)row.date=fields.date;
+        if('access_locator_text' in fields)row.access_locator_text=fields.access_locator_text;
+        for(const name of ['purpose_text','reading_state_text'])if(name in fields)row.use[name]=fields[name];
+        return json({...head,paper_fields:fields});
+      }
       return json(head);
     }
     if (kind==='artifacts' && action==='pdf') {
@@ -400,5 +415,71 @@ test('a project created through the original picker reopens its two registered p
     await second.el('#rRecords .rc-preview').filter({hasText:memo.trim()}).waitFor();
     await second.page.waitForFunction(()=>document.querySelector('#authWorkspace iframe').contentDocument.querySelector('#pvNum')?.value==='2');
     assert.deepEqual(server.files.map(f=>[f.task,f.id]),[[task,edition.artifact_id],[task,edition.artifact_id]]);
+    assert.deepEqual(server.unexpected,[]);
+});
+
+test('two already signed-in browser sessions share the project graph, original PDF bytes, linked memo, anchor and page after refresh',
+  {timeout:120000},async t=>{
+    const {runProductPersistenceJourney}=await import('./fixtures/product-persistence-journey.mjs');
+    const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
+    t.after(()=>browser.close());
+    const server=mockAccount();
+    server.paperReceipt.resolve();
+    const first=await startClient(browser,server), second=await startClient(browser,server);
+    await login(first);
+    await login(second);
+    const result=await runProductPersistenceJourney({first,second,pdf:server.qa.files.draft,allowRetry:true});
+    const state=server.reader.get(result.task+'/'+result.edition);
+    assert.equal(state.last_page,3);
+    assert.ok(state.highlights.some(h=>h.id===result.anchor && h.record_id===result.record));
+    assert.deepEqual(server.unexpected,[]);
+});
+
+test('an area captured from the actual PDF canvas can be found before opening the reader on a second client',
+  {timeout:90000},async t=>{
+    const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
+    t.after(()=>browser.close());
+    const server=mockAccount(),first=await startClient(browser,server),{el,page}=first;
+    await login(first);await visitProject(first,'A');
+    await el('.card[data-id="draft"]').click();
+    await el('#pEdition').selectOption('draft');await el('#pRead').click();
+    await el('#pvNum').fill('2');await el('#pvNum').press('Tab');
+    const canvas=el('.pgbox[data-n="2"] canvas');
+    await canvas.scrollIntoViewIfNeeded();await el('#pvCap').click();
+    const box=await canvas.boundingBox(), viewport=await el('#pvs').boundingBox();
+    const x=Math.max(box.x,viewport.x)+30,y=Math.max(box.y,viewport.y)+40;
+    await page.mouse.move(x,y);await page.mouse.down();
+    await page.mouse.move(x+110,y+70,{steps:8});await page.mouse.up();
+    const card=el('#rRecords .reading-card:has(img.rv-img)').first();
+    await card.waitFor();const id=await card.getAttribute('data-rid');
+    const shot=await card.locator('img.rv-img').getAttribute('src');
+    assert.match(shot,/^data:image\/(png|jpeg);base64,/);
+    const text='도표의 합성 계정 메모';
+    await card.locator('textarea[data-hm]').fill(text);await card.locator('textarea[data-hm]').press('Tab');
+    await el('#accountReaderNotice button').filter({hasText:'메모 다시 저장'}).click();
+    await el('#memoStatus').filter({hasText:'이제 닫아도 돼요'}).waitFor();
+    const captured=server.meta.A.artifacts.draft.data.cards[id];
+    assert.equal(captured.img,shot);assert.equal(captured.page,2);assert.equal(captured.rects.length,1);
+    assert.deepEqual(server.records.A[0].context_refs.artifact_ids,['draft']);
+    const pageWrite=page.waitForResponse(r=>r.url().endsWith('/artifacts/draft/reader') &&
+      r.request().method()==='POST' && r.request().postDataJSON()?.last_page===3);
+    await el('#pvNum').fill('3');await el('#pvNum').press('Tab');await pageWrite;
+    assert.equal(server.reader.get('A/draft').last_page,3);
+
+    const second=await startClient(browser,server);await login(second,names.A);
+    await second.page.reload();await second.el('#tName').filter({hasText:names.A}).waitFor();
+    await second.el('#vFind').click();await second.el('#fdQ').fill(text);
+    const hit=second.el('#fdL [data-i]').filter({hasText:text});
+    await hit.waitFor();assert.equal(await hit.locator('img').getAttribute('src'),shot);
+    await hit.click();
+    const restored=second.el('#rRecords [data-rid="'+id+'"]');
+    await second.el('#pvTot').waitFor();await restored.locator('.rc-preview').filter({hasText:text}).waitFor();
+    assert.equal(await restored.locator('.rv-img').getAttribute('src'),shot);
+    await second.page.waitForFunction(()=>document.querySelector('#authWorkspace iframe').contentDocument.querySelector('#pvNum')?.value==='2');
+    await restored.locator('.rv-meta').click();await restored.locator('[data-rv="del"]').click();await second.el('#dgOk').click();
+    await restored.waitFor({state:'detached'});
+    assert.equal(server.meta.A.artifacts.draft.data.cards[id].deleted,true);
+    assert.equal(server.meta.A.artifacts.draft.data.cards[id].img,undefined);
+    assert.equal(server.records.A.length,1);
     assert.deepEqual(server.unexpected,[]);
 });

@@ -11,9 +11,7 @@ function hasMine(){
 function landingAccountButton(){
   try{
     var parentDoc=window.parent!==window&&window.parent.document;
-    var back=parentDoc&&parentDoc.getElementById('authBack');
     var login=parentDoc&&parentDoc.getElementById('authLogin');
-    if(back&&!back.hidden)return back;
     if(login&&!login.hidden)return login;
   }catch(e){}
   return null;
@@ -37,13 +35,11 @@ function showLanding(){
   var ch=curChar(),has=hasMine(),configured=!!window.RESEARCHTRAIL_CONFIG?.SUPABASE_URL;
   app.innerHTML = screens.landing;
   $$('[data-lp="start"]').forEach(function(button){
-    button.textContent=signed?'계정 작업공간으로 돌아가기':has?'이 브라우저에 저장한 작업 열기':'이 브라우저에서 시작하기';
+    button.textContent=signed?'프로젝트로 돌아가기':has?'이 브라우저에 저장한 작업 열기':'이 브라우저에서 시작하기';
     if(!configured)button.classList.add('pri');
   });
   $$('[data-lp="google"]').forEach(function(button){button.hidden=!configured||signed});
-  var canReturn=landingAccountButton()?.id==='authBack';
-  if(canReturn)$$('.landing-gt').forEach(function(label){label.textContent='계정 타임라인으로'});
-  $$('[data-lp="switch"]').forEach(function(button){button.hidden=!canReturn&&!signed});
+  $$('[data-lp="switch"]').forEach(function(button){button.hidden=!signed});
   $('.landing-mascot').innerHTML=spr(ch.rows,3,'bob');
   $('#lpWalk').innerHTML=spr(ch.rows,2,'bob');
   $$('[data-lp]').forEach(function(b){b.addEventListener('click',function(){

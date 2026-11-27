@@ -35,6 +35,9 @@ if (!demo) {
   assert.ok(typeof key === 'string' && key.startsWith('sb_publishable_'), 'Expected a publishable key.');
   expected.set('browser.html', expected.get('index.html'));
   expected.set('index.html', expected.get('views/account.html'));
+  expected.delete('js/account-projects.js');
+  for (const alias of ['views/account.html','views/account-projects.html'])
+    expected.set(alias,path.join(root,'web/views/site-root.html'));
 }
 const sdk = path.join(root, 'node_modules/@supabase/supabase-js');
 expected.set('vendor/supabase/supabase.js', path.join(sdk,'dist/umd/supabase.js'));

@@ -148,6 +148,7 @@ function projMenuRender(){
   }
 }
 function projMenuToggle(){
+  if(typeof returnFromStandaloneExample==='function'&&returnFromStandaloneExample())return;
   if(projMenuOpen()){projMenuClose();return}
   var ov=document.createElement('div');ov.className='project-menu-backdrop';ov.id='pjmOv';ov.addEventListener('click',projMenuClose);
   var m=document.createElement('div');m.className='project-menu';m.id='pjm';m.setAttribute('role','dialog');m.setAttribute('aria-label','프로젝트');
@@ -179,4 +180,4 @@ function projMenuToggle(){
   projMenuRender();
 }
 if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('resize',function(){if(projMenuOpen())projMenuRender()});
-if(S.source!=='account'&&typeof localStorage!=='undefined'&&typeof document!=='undefined'&&document.getElementById&&!document.getElementById('accountProjects'))try{projBoot()}catch(e){}
+if(S.source!=='account'&&!(typeof explicitExample!=='undefined'&&explicitExample)&&typeof localStorage!=='undefined'&&typeof document!=='undefined'&&document.getElementById&&!document.getElementById('accountProjects'))try{projBoot()}catch(e){}

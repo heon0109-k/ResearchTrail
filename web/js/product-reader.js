@@ -27,15 +27,15 @@ function accountReaderExtra(p,patch,label) {
 }
 function accountCardMetadata(h,includeQuote=false) {
   const result={};
-  for (const k of ['at','kind','blocked','stuck','solved','type','page','img','record_id']) {
+  for (const k of ['at','kind','blocked','stuck','solved','unsure','type','page','img','record_id']) {
     if (h[k]!=null) result[k]=h[k];
   }
   if (h.img || includeQuote) {result.rects=h.rects;result.text=h.text||'';}
   return result;
 }
-function accountReaderCardChanged(p,h) {
+function accountReaderCardChanged(p,h,changes) {
   const label=h.img?'영역 캡처':h.type==='note'?'메모 위치':'하이라이트 표시';
-  return accountReaderExtra(p,{cards:{[h.id]:accountCardMetadata(h,!accountReaderEdition(p)?.pdf)}},label);
+  return accountReaderExtra(p,{cards:{[h.id]:changes||accountCardMetadata(h,!accountReaderEdition(p)?.pdf)}},label);
 }
 function accountReaderPath(s) { return s.path+'/artifacts/'+s.artifact+'/reader'; }
 function accountReaderNewCard(p,h) {
@@ -43,12 +43,19 @@ function accountReaderNewCard(p,h) {
   accountReaderBackground(accountReaderCardChanged(p,h));
   if (h.type!=='note' && !h.img && h.text) accountReaderBackground(accountReaderAnchor(p,h));
 }
+function accountReaderCacheMark(s,id,receipt) {
+  if (!s.w.current() || S.taskId!==s.task || !Array.isArray(receipt?.highlights)) return;
+  const cache=s.w.readerHighlights||=(Object.create(null)), previous=cache[s.artifact]||[];
+  const stored=receipt.highlights.find(mark=>mark.id===id);
+  cache[s.artifact]=previous.filter(mark=>mark.id!==id);
+  if (stored) cache[s.artifact].push(stored);
+}
 function accountReaderAnchor(p,h) {
   const s=accountReaderScope(p);
   if (!s.privatePdf || h.anchorReady || h.type==='note'||h.img) return Promise.resolve();
   if (!h.anchorRequest) {
     const highlight={id:h.id,page:h.page,text:h.text,rects:h.rects,record_id:null};
-    h.anchorRequest=s.w.mutate('하이라이트',accountReaderPath(s),{highlight},{requestId:h.id,onAck:()=>{h.anchorReady=true;}})
+    h.anchorRequest=s.w.mutate('하이라이트',accountReaderPath(s),{highlight},{requestId:h.id,onAck:ack=>{h.anchorReady=true;accountReaderCacheMark(s,h.id,ack);}})
       .then(ack=>{h.anchorReady=true;return ack;});
     h.anchorRequest.finally(()=>{delete h.anchorRequest;}).catch(()=>{});
   }
@@ -62,9 +69,9 @@ async function accountReaderRemoveCard(p,h) {
   if (item.draft.operations.length || (h.mine||'')!==item.draft.original)
     await accountReaderCompleteMemo(p,h);
   if (!s.active()) return;
-  const writes=[accountReaderExtra(p,{cards:{[h.id]:{deleted:true}}},'읽기 기록 삭제')];
+  const writes=[accountReaderExtra(p,{cards:{[h.id]:{deleted:true,img:null,rects:null,text:null}}},'읽기 기록 삭제')];
   if (s.privatePdf && h.type!=='note' && !h.img)
-    writes.push(s.w.mutate('하이라이트 삭제',accountReaderPath(s),{remove_highlight:h.id}));
+    writes.push(s.w.mutate('하이라이트 삭제',accountReaderPath(s),{remove_highlight:h.id},{onAck:ack=>accountReaderCacheMark(s,h.id,ack)}));
   await Promise.all(writes);
   if (!s.active()) return;
   p.hl=p.hl.filter(card=>card.id!==h.id);
@@ -88,13 +95,13 @@ function accountReadCard(id,raw) {
   if (Number.isSafeInteger(raw.at)&&raw.at>0) h.at=raw.at;
   if (Number.isSafeInteger(raw.page)&&raw.page>0) h.page=raw.page;
   for(const key of ['cleared','blocked','deleted','solved']) if(typeof raw[key]==='boolean') h[key]=raw[key];
-  for(const key of ['kind','stuck','text']) if(typeof raw[key]==='string') h[key]=raw[key];
+  for(const key of ['kind','stuck','unsure','text']) if(typeof raw[key]==='string') h[key]=raw[key];
   if (accountCardRects(raw.rects)) h.rects=raw.rects;
   if (h.rects.length && typeof raw.img==='string' && /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(raw.img)) h.img=raw.img;
   return h;
 }
-function accountHydratePaperRecords(p,snapshot,state) {
-  if (!p.artifactId) {
+function accountHydratePaperRecords(p,snapshot,state,restoreSelection=true) {
+  if (restoreSelection && !p.artifactId) {
     const chosen=accountWorkspace.extra('paper',p.id)?.selectedArtifactId;
     const a=chosen && p.artifacts?.find(a=>a.artifact_id===chosen);
     if(a){p.artifactId=chosen;p.pdf=!!a.pdf?.available;p.fname=a.label_text||'';}
@@ -107,7 +114,7 @@ function accountHydratePaperRecords(p,snapshot,state) {
   }
   p.accountTaskId=s.task;
   const records=snapshot?.records||[],byId=new Map(records.map(r=>[r.record_id,r]));
-  const anchors=state?.highlights||[],byRecord=new Map(anchors.filter(h=>h.record_id).map(h=>[h.record_id,h.id]));
+  const anchors=state?.highlights||s.w.readerHighlights?.[s.artifact]||[],byRecord=new Map(anchors.filter(h=>h.record_id).map(h=>[h.record_id,h.id]));
   const models=new Map();
   for (const [id,raw] of Object.entries(cards)) {
     const h=accountReadCard(id,raw);
@@ -135,6 +142,7 @@ function accountHydratePaperRecords(p,snapshot,state) {
     if (!accountCardId(id)) continue;
     recordCards.set(r.record_id,id);latestByRoot.set(root.record_id,r);
     const h=models.get(id)||{id,type:'note',mine:'',text:'',rects:[],at:Date.parse(root.created_at)||null};
+    if (!refs.artifact_ids?.length && !cards[id] && !byRecord.has(root.record_id)) h.documentOnly=true;
     h.record_id=h.record_id||root.record_id;h.latestRecordId=r.record_id;
     h.mine=r.record.content_text;h.savedMemo=h.mine;
     const contexts=(snapshot.context?.document_contexts||[]).filter(row=>row.record_id===r.record_id);
@@ -142,6 +150,8 @@ function accountHydratePaperRecords(p,snapshot,state) {
       const cited=row.artifacts?.find(a=>refs.artifact_ids?.includes(a.artifact_id));
       return {document_ref:{document_id:row.document_id},use:{},...(cited?{artifact_ref:{artifact_id:cited.artifact_id}}:{})};
     });
+    else if (refs.document_ids?.length && !refs.artifact_ids?.length)
+      h.recordContexts=refs.document_ids.map(id=>({document_ref:{document_id:id},use:{}}));
     history.push({id:r.record_id,content_text:h.mine,source_highlight_id:id,source_page:h.page,
       created_at:Date.parse(r.created_at)||null,hidden_in_history:!!hidden[r.record_id]});
     if (h.cleared) h.mine='';
@@ -181,6 +191,36 @@ function accountHydratePaperRecords(p,snapshot,state) {
     if (!h) { h=accountReadCard(id,metadata);if(!h)continue;p.hl.push(h); }
     h.mine=d.text;
   }
+}
+// A project search includes every edition. Ordinary document-level memos appear once.
+function accountReaderFindRecords(p) {
+  const results=new Map();
+  const editions=new Set([null,p.artifactId||null,...(p.artifacts||[]).map(a=>a.artifact_id)]);
+  for (const id of editions) {
+    let model=p;
+    if (id!==(p.artifactId||null)) {
+      model={...p,artifactId:id};
+      accountHydratePaperRecords(model,accountWorkspace.resume,null,false);
+    }
+    for (const card of model.hl||[]) {
+      const artifactId=card.documentOnly?null:id, key=JSON.stringify([artifactId,card.id]);
+      if (!results.has(key)) results.set(key,{card,artifactId});
+    }
+  }
+  return [...results.values()];
+}
+function accountReaderPaperSuffix(p) {
+  const same=S.papers.filter(item=>item.title===p.title);
+  if (same.length<2) return '';
+  const prefix=p.id.slice(0,8);
+  return same.filter(item=>item.id.startsWith(prefix)).length>1?p.id:prefix;
+}
+function accountReaderResultLabel(p,id) {
+  const edition=p.artifacts?.find(a=>a.artifact_id===id);
+  const label=edition?.pdf?accountPdfEditionLabel(edition,p.artifacts.filter(a=>a.pdf).length>1):
+    edition?.label_text||'논문 기록';
+  const suffix=accountReaderPaperSuffix(p);
+  return suffix?label+' · 논문 '+suffix:label;
 }
 function accountMemo(p,h) {
   const s=accountReaderScope(p),key='draft.'+s.task+'.'+s.id+'.'+h.id;
@@ -223,54 +263,82 @@ function accountReaderDraftMemo(p,h) {
   if (!accountReaderEnabled()) return;
   const item=accountMemo(p,h);item.draft.text=h.mine;accountMemoKeep(item,'draft');
 }
+async function accountMemoVisibility(item,op,cleared,requestId) {
+  const {w,task,id,target,h}=item;
+  const persisted=w.current() && S.taskId===task && w.extra(target,id)?.cards?.[h.id]?.cleared===cleared;
+  if (!op.visibilityConfirmed && !persisted) {
+    await w.patchExtra(target,id,{cards:{[h.id]:{cleared}}},{task,requestId,
+      label:cleared?'메모 비우기':'메모 표시',onAck(){
+        op.visibilityConfirmed=true;
+        if (!item.sending && item.draft.operations.includes(op)) {
+          // The global retry button may receive the receipt independently of this editor.
+          accountMemoKeep(item,'draft');
+          if (item.active() && item.draft.text===op.text)
+            accountReaderBackground(accountReaderCompleteMemo(item.p,item.h));
+        }
+      }});
+  }
+  item.h.cleared=cleared;
+}
 async function accountReaderCompleteMemo(p,h) {
   const item=accountMemo(p,h),d=item.draft,w=item.w;
   d.text=h.mine;
-  const pending=d.operations.at(-1);
-  if (d.text.trim() && d.text!==(pending?pending.text:d.original)) {
-    d.operations.push({request_id:!d.latest && !pending?h.id:crypto.randomUUID(),text:d.text});
+  const pending=d.operations.at(-1),text=d.text.trim()?d.text:'';
+  if (text!==(pending?pending.text:d.original)) {
+    d.operations.push({request_id:!d.latest && !pending && text?h.id:crypto.randomUUID(),text});
   }
-  // Empty edits are deliberate cleared annotations. Retain their saved record history.
-  if (!d.text.trim() && !d.operations.length) {
-    await accountReaderExtra(p,{cards:{[h.id]:{cleared:true}}});
-    h.cleared=true;d.original='';
-    accountMemoKeep(item,'saved');return null;
-  }
-  if (!d.operations.length) {accountMemoKeep(item,'saved');return d.latest;}
+  if (!d.operations.length) {accountMemoKeep(item,'saved');return text?d.latest:null;}
   if (item.sending) return item.sending;
   item.sending=(async()=>{
     try {
       while (d.operations.length) {
         const op=d.operations[0];
+        accountMemoKeep(item,'saving');
+        // Clearing a memo hides its current annotation; immutable records and their references survive.
+        if (!op.text) {
+          await accountMemoVisibility(item,op,true,op.request_id);
+          d.original='';d.operations.shift();continue;
+        }
         const entry={document_ref:{document_id:p.document_id},use:{}};
         if (item.artifact) entry.artifact_ref={artifact_id:item.artifact};
         if (!op.body) {
           op.body={request_id:op.request_id,record:{content_text:op.text},context:{document_contexts:item.h.recordContexts||[entry]}};
           if (d.latest) op.body.revises_record_id=d.latest;
+          accountMemoKeep(item,'saving');
         }
-        accountMemoKeep(item,'saving');
         if (!op.receipt) {
           const ack=await w.write(item.path+'/records',op.body);
           if (typeof ack?.record_id!=='string' || !ack.record_id) throw Error('메모 저장 응답을 확인하지 못했어요.');
           op.receipt=ack.record_id;
-          if (w.recordRequests && S.taskId===item.task) w.recordRequests[op.receipt]=op.request_id;
+          if (w.current() && S.taskId===item.task) {
+            if (w.recordRequests) w.recordRequests[op.receipt]=op.request_id;
+            const rows=w.resume?.records;
+            if (rows && !rows.some(r=>r.record_id===op.receipt)) rows.unshift({
+              record_id:op.receipt,revises_record_id:op.body.revises_record_id||null,record:op.body.record,
+              context_refs:ack.context_refs||{document_ids:[p.document_id],artifact_ids:item.artifact?[item.artifact]:[]}
+            });
+          }
           accountMemoKeep(item,'saving');
         }
         const root=d.root||op.receipt;
         if (item.privatePdf && item.h.type!=='note' && !item.h.img && !d.root) {
           if (item.active()) await accountReaderAnchor(item.p,item.h);
           const linked=await w.write(accountReaderPath(item),{link:{id:item.h.id,record_id:root}});
+          accountReaderCacheMark(item,item.h.id,linked);
           if (!linked?.highlights?.some(a=>a.id===item.h.id && a.record_id===root)) throw Error('하이라이트와 메모의 연결을 확인하지 못했어요.');
+        }
+        if (item.h.cleared || op.restoreId) {
+          op.restoreId||=crypto.randomUUID();accountMemoKeep(item,'saving');
+          await accountMemoVisibility(item,op,false,op.restoreId);
         }
         d.latest=op.receipt;d.root=root;d.original=op.text;d.operations.shift();
         Object.assign(item.h,{record_id:root,latestRecordId:d.latest,savedMemo:op.text});
         if (item.active()) {
           const hist=item.p.noteHistory||=[];
           if (!hist.some(r=>r.id===op.receipt)) hist.push({id:op.receipt,content_text:op.text,created_at:Date.now(),source_highlight_id:h.id,source_page:h.page});
-          if (h.cleared) { h.cleared=false;accountReaderBackground(accountReaderExtra(p,{cards:{[h.id]:{cleared:false}}})); }
         }
       }
-      accountMemoKeep(item,d.text===d.original?'saved':'draft');
+      accountMemoKeep(item,(d.text.trim()?d.text:'')===d.original?'saved':'draft');
       if (d.text===d.original && item.active() && S.reader===item.p.id && typeof aiOn==='function' && aiOn())
         aiSchedule(item.p,300);
       return d.latest;
@@ -292,6 +360,7 @@ function accountReaderRefreshMarks(job,ack) {
   if (job.path!==accountReaderPath(s)) return;
   const id=job.body.highlight?.id||job.body.link?.id||job.body.remove_highlight;
   if (!id) return;
+  accountReaderCacheMark(s,id,ack);
   const match=ack.highlights.find(h=>h.id===id);
   if (job.body.remove_highlight) p.hl=p.hl.filter(h=>h.id!==id);
   else if (match) {
@@ -324,14 +393,19 @@ function accountReaderPrepare(p,box) {
     const fileRead=Promise.allSettled(a?.pdf?.available?[accountReaderPdf(p,a.artifact_id)]:[]);
     const [data,state]=await Promise.all([s.w.write(s.path+'/resume'),stateRead]);
     if (!v.current()) return;
-    v.ready=true;accountHydratePaperRecords(p,data,state);
-    renderRNotes();$('#rdnotes').inert=false;
+    v.ready=true;s.w.resume=data;
+    if (state?.highlights) (s.w.readerHighlights||=(Object.create(null)))[s.artifact]=state.highlights;
+    accountHydratePaperRecords(p,data,state,false);
+    renderRNotes();$('#rdnotes').inert=false;accountReaderApplyDestination(v);
     const [file]=await fileRead;
     if (!v.current()) return;
     if (file?.status==='rejected') throw file.reason;
     if (file?.value) {
       const bytes=await file.value.arrayBuffer();
-      if (v.current()) await openPv(p,{data:bytes},p.page,v.current);
+      if (v.current()) {
+        await openPv(p,{data:bytes},p.page,v.current);
+        if (v.current()) {v.pdfReady=true;accountReaderApplyDestination(v);}
+      }
     } else if (a?.pdf) box.textContent='이 판본의 PDF를 열 수 없어요. 저장된 기록을 확인하거나 같은 파일을 다시 첨부해 주세요.';
   })().catch(()=>{
     if (v.current()) {
@@ -341,6 +415,16 @@ function accountReaderPrepare(p,box) {
   });
   if (a?.pdf && typeof productAccountChatOpen==='function') productAccountChatOpen(s.task,p.document_use_id||p.id,a,s.w,loaded);
   return loaded;
+}
+function accountReaderApplyDestination(view) {
+  if (!view?.current() || !view.ready || !view.destination) return;
+  const {cardId,page}=view.destination,p=view.p;
+  const card=p.hl.find(mark=>mark.id===cardId);
+  if (card) chooseReadingRecord(p,cardId);
+  if (!view.pdfReady) return;
+  view.destination=null;
+  if (card?.rects?.length) pvReveal(card);
+  else if (Number.isSafeInteger(page) && page>0) pvGo(page);
 }
 function accountReaderPendingNotice(p) {
   const s=accountReaderScope(p),pending=s.w.saves.read('memoCards.'+s.task+'.'+s.id)||{};

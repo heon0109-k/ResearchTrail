@@ -43,3 +43,32 @@ for view, regions in data['captures'].items():
     print(view, ', '.join(regions))
 PY
 ```
+
+## 데스크톱·휴대폰의 로그인 전후 비교
+
+같은 프로젝트, 날짜, 태그 두 개, 논문 두 편, 연결 이유, 합성 PDF 파일과 첫 쪽을 양쪽에 넣는다. 왼쪽은 위 기준 커밋의 **이 브라우저에만 저장**, 오른쪽은 현재 빌드에서 Google PKCE 콜백을 거쳐 연 **계정에 저장**이다. 별도 Chromium 컨텍스트를 쓰며 인증과 계정 API는 로컬 응답 대역으로 처리한다. 외부 글꼴 요청은 차단하고 같은 시스템 글꼴로 렌더한다. 그래프는 두 화면에서 같은 난수 시드로 배치를 시작해 움직임이 멈춘 뒤 촬영한다.
+
+| 화면 | 1440 × 900 데스크톱 | 390 × 844 휴대폰 |
+|---|---|---|
+| 타임라인 | 사이드바, 가로 카드, 도구 막대 | 아래 탐색 탭, 날짜순 세로 카드 |
+| 그래프 | 그래프 버튼을 눌러 연 노드와 연결 | 아래 그래프 탭과 노드 |
+| 논문 목록 | 목록 버튼, 필터, 논문 행 | 아래 목록 탭, 필터, 같은 논문 행 |
+| 상세 | 같은 타임라인 카드에서 연 패널, 읽은 정도, 읽기 버튼 | 같은 세로 카드를 터치해 연 상세 패널 |
+| 리더 | 같은 PDF 첫 쪽, 쪽 조작, 기록과 질문 탭 | PDF 탭을 선택한 리더와 모바일 탭 |
+
+소스 비교에서 원본 기본 화면의 요소 ID는 모두 유지됐고, 본문에 날짜 미기록 논문 영역 한 개가 추가됐다. 리더 템플릿, 데스크톱과 하단 탐색을 정의하는 CSS, 그래프·목록·상세·리더·PDF·읽기 기록·질문 CSS는 기준과 바이트 단위로 일치했다. 모바일 타임라인 함수도 같은 세로 카드 요소를 사용하며 계정에 저장된 원래 읽기 상태를 표시한다. 타임라인과 계정 CSS에는 변경이 있다. 실제 글자 폭, 패널 위치, 모바일 탭 가시성과 조작 범위는 아래 렌더 비교에서 확인한다.
+
+Ubuntu에서 저장소 루트를 열고 실행한다.
+
+```bash
+npm ci
+npx --no-install playwright-core install --with-deps chromium
+unset CHROMIUM_EXECUTABLE_PATH
+SUPABASE_URL=http://localhost SUPABASE_PUBLISHABLE_KEY=sb_publishable_fixture npm run build
+node scripts/compare-product-workspace.mjs /tmp/rt-product-visual
+xdg-open /tmp/rt-product-visual/index.html
+```
+
+결과는 화면별 좌우 원본 PNG 20개, 비교용 HTML, 공통 컨트롤의 레이블·가시성·프레임 내 좌표를 기록한 `geometry.json`이다. 비교용 HTML의 각 쌍 아래에는 가시성이나 레이블이 다르거나 경계가 2 CSS px보다 많이 이동한 컨트롤을 표시한다. 추가된 컨트롤과 그래프 선, PDF 내용 등은 나란히 표시된 이미지로 확인한다. 이 환경에서는 Chromium이 시작 중 Crashpad 소켓에서 거부되어 PNG·화면 좌표를 측정할 수 없었다. `node scripts/compare-product-workspace.mjs --source-only /tmp/rt-product-visual`의 소스 비교는 실행했다.
+
+브라우저 없이 양쪽 렌더 함수를 실행한 [데스크톱·휴대폰의 화면별 컨트롤 및 문구 비교](research/product_workspace_paired_markup.md)도 있다. `node scripts/compare-product-markup.mjs`로 합성 계정 행 변환과 화면별 마크업 생성을 재현할 수 있다.

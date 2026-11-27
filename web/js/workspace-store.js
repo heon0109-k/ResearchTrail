@@ -43,8 +43,8 @@ function createWorkspaceStore(account, changed) {
       for (const [id,val] of Object.entries(rows||{})) put(kind,id,val);
   }
   function persist(job) {
-    const {id,task,lane,label,path,method,body,edit,order,conflict}=job;
-    try {sessionStorage.setItem(prefix+id,JSON.stringify({id,task,lane,label,path,method,body,edit,order,conflict})); job.volatile=false;}
+    const {id,task,lane,label,path,method,body,edit,order,conflict,tagRemoval,reviewTag}=job;
+    try {sessionStorage.setItem(prefix+id,JSON.stringify({id,task,lane,label,path,method,body,edit,order,conflict,tagRemoval,reviewTag})); job.volatile=false;}
     catch {job.volatile=true;}
   }
   const pending=()=>[...jobs.values()].sort((a,b)=>a.order-b.order);
@@ -53,8 +53,15 @@ function createWorkspaceStore(account, changed) {
       const k=sessionStorage.key(i); if(!k?.startsWith(prefix)) continue;
       let job;
       try {job=JSON.parse(sessionStorage.getItem(k));}catch{continue;}
-      if (job?.id && job.path?.startsWith('/tasks') && job.lane)
-        jobs.set(job.id,{...job,phase:'queued',recovered:true});
+      if (!job?.id || !job.path?.startsWith('/tasks') || !job.lane)continue;
+      if(!job.tagRemoval && job.path.endsWith('/tag-removal') && job.body?.tag_id){
+        const {tag_id,archive_papers}=job.body;
+        job.tagRemoval={tag_id,archive_papers};
+        job.lane=JSON.stringify([job.task,'tag-removal',tag_id]);
+        // Older archive requests did not record which papers the user saw.
+        if(archive_papers)job.reviewTag=true;
+      }
+      jobs.set(job.id,{...job,phase:'queued',recovered:true});
     }
   } catch { /* The session may have no accessible recovery storage. */ }
   // Each lane sends one request at a time. Only the head could have lost its
@@ -80,13 +87,61 @@ function createWorkspaceStore(account, changed) {
     waiting.delete(job.id);
     if(error) wait?.reject(error); else wait?.resolve(ack);
   }
+  function tagDependency(job,tag){
+    if(job.edit?.target==='project')return Object.hasOwn(job.edit.patch,'tags');
+    if(job.edit?.target==='paper' && Object.hasOwn(job.edit.patch,'tag'))
+      return job.edit.patch.tag===tag || read(job.task,'paper',job.edit.id).data.tag===tag;
+    return job.path.endsWith('/papers') && job.body?.workspace_data?.tag===tag;
+  }
+  function tagCreationsBefore(job){
+    const tag=job.edit?.target==='paper'?job.edit.patch.tag:
+      job.path.endsWith('/papers')?job.body?.workspace_data?.tag:null;
+    if(!tag || read(job.task,'project').data.tags?.some(t=>t.id===tag))return [];
+    return pending().filter(j=>j.task===job.task && j.order<job.order &&
+      j.edit?.target==='project' && j.edit.patch.tags?.some(t=>t.id===tag));
+  }
+  async function sendTagRemoval(job){
+    const {tag_id,archive_papers,expected_papers}=job.tagRemoval;
+    for(const prev of pending().filter(j=>j.task===job.task && j.order<job.order && tagDependency(j,tag_id))){
+      if(!jobs.has(prev.id))continue;
+      if(next(prev.lane)?.phase==='failed')throw Error('이 태그에 대한 미확인 저장을 먼저 다시 시도해 주세요.');
+      await ticket(prev);
+    }
+    if(!job.body){
+      job.body={...job.tagRemoval,request_id:job.id,version:read(job.task,'project').version};
+      persist(job);
+    }
+    const send=()=>account.write(job.path,job.body,{method:'POST'});
+    try{return await send();}catch(error){
+      if(error.status!==409)throw error;
+      const snapshot=await account.write('/tasks/'+job.task+'/workspace');
+      load(job.task,snapshot);
+      const members=Object.entries(snapshot.papers || {}).filter(([,v])=>v.data?.tag===tag_id).map(([id])=>id).sort();
+      if(archive_papers && !equal(members,expected_papers)){
+        job.reviewTag=true;
+        throw Error('이 태그의 논문이 바뀌었어요. 삭제할 논문을 다시 확인해 주세요.');
+      }
+      job.body.version=snapshot.project.version;
+      persist(job);
+      return send();
+    }
+  }
   async function attempt(job) {
     if (!account.current()) throw Error('계정이 변경되었어요.');
+    if(job.reviewTag)throw Error('삭제할 논문을 다시 확인해 주세요.');
+    if(job.tagRemoval)return sendTagRemoval(job);
+    for(const prior of tagCreationsBefore(job)){
+      if(!jobs.has(prior.id))continue;
+      if(next(prior.lane)?.phase==='failed')throw Error('새 태그의 저장을 먼저 다시 시도해 주세요.');
+      await ticket(prior);
+      if(!account.current())throw Error('계정이 변경되었어요.');
+    }
     if (job.edit && !job.body) {
       const {target,id,patch}=job.edit;
       const head=read(job.task,target,id);
       job.edit.before=previousValues(head.data,patch);
       job.body={target,...(target==='project'?{}:{id}),version:head.version,patch,request_id:job.id};
+      if(job.edit.paperFields)job.body.paper_fields=job.edit.paperFields;
       persist(job);
     }
     try { return await account.write(job.path,job.body,{method:job.method}); }
@@ -95,7 +150,7 @@ function createWorkspaceStore(account, changed) {
       const {target,id,patch,before}=job.edit;
       load(job.task,await account.write(job.path));
       const head=read(job.task,target,id);
-      if (conflicts(before,head.data,patch) && !job.overwrite) {
+      if ((job.edit.paperFields || conflicts(before,head.data,patch)) && !job.overwrite) {
         job.conflict=true;
         throw Error('다른 기기에서 같은 항목을 수정했어요. 내용을 확인해 주세요.');
       }
@@ -139,10 +194,18 @@ function createWorkspaceStore(account, changed) {
       if (job.path.endsWith('/paper-links') && (!ack?.link_id ||
           ack.from_document_use_id!==job.body.from_document_use_id || ack.to_document_use_id!==job.body.to_document_use_id))
         throw Error('선택한 두 논문의 연결을 확인하지 못했어요.');
-      if (job.edit) {
+      if (job.edit || job.tagRemoval) {
         if (!Number.isSafeInteger(ack?.version) || !object(ack?.data)) throw Error('저장 응답을 확인하지 못했어요.');
-        if(ack.version>=read(job.task,job.edit.target,job.edit.id).version)
-          scopes.set(scopedKey(job.task,job.edit.target,job.edit.id),clone(ack));
+        if(job.edit?.paperFields && (!equal(ack.paper_fields,job.edit.paperFields) ||
+            !equal(merge(ack.data,job.edit.patch),ack.data)))
+          throw Error('논문 수정 내용과 태그의 저장을 함께 확인하지 못했어요.');
+        if(job.tagRemoval && (!Number.isSafeInteger(ack.removed) || !Array.isArray(ack.data.tags) ||
+            ack.data.tags.some(t=>t.id===job.tagRemoval.tag_id) ||
+            (job.tagRemoval.archive_papers && ack.removed!==job.tagRemoval.expected_papers.length)))
+          throw Error('태그 삭제 결과를 확인하지 못했어요.');
+        const target=job.edit?.target || 'project', id=job.edit?.id;
+        if(ack.version>=read(job.task,target,id).version)
+          scopes.set(scopedKey(job.task,target,id),clone(ack));
       }
       try {sessionStorage.removeItem(prefix+job.id);} catch {}
       jobs.delete(job.id);
@@ -164,7 +227,9 @@ function createWorkspaceStore(account, changed) {
   function enqueue(job) {
     const existing=jobs.get(job.id);
     if (existing) {
-      if (existing.lane!==job.lane || existing.method!==job.method || !equal(existing.path,job.path) || !equal(existing.edit?.patch||existing.body,job.edit?.patch||job.body))
+      if (existing.lane!==job.lane || existing.method!==job.method || !equal(existing.path,job.path) ||
+          !equal(existing.edit?.paperFields,job.edit?.paperFields) ||
+          !equal(existing.tagRemoval || existing.edit?.patch || existing.body,job.tagRemoval || job.edit?.patch || job.body))
         return Promise.reject(Error('다른 변경에 같은 저장 번호를 사용할 수 없어요.'));
       if (job.onAck) existing.onAck=job.onAck;
       return retry(existing.id);
@@ -178,6 +243,7 @@ function createWorkspaceStore(account, changed) {
   }
   function retry(id,overwrite=false) {
     const job=jobs.get(id); if(!job)return Promise.resolve();
+    if(job.reviewTag)return Promise.reject(Error('태그에 속한 논문을 다시 확인해 주세요.'));
     const first=next(job.lane);
     if(first!==job && first.phase==='failed') return Promise.reject(Error('이전 변경의 저장을 먼저 확인해 주세요.'));
     if (job.phase==='failed'){job.phase='queued'; job.overwrite=overwrite;}
@@ -197,7 +263,28 @@ function createWorkspaceStore(account, changed) {
     if (!task) return Promise.reject(Error('프로젝트를 먼저 선택해 주세요.'));
     return enqueue({id:options.requestId||options.request_id||crypto.randomUUID(),lane:scopedKey(task,target,id),task,
       label:options.label||({project:'프로젝트 설정',paper:'논문 정보',artifact:'판본 기록'}[target]),
-      path:'/tasks/'+task+'/workspace',method:'PATCH',edit:{target,id,patch:clone(data)},onAck:options.onAck});
+      path:'/tasks/'+task+'/workspace',method:'PATCH',edit:{target,id,patch:clone(data),
+        ...(options.paperFields?{paperFields:clone(options.paperFields)}:{})},onAck:options.onAck});
+  }
+  function releaseTagReview(id){
+    const job=jobs.get(id);
+    if(!job?.tagRemoval || !job.reviewTag || job.phase!=='failed')return;
+    jobs.delete(id);
+    try{sessionStorage.removeItem(prefix+id);}catch{}
+    changed(job,'idle');
+    pump(job.lane);
+  }
+  function removeTag(task,tag,archivePapers,ids) {
+    if(archivePapers && !Array.isArray(ids))return Promise.reject(Error('삭제할 논문을 확인해 주세요.'));
+    const tagRemoval={tag_id:tag,archive_papers:!!archivePapers};
+    if(archivePapers)tagRemoval.expected_papers=[...new Set(ids)].sort();
+    const lane=JSON.stringify([task,'tag-removal',tag]);
+    const previous=next(lane);
+    if(previous?.reviewTag)releaseTagReview(previous.id);
+    else if(previous && !equal(previous.tagRemoval,tagRemoval))
+      return Promise.reject(Error('이 태그에 대한 이전 저장을 먼저 확인해 주세요.'));
+    return enqueue({id:next(lane)?.id || crypto.randomUUID(),lane,task,tagRemoval,label:'태그 삭제',
+      path:'/tasks/'+task+'/tag-removal',method:'POST'});
   }
   async function flush(task) {
     while (pending().some(j=>j.task===task)) {
@@ -224,5 +311,5 @@ function createWorkspaceStore(account, changed) {
       pump(job.lane);
     }
   }
-  return {read,load,mutate,patch,retry,pending,flush,projected,reconcileSelection};
+  return {read,load,mutate,patch,retry,removeTag,releaseTagReview,pending,flush,projected,reconcileSelection};
 }

@@ -65,19 +65,19 @@ function openReader(id,artifactId,options){S.bubble=null;if(typeof RBSEL!=='unde
   if (typeof accountReaderEnabled==='function' && accountReaderEnabled()) {
     var choices=(p.artifacts||[]).filter(a=>a.pdf || a.can_attach_pdf);
     if (artifactId && !(p.artifacts||[]).some(a=>a.artifact_id===artifactId)) return;
-    if (!RD.guide && !artifactId && !p.artifactId && choices.length>1) {
+    if (!RD.guide && !options?.paperOnly && !artifactId && !p.artifactId && choices.length>1) {
       select(id);toast('논문 상세에서 읽을 PDF 판본을 선택해 주세요.');return;
     }
-    var selected=artifactId || p.artifactId || (choices.length===1?choices[0].artifact_id:null);
+    var selected=options?.paperOnly?null:(artifactId || p.artifactId || (choices.length===1?choices[0].artifact_id:null));
     if (p.artifactId!==selected || RD.id!==id) {
       if (document.activeElement?.blur) document.activeElement.blur();
       accountCloseProductReader();NA.pid=null;RC.pid=null;
       p.artifactId=selected;
-      if(artifactId && choices.length>1 && accountWorkspace.extra('paper',p.id)?.selectedArtifactId!==selected)
+      if(artifactId && choices.length>1 && choices.some(a=>a.artifact_id===artifactId) && accountWorkspace.extra('paper',p.id)?.selectedArtifactId!==selected)
         accountReaderBackground(accountWorkspace.papers.selectEdition(p,selected));
       var pick=accountReaderEdition(p);
       p.pdf=!!pick?.pdf?.available;p.fname=pick?.label_text||'';
-      accountHydratePaperRecords(p,accountWorkspace.resume);
+      accountHydratePaperRecords(p,accountWorkspace.resume,null,false);
     }
   }
   if(!RD.guide && p.state==='skim'){
@@ -86,6 +86,10 @@ function openReader(id,artifactId,options){S.bubble=null;if(typeof RBSEL!=='unde
   }
   if(!RD.guide)p.lastReadOrder=S.papers.reduce(function(order,item){return Number.isSafeInteger(item.lastReadOrder)&&item.lastReadOrder>order?item.lastReadOrder:order},0)+1;
   S.reader=id;S.sel=id;S.panel='none';S.linking=null;renderAll();if(typeof renderRbar==='function')renderRbar();
+  if (options?.cardId && accountReaderView?.current()) {
+    accountReaderView.destination={cardId:options.cardId,page:options.page};
+    accountReaderApplyDestination(accountReaderView);
+  }
 }
 function closeReader(){if(typeof accountCloseProductReader==='function')accountCloseProductReader();S.reader=null;renderAll();if(S.sel)ensureVisible(S.sel)}
 function readerSrc(p,page){
@@ -101,6 +105,9 @@ function readerSrc(p,page){
     $('#rdnotes').inert=true;
     var accountReady=accountReaderPrepare(p,box), accountCurrent=accountReaderView.current;
     if(RD.guide && !edition && (p.artifacts||[]).filter(a=>a.pdf).length>1){box.textContent='논문 상세에서 읽을 PDF 판본을 선택할 수 있어요.';return}
+    if(edition?.can_attach_pdf && !edition.pdf){
+      box.innerHTML='<div class="rdempty"><b>선택한 판본에 PDF 파일이 아직 없어요.</b><span>이 판본의 파일을 첨부하면 원문과 함께 기록을 볼 수 있어요.</span>'+pickHtml()+'</div>';wirePick(p);return;
+    }
     if(edition?.pdf){box.innerHTML='<div class="rdempty">PDF 불러오는 중…</div>';return}
   }
   if(p.pdf && S.source!=='account'){
@@ -120,7 +127,7 @@ function readerSrc(p,page){
   var pu=pdfUrlOf(p.link);
   if(pu){
     box.innerHTML='<div class="rdempty">원문 불러오는 중…</div>';
-    Promise.resolve(accountReady).then(function(){if(!accountCurrent||accountCurrent())return openPv(p,{url:pu},accountCurrent?p.page:page,accountCurrent)}).catch(function(){if(RD.id!==p.id||(accountCurrent&&!accountCurrent()))return;frame(pu);toast('arXiv 원문은 형광펜 없이 열려요. PDF를 내려받아 올리면 형광펜을 쓸 수 있어요')});
+    Promise.resolve(accountReady).then(function(){if(!accountCurrent||accountCurrent())return openPv(p,{url:pu},accountCurrent?p.page:page,accountCurrent)}).then(function(){if(accountCurrent&&accountCurrent()){accountReaderView.pdfReady=true;accountReaderApplyDestination(accountReaderView)}}).catch(function(){if(RD.id!==p.id||(accountCurrent&&!accountCurrent()))return;frame(pu);toast('arXiv 원문은 형광펜 없이 열려요. PDF를 내려받아 올리면 형광펜을 쓸 수 있어요')});
     return;
   }
   if(p.link){
@@ -136,11 +143,14 @@ function wirePick(p){
   var f=$('#rdFile');if(!f)return;
   f.addEventListener('change',function(e){var file=e.target.files[0];if(!file)return;
     f.disabled=true;
-    attachPaperPdf(p,file,S.source==='account'&&accountReaderEdition(p)?.can_attach_pdf?p.artifactId:undefined).then(function(){
+    var scope=S.source==='account' && accountReaderScope(p);
+    attachPaperPdf(p,file,scope&&accountReaderEdition(p)?.can_attach_pdf?p.artifactId:undefined).then(function(edition){
+      if(scope&&(!scope.w.current() || S.taskId!==scope.task || paperBy(p.id)!==p || p.artifactId!==edition?.artifact_id))return;
       save();
       if(typeof scanPaperResources==='function')scanPaperResources(p,file);
       if(S.reader===p.id){readerSrc(p,p.page);renderRNotes()}
     }).catch(function(){
+      if(scope&&!scope.active())return;
       var box=$('#rdsrc');if(S.reader===p.id&&box){var error=document.createElement('p');error.setAttribute('role','alert');error.textContent='PDF를 저장하지 못했어요. 기존 첨부와 메모는 유지했으니 다시 선택해 주세요.';box.appendChild(error)}
     }).finally(function(){f.disabled=false;f.value=''})});
 }
@@ -292,7 +302,11 @@ function renderRNotes(){
 /* PDF 다운로드: 올린 PDF는 이 브라우저 저장소에서, 예시 논문은 앱 폴더에서, arXiv는 원문 PDF에서 받는다. */
 function pdfDownloadSource(p){
   if(!p)return null;
-  if(typeof accountReaderEnabled==='function' && accountReaderEnabled() && accountReaderEdition(p)?.pdf?.available) return {kind:'account'};
+  if(typeof accountReaderEnabled==='function' && accountReaderEnabled()){
+    var selected=accountReaderEdition(p);
+    if(selected?.pdf?.available)return {kind:'account'};
+    if(selected?.pdf || selected?.can_attach_pdf)return null;
+  }
   if(p.pdf && S.source!=='account')return {kind:'local'};
   var u=(typeof samplePdfUrl==='function'&&samplePdfUrl(p))||'';if(u)return {kind:'url',url:u};
   u=pdfUrlOf(p.link);if(u)return {kind:'url',url:u,external:true};

@@ -1,0 +1,82 @@
+-- Draft AC5/AC7. Fresh client with the same synthetic account, then another account.
+set role authenticated;
+select set_config('request.jwt.claim.sub','aaaaaaaa-0000-4000-8000-000000000001',false);
+do $$
+declare f product_clients.saved; state jsonb; papers jsonb; edited jsonb; snapshot jsonb; scoped jsonb; pdf jsonb;
+  a uuid; b uuid; other_task uuid; capture jsonb; key uuid:=gen_random_uuid(); req jsonb; ack jsonb;
+begin
+  select * into strict f from product_clients.saved;
+  assert pg_backend_pid()<>f.writer;
+  a:=(f.edition->>'artifact_id')::uuid; b:=(f.sibling->>'artifact_id')::uuid;
+  assert a<>b and f.edition->>'sha256'<>f.sibling->>'sha256';
+  state:=public.rt_workspace_state(f.task); papers:=public.rt_workspace_papers(f.task)->'papers';
+  assert exists(select from jsonb_array_elements(public.rt_workspace_tasks()->'tasks') task where task->>'task_id'=f.task::text and task->>'paper_count'='2');
+  select p into strict edited from jsonb_array_elements(papers) p where p->>'document_use_id'=f.paper::text;
+  assert jsonb_array_length(papers)=2 and exists(select from jsonb_array_elements(papers) p where p->>'document_use_id'=f.other::text);
+  assert edited#>>'{document,title}'='Edited synthetic A' and edited->>'date'='2026-11-27' and edited#>>'{use,purpose_text}'='Read tables';
+  assert public.rt_paper_links(f.task)->'links'=jsonb_build_array(f.link);
+  assert jsonb_array_length(edited->'artifacts')=2;
+  foreach pdf in array array[f.edition,f.sibling] loop
+    assert public.rt_paper_pdf(f.task,(pdf->>'artifact_id')::uuid)=pdf;
+    assert exists(select from jsonb_array_elements(edited->'artifacts') e where e->'artifact_id'=pdf->'artifact_id'
+      and e->>'label_text'='same.pdf' and e#>'{pdf,available}'='true' and e#>'{pdf,sha256}'=pdf->'sha256' and e#>'{pdf,size_bytes}'=pdf->'size_bytes');
+  end loop;
+  snapshot:=public.rt_resume(f.task);
+  assert jsonb_array_length(snapshot->'records')=1 and snapshot#>>'{records,0,record_id}'=f.memo::text;
+  assert snapshot#>>'{records,0,record,content_text}'='  Synthetic passage memo  ' and snapshot#>'{records,0,context_refs,artifact_ids}'=jsonb_build_array(a);
+  assert state->'reader_highlights'=jsonb_build_object(a,jsonb_build_array(f.highlight));
+  assert state->'reading_pages'=jsonb_build_object(a,2);
+  assert public.rt_pdf_reader(f.task,a)=jsonb_build_object('highlights',jsonb_build_array(f.highlight),'last_page',2);
+  assert public.rt_pdf_reader(f.task,b)='{"highlights":[],"last_page":null}';
+  assert public.rt_workspace_state(f.task)->'reading_pages'=state->'reading_pages';
+  assert state#>>'{project,data,tags,0,id}'='methods' and state#>>'{project,data,filterTag}'='methods';
+  assert state->'papers'->f.paper::text=jsonb_build_object('version',1,'data',f.edit->'patch');
+  capture:=state->'artifacts'->a::text->'data'->'cards'->f.capture::text;
+  assert capture->>'page'='2' and capture->>'record_id'=f.memo::text and capture->>'text'='Crop A' and capture->'rects'='[[0.2,0.3,0.4,0.1]]';
+  assert capture->>'img'='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jme8AAAAASUVORK5CYII=';
+  other_task:=(public.rt_create_task('{"goal_text":"Independent scope"}',gen_random_uuid())->>'task_id')::uuid;
+  assert public.rt_workspace_state(other_task)->'reader_highlights'='{}';
+  perform set_config('request.jwt.claim.sub','bbbbbbbb-0000-4000-8000-000000000002',true);
+  begin perform public.rt_workspace_state(f.task); raise exception 'foreign account read marks'; exception when no_data_found then null; end;
+  assert not exists(select from researchtrail.workspace_highlights h where h.task_id=f.task);
+  perform set_config('request.jwt.claim.sub','aaaaaaaa-0000-4000-8000-000000000001',true);
+  -- Either invalid half must roll back a mixed save. Retry identities include both halves.
+  begin perform public.rt_workspace_change(f.task,null,'patch_state',f.edit||'{"version":1,"patch":{"tag":"absent"},"paper_fields":{"title":"Wrong"}}',gen_random_uuid());
+    raise exception 'bad tag committed title'; exception when sqlstate 'RT001' then null; end;
+  begin perform public.rt_workspace_change(f.task,null,'patch_state',f.edit||'{"version":1,"patch":{"year":"1990"},"paper_fields":{"title":""}}',gen_random_uuid());
+    raise exception 'invalid title committed year'; exception when invalid_parameter_value then null; end;
+  assert public.rt_workspace_state(f.task)->'papers'=state->'papers' and public.rt_workspace_papers(f.task)->'papers'=papers;
+  begin perform public.rt_workspace_change(f.task,null,'patch_state',f.edit||'{"paper_fields":{"title":"different request"}}',f.request_id);
+    raise exception 'old receipt reused with another title'; exception when invalid_parameter_value then null; end;
+  perform public.rt_workspace_change(f.task,f.paper,'edit_paper','{"title":"Another client"}',key);
+  perform public.rt_workspace_change(f.task,f.paper,'edit_paper','{"title":"Another client"}',key);
+  assert public.rt_workspace_state(f.task)->'papers'->f.paper::text->>'version'='2';
+  begin perform public.rt_workspace_change(f.task,null,'patch_state',f.edit||'{"version":1}',gen_random_uuid());
+    raise exception 'overwrote concurrent canonical-only save'; exception when sqlstate 'RT409' then null; end;
+  assert public.rt_workspace_change(f.task,null,'patch_state',f.edit,f.request_id)=f.receipt;
+  assert exists(select from jsonb_array_elements(public.rt_workspace_papers(f.task)->'papers') p where p->>'document_use_id'=f.paper::text and p#>>'{document,title}'='Another client');
+  -- Recheck the exact set the owner confirmed when archiving tagged cards.
+  perform public.rt_workspace_change(f.task,null,'patch_state',jsonb_build_object('target','paper','id',f.other,'version',0,'patch','{"tag":"methods"}'::jsonb),gen_random_uuid());
+  req:=jsonb_build_object('tag_id','methods','archive_papers',true,'version',1,'expected_papers',jsonb_build_array(f.paper));
+  begin perform public.rt_workspace_change(f.task,null,'remove_tag',req,gen_random_uuid());
+    raise exception 'archived an unconfirmed paper'; exception when sqlstate 'RT409' then null; end;
+  assert jsonb_array_length(public.rt_workspace_papers(f.task)->'papers')=2;
+  key:=gen_random_uuid(); req:=req||jsonb_build_object('expected_papers',jsonb_build_array(f.other,f.paper));
+  ack:=public.rt_workspace_change(f.task,null,'remove_tag',req,key);
+  assert ack->>'removed'='2' and public.rt_workspace_change(f.task,null,'remove_tag',req,key)=ack;
+  assert not (ack->'data'?'filterTag'), 'removed tag still filters the project';
+  assert not (public.rt_workspace_state(f.task)#>'{project,data}'?'filterTag');
+  assert public.rt_workspace_state(f.task)->'reader_highlights'='{}' and public.rt_workspace_papers(f.task)->'papers'='[]';
+  assert public.rt_resume(f.task)#>>'{records,0,record,content_text}'='  Synthetic passage memo  ';
+  perform public.rt_workspace_change(f.task,null,'patch_state','{"target":"project","version":2,"patch":{"tags":[{"id":"one","name":"One"},{"id":"two","name":"Two"}],"filterTag":"two"}}',gen_random_uuid());
+  assert public.rt_workspace_change(f.task,null,'remove_tag',req,key)=ack, 'replayed removal did not return original filter';
+  assert public.rt_workspace_state(f.task)#>>'{project,data,filterTag}'='two';
+  ack:=public.rt_workspace_change(f.task,null,'remove_tag','{"version":3,"tag_id":"one","archive_papers":false}',gen_random_uuid());
+  assert ack#>>'{data,filterTag}'='two', 'unrelated removal changed a valid filter';
+  perform public.rt_workspace_change(f.task,null,'patch_state','{"target":"project","version":4,"patch":{"filterTag":""}}',gen_random_uuid());
+  ack:=public.rt_workspace_change(f.task,null,'remove_tag','{"version":5,"tag_id":"two","archive_papers":false}',gen_random_uuid());
+  assert ack#>>'{data,filterTag}'='', 'untagged filter must remain available';
+end $$;
+reset role;
+drop table product_clients.saved;
+drop schema product_clients;

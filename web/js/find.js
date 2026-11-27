@@ -1,15 +1,16 @@
 'use strict';
 /* ---------- 내용 찾기: 모든 논문의 하이라이트·캡처·메모에서 위치를 다시 찾기 ---------- */
 var KINDS=['수식','그래프·표','개념·방법','기타'];
-function findItems(q,kind){
+function findItems(q,kind,catalog){
   var out=[],ql=q.trim().toLowerCase();
   S.papers.forEach(function(p){
     if(typeof visible==='function'&&!visible(p))return;
-    (p.hl||[]).forEach(function(h){
+    var records=catalog?.get(p.id) || (S.source==='account'?accountReaderFindRecords(p):(p.hl||[]).map(h=>({card:h})));
+    records.forEach(function({card:h,artifactId}){
       if(kind==='막힌 곳'){if(!highlightBlocked(h))return}else if(kind&&h.kind!==kind)return;
       var hay=((h.text||'')+' '+(h.mine||'')+' '+(h.unsure||'')+' '+(h.kind||'')+' '+p.title).toLowerCase();
       if(ql&&hay.indexOf(ql)<0)return;
-      out.push({p:p,page:h.page,kind:h.kind||'',text:h.text||'',mine:h.mine||'',img:h.img||'',stuck:highlightBlocked(h)?true:(h.blocked===false?'':h.stuck||''),unsure:h.unsure||'',solved:typeof h.blocked==='boolean'?false:!!h.solved});
+      out.push({p:p,artifactId:artifactId,cardId:h.id,page:h.page,kind:h.kind||'',text:h.text||'',mine:h.mine||'',img:h.img||'',stuck:highlightBlocked(h)?true:(h.blocked===false?'':h.stuck||''),unsure:h.unsure||'',solved:typeof h.blocked==='boolean'?false:!!h.solved});
     });
     if(ql&&!kind&&p.note){
       p.note.split('\n').forEach(function(line){
@@ -34,18 +35,21 @@ function openFind(){
     '<input type="search" id="fdQ" placeholder="논문 제목이나 읽기 기록 검색" aria-label="검색어" autocomplete="off">'+
     '<div class="fk" id="fdK"></div><div class="fl" id="fdL" aria-live="polite"></div></div>';
   document.body.appendChild(ov);
+  var catalog=S.source==='account'?new Map(S.papers.map(p=>[p.id,accountReaderFindRecords(p)])):null;
   var kind='',q=$('#fdQ',ov);
   function draw(){
     $('#fdK',ov).innerHTML=['전체'].concat(KINDS).concat(['막힌 곳']).map(function(k){var on=(k==='전체'&&!kind)||k===kind;return '<button type="button" class="kc" data-k="'+(k==='전체'?'':k)+'" aria-pressed="'+on+'">'+k+'</button>'}).join('');
-    var items=findItems(q.value,kind),papers=kind?[]:findPapers(q.value);
-    var paperHtml=papers.length?'<h4 class="find-section">논문 <span>'+papers.length+'</span></h4>'+papers.map(function(p,i){return '<button type="button" class="fi find-paper" data-paper-index="'+i+'"><b>'+esc(p.title)+'</b><span>'+esc(readingState(p.state).t)+'</span></button>'}).join(''):'';
+    var items=findItems(q.value,kind,catalog),papers=kind?[]:findPapers(q.value);
+    var paperHtml=papers.length?'<h4 class="find-section">논문 <span>'+papers.length+'</span></h4>'+papers.map(function(p,i){var suffix=catalog&&accountReaderPaperSuffix(p);return '<button type="button" class="fi find-paper" data-paper-index="'+i+'"><b>'+esc(suffix?p.title+' · '+suffix:p.title)+'</b><span>'+esc(readingState(p.state).t)+'</span></button>'}).join(''):'';
     var recordHtml=items.length?'<h4 class="find-section">읽기 기록 <span>'+items.length+'</span></h4>'+items.map(function(it,i){
-      return '<button type="button" class="fi" data-i="'+i+'"><div class="ft"><b>'+esc(short(it.p.title,48))+'</b><span>'+(it.page?'p.'+it.page:'쪽 미기록')+'</span>'+(it.kind?'<em>'+esc(it.kind)+'</em>':'')+(it.stuck?'<em class="stkem">'+(it.solved?'이해함':'막힘')+'</em>':'')+'</div>'+
+      return '<button type="button" class="fi" data-i="'+i+'"><div class="ft"><b>'+esc(short(it.p.title,48))+'</b>'+(catalog?'<small>'+esc(accountReaderResultLabel(it.p,it.artifactId))+'</small>':'')+'<span>'+(it.page?'p.'+it.page:'쪽 미기록')+'</span>'+(it.kind?'<em>'+esc(it.kind)+'</em>':'')+(it.stuck?'<em class="stkem">'+(it.solved?'이해함':'막힘')+'</em>':'')+'</div>'+
         (it.img?'<img src="'+it.img+'" alt="캡처한 부분">':'')+(it.text?'<div class="fx">'+esc(short(it.text,140))+'</div>':'')+(it.mine?'<div class="fm">내가 이해한 것: '+esc(it.mine)+'</div>':'')+(it.unsure?'<div class="fm">아직 헷갈리는 것: '+esc(it.unsure)+'</div>':'')+'</button>';
     }).join(''):'';
     $('#fdL',ov).innerHTML=paperHtml+recordHtml||'<p class="empty">'+(q.value||kind?'찾은 논문이나 읽기 기록이 없어요.':'논문 제목을 검색하거나, 저장한 하이라이트·메모를 찾아보세요.')+'</p>';
     $$('[data-paper-index]',ov).forEach(function(b){b.addEventListener('click',function(){var p=papers[+b.dataset.paperIndex];close();openReader(p.id)})});
-    $$('[data-i]',ov).forEach(function(b){b.addEventListener('click',function(){var it=items[+b.dataset.i];close();if(Number.isSafeInteger(+it.page)&&+it.page>0)it.p.page=String(it.page);openReader(it.p.id)})});
+    $$('[data-i]',ov).forEach(function(b){b.addEventListener('click',function(){var it=items[+b.dataset.i];close();
+      if(catalog){openReader(it.p.id,it.artifactId,{paperOnly:!it.artifactId,cardId:it.cardId,page:+it.page});return}
+      if(Number.isSafeInteger(+it.page)&&+it.page>0)it.p.page=String(it.page);openReader(it.p.id)})});
     $$('.kc',ov).forEach(function(b){b.addEventListener('click',function(){kind=b.dataset.k;draw()})});
   }
   function close(){document.removeEventListener('keydown',kd,true);ov.remove()}

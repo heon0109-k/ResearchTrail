@@ -46,11 +46,11 @@ function showMain(){
     tn.addEventListener('click',projMenuToggle);if(tch)tch.addEventListener('click',projMenuToggle);
     tn.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();projMenuToggle()}})}
   else if(tch)tch.hidden=true;
-  $('#ownBtn').addEventListener('click',function(){if(TOUR)tourEnd(true);if(RET){RET=false;S.example=false;if(load()){showMain();renderAll();return}}startEmpty();firstRunTour()});
+  $('#ownBtn').addEventListener('click',function(){if(returnFromStandaloneExample())return;if(TOUR)tourEnd(true);if(RET){RET=false;S.example=false;if(load()){showMain();renderAll();return}}startEmpty();firstRunTour()});
   $('#bBand').addEventListener('click',function(){S.bands=!S.bands;renderAll()});
   $('#bWhy').addEventListener('click',function(){S.why=!S.why;renderAll()});
   $('#addBtn').addEventListener('click',function(){openAdd(null)});
-  $('#homeBtn').addEventListener('click',function(){showLanding()});
+  $('#homeBtn').addEventListener('click',function(){if(!returnFromStandaloneExample())showLanding()});
   $('#mm').addEventListener('keydown',function(e){var step=e.key==='ArrowLeft'?-7:e.key==='ArrowRight'?7:0;if(!step)return;e.preventDefault();var sc=$('#scroller');scrollToDay(S.zoom==='all'?(L.a+L.b)/2+(S.overviewPan||0)*(L.b-L.a)+step:L.a+(sc.scrollLeft+(sc.clientWidth-LABELW)/2)/L.px+step)});
   $('#zoomSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(b)setZoom(b.dataset.z)});
   $('#relayout').addEventListener('click',function(){relayoutDots()});
@@ -168,6 +168,11 @@ function renderAll({keepTagInputs=false}={}){
   save();
 }
 var TAGEDIT=false,TAGMANAGE=false,NEWCOLOR=null,COLOREDIT=null;
+function resetPaperWorkspaceControls(){
+  TAGEDIT=false;TAGMANAGE=false;NEWCOLOR=null;COLOREDIT=null;
+  if(typeof PSNAP!=='undefined'){PEDIT=null;PSNAP=null;PSUGOPEN=null;}
+  if(typeof flushGraphGesture==='function')flushGraphGesture();
+}
 /* 태그 색: 사용자가 고른 색은 태그 점에만 쓰인다(카드·그래프 색은 읽기 상태). */
 function colorSwatches(cur,attr){return '<div class="tag-color-palette" role="group" aria-label="태그 색">'+PAL.map(function(c){return '<button type="button" '+attr+'="'+c+'" style="--c:'+c+'" aria-label="색 '+c+'" aria-pressed="'+(c===cur)+'"></button>'}).join('')+'</div>'}
 document.addEventListener('click',function(e){var b=document.getElementById('ghB');if(!b)return;if(e.target.closest&&e.target.closest('#ghB')){b.setAttribute('aria-expanded',b.getAttribute('aria-expanded')==='true'?'false':'true')}else b.setAttribute('aria-expanded','false')});
@@ -252,7 +257,7 @@ function renderTagbar(){
     inp.addEventListener('keydown',function(e){if(e.isComposing||e.keyCode===229)return;if(e.key==='Enter'){e.preventDefault();inp.blur()}else if(e.key==='Escape'){e.stopPropagation();inp.value=tagBy(inp.dataset.renameTag).name;inp.blur()}});
     inp.addEventListener('change',function(){renameTag(inp)});
   });
-  var ti=$('#tagNew');if(ti){ti.focus();ti.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();commitTag()}else if(e.key==='Escape'){TAGEDIT=false;renderTagbar()}});ti.addEventListener('blur',function(){setTimeout(function(){if(TAGEDIT)commitTag()},120)})}
+  var ti=$('#tagNew');if(ti){ti.focus();ti.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();commitTag()}else if(e.key==='Escape'){TAGEDIT=false;renderTagbar()}});ti.addEventListener('blur',function(){setTimeout(function(){if(TAGEDIT && ti.isConnected && $('#tagNew')===ti)commitTag()},120)})}
   var cnt={done:0,reading:0,skim:0,unknown:0};S.papers.forEach(function(p){cnt[readingStateKey(p.state)]++});
   var sl=$('#stl');if(sl)sl.innerHTML=['done','reading','skim'].concat(cnt.unknown?['unknown']:[]).map(function(k){return '<div class="stl st-'+k+'"><i></i>'+readingState(k).t+'<em>'+cnt[k]+'</em></div>'}).join('');
 }
@@ -284,7 +289,8 @@ function renameTag(input){
 }
 function deleteTag(id){
   var tag=S.tags.find(function(t){return t.id===id});if(!tag)return;
-  var count=S.papers.filter(function(p){return p.tag===id}).length;
+  var confirmedPapers=S.papers.filter(p=>p.tag===id).map(p=>p.id).sort();
+  var count=confirmedPapers.length;
   var ov=document.createElement('div');ov.className='ov';
   ov.innerHTML='<div class="dlg tag-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="tagDeleteTitle"><button type="button" class="tag-dialog-close" aria-label="닫기">×</button><h3 id="tagDeleteTitle">태그 삭제</h3><p>'+esc(tag.name)+' 태그를 어떻게 삭제할까요?</p><fieldset class="tag-delete-options"><legend class="sr-only">삭제 범위</legend><label><input type="radio" name="tagDeleteScope" value="tag" checked><span><b>태그만 삭제</b><small>논문 '+count+'편은 ‘태그 없음’으로 이동해요.</small></span></label><label><input type="radio" name="tagDeleteScope" value="papers"><span><b>태그와 논문 모두 삭제</b><small>논문 '+count+'편과 메모·하이라이트도 함께 삭제해요.</small></span></label></fieldset><div class="dact"><button type="button" class="btn" id="tagDeleteCancel">취소</button><button type="button" class="btn pri" id="tagDeleteContinue">태그 삭제</button></div></div>';
   if(S.source==='account'){
@@ -310,7 +316,7 @@ function deleteTag(id){
     var all=ov.querySelector('input[value="papers"]').checked;close();
     function remove(){
       if(S.source==='account'&&S.taskId!==project)return;
-      applyTagDeletion(id,all);
+      applyTagDeletion(id,all,confirmedPapers);
     }
     if(all&&count){
       const effect=S.source==='account'?'이 프로젝트의 목록에서 “'+tag.name+'” 태그와 논문 '+count+'편을 함께 삭제해요.':
@@ -320,9 +326,9 @@ function deleteTag(id){
   });
   document.body.appendChild(ov);document.addEventListener('keydown',key,true);$('#tagDeleteCancel',ov).focus();
 }
-function applyTagDeletion(id,withPapers){
+function applyTagDeletion(id,withPapers,confirmedPapers){
   if(!S.tags.some(function(t){return t.id===id}))return false;
-  if(S.source==='account')return removeAccountTag(id,withPapers);
+  if(S.source==='account')return removeAccountTag(id,withPapers,confirmedPapers);
   var removed=S.papers.filter(function(p){return p.tag===id}),ids=new Set(removed.map(function(p){return p.id}));
   var oldPapers=S.papers,oldTags=S.tags,oldLinks=S.links,oldFilter=S.filterTag;
   S.papers=withPapers?S.papers.filter(function(p){return !ids.has(p.id)}):S.papers.map(function(p){return p.tag===id?Object.assign({},p,{tag:''}):p});
@@ -343,13 +349,16 @@ function applyTagDeletion(id,withPapers){
   S.hidden.delete(id);D.inited=false;renderAll();return true;
 }
 
-async function removeAccountTag(tagId,archivePapers){
+async function removeAccountTag(tagId,archivePapers,confirmedPapers){
   const task=S.taskId,workspace=accountWorkspace;
   try{
-    await workspace.flush();
     if(!workspace.current()||S.taskId!==task)return false;
-    const body={tag_id:tagId,archive_papers:archivePapers,version:workspace.extraVersion('project')};
-    await workspace.mutate('태그 삭제','/tasks/'+encodeURIComponent(task)+'/tag-removal',body);
+    if(workspace.removeTag){
+      await workspace.removeTag(task,tagId,archivePapers,archivePapers?confirmedPapers:undefined);
+    }else{
+      const body={tag_id:tagId,archive_papers:archivePapers,version:workspace.extraVersion('project')};
+      await workspace.mutate('태그 삭제','/tasks/'+encodeURIComponent(task)+'/tag-removal',body);
+    }
     if(workspace.current()&&S.taskId===task)await workspace.select(task);
     return true;
   }catch{

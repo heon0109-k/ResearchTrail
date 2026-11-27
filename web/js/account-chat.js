@@ -379,8 +379,13 @@ function productAccountChatOpen(task,use,artifact,account,pdfLoaded) {
   if (!artifact?.pdf) return;
   const paper=paperBy(use);
   let controller;
-  const active=(t,id)=>accountProductChat===controller && account.current() && t===task && id===artifact.artifact_id &&
-    S.taskId===task && S.reader===use && typeof PV!=='undefined' && PV?.pid===use && PV.doc;
+  // A paper may change editions before its next PDF.js document is mounted.
+  // Recheck the product selection even when the Auth session has not changed.
+  const readerSession={write:account.write,current:()=>account.current() && accountProductChat===controller &&
+    S.taskId===task && S.reader===use && paperBy(use)===paper &&
+    (!paper?.artifactId || paper.artifactId===artifact.artifact_id)};
+  const active=(t,id)=>readerSession.current() && t===task && id===artifact.artifact_id &&
+    typeof PV!=='undefined' && PV?.pid===use && PV.doc;
   const pdf={
     context(t,id) {
       if (!active(t,id)) return null;
@@ -394,7 +399,7 @@ function productAccountChatOpen(task,use,artifact,account,pdfLoaded) {
       return true;
     }
   };
-  controller=createAccountReaderChat(null,account,pdf,()=>{
+  controller=createAccountReaderChat(null,readerSession,pdf,()=>{
     if (window.matchMedia('(max-width:600px)').matches) {MTAB='pdf';applyMobileTab(paper,false);}
     $('#pvs')?.focus();
   },account);

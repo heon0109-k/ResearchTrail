@@ -54,7 +54,7 @@ async function findPaperResources(p,isCurrent,uploadedFile){
   }finally{await task.destroy()}
 }
 var PV=null;
-function killPv(){if(PV){try{PV.io&&PV.io.disconnect();PV.doc&&PV.doc.destroy()}catch(e){}PV=null}var b=$('#hlbar');if(b)b.remove()}
+function killPv(){if(PV){try{PV.clearCapture?.();PV.io&&PV.io.disconnect();PV.doc&&PV.doc.destroy()}catch(e){}PV=null}var b=$('#hlbar');if(b)b.remove();var del=$('#hldel');if(del)del.remove()}
 function toast(t){var el=$('#rdtoast');if(!el){el=document.createElement('div');el.id='rdtoast';el.className='rdtoast';document.body.appendChild(el)}el.textContent=t;el.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){el.classList.remove('on')},4200)}
 function openPv(p,src,page,current){
   return loadPdfJs().then(function(){return pdfjsLib.getDocument({...src,isEvalSupported:false}).promise}).then(function(doc){
@@ -243,16 +243,19 @@ function renderPage(p,n){
    (휴대폰에서는 pvGo가 PDF 탭으로 넘겨 주고, 화면이 다시 그려지므로 한 번 더 맞춘다.) */
 function pvReveal(h){
   if(!PV||!h||!h.page)return false;
-  pvGo(h.page,true);
+  var account=typeof accountReaderEnabled==='function'&&accountReaderEnabled();
+  pvGo(h.page,!account);
+  var viewer=PV;
   function place(){
-    var pg=PV&&PV.pages[h.page],sc=$('#pvs');if(!pg||!pg.el||!sc)return;
+    if (PV!==viewer) return;
+    var pg=PV.pages[h.page],sc=$('#pvs');if(!pg||!pg.el||!sc)return;
     var r=h.rects&&h.rects[0];
     if(r){var top=pg.el.offsetTop+r[1]*pg.el.offsetHeight;sc.scrollTop=Math.max(0,top-sc.clientHeight*0.3);
       var left=pg.el.offsetLeft+r[0]*pg.el.offsetWidth;if(left<sc.scrollLeft||left>sc.scrollLeft+sc.clientWidth-40)sc.scrollLeft=Math.max(0,left-24)}
     $$('#pvs .hlayer i[data-hid]').forEach(function(i){i.classList.toggle('flash',i.dataset.hid===h.id)});
   }
   PV.flash=h.id;place();setTimeout(place,200);
-  clearTimeout(pvReveal._t);pvReveal._t=setTimeout(function(){if(PV)PV.flash=null;$$('#pvs .hlayer i.flash').forEach(function(i){i.classList.remove('flash')})},1800);
+  clearTimeout(pvReveal._t);pvReveal._t=setTimeout(function(){if(PV!==viewer)return;PV.flash=null;$$('#pvs .hlayer i.flash').forEach(function(i){i.classList.remove('flash')})},1800);
   return true;
 }
 function drawHl(p,n){
@@ -411,7 +414,7 @@ function drawHlList(){
     fit();i.addEventListener('input',fit);
   });
   $$('[data-pg]',el).forEach(function(b){b.addEventListener('click',function(){var card=b.closest('[data-rid]'),h=card&&(p.hl||[]).filter(function(x){return x.id===card.dataset.rid})[0];if(h&&h.rects&&h.rects.length)pvReveal(h);else pvGo(+b.dataset.pg)})});
-  $$('[data-hk]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hk);if(!h)return;h.kind=b.dataset.kind;if(S.source==='account')accountReaderBackground(accountReaderCardChanged(p,h));else save();var menu=b.closest('.kind-picker');$('.kind-label',menu).textContent=h.kind;$('summary',menu).setAttribute('aria-label','기록 종류: '+h.kind);$$('[data-hk]',menu).forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});menu.open=false;$('summary',menu).focus()})});
+  $$('[data-hk]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hk);if(!h)return;h.kind=b.dataset.kind;if(S.source==='account')accountReaderBackground(accountReaderCardChanged(p,h,{kind:h.kind}));else save();var menu=b.closest('.kind-picker');$('.kind-label',menu).textContent=h.kind;$('summary',menu).setAttribute('aria-label','기록 종류: '+h.kind);$$('[data-hk]',menu).forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});menu.open=false;$('summary',menu).focus()})});
   $$('.kind-picker',el).forEach(function(menu){
     menu.addEventListener('toggle',function(){if(!menu.open)return;$$('.kind-picker',el).forEach(function(other){if(other!==menu)other.open=false});var panel=$('.kind-menu',menu),notes=$('#rdnotes'),r=menu.getBoundingClientRect(),nr=notes?notes.getBoundingClientRect():{top:0,bottom:window.innerHeight};menu.classList.toggle('opens-up',r.bottom+panel.offsetHeight+8>nr.bottom&&r.top-panel.offsetHeight-8>nr.top)});
     menu.addEventListener('keydown',function(e){var options=$$('[data-hk]',menu),index=options.indexOf(document.activeElement);if(e.key==='Escape'){e.preventDefault();e.stopPropagation();menu.open=false;$('summary',menu).focus()}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();menu.open=true;var n=e.key==='ArrowDown'?index+1:index<0?options.length-1:index-1;options[(n+options.length)%options.length].focus()}});
@@ -429,7 +432,8 @@ function drawHlList(){
       if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');save();if(typeof renderHistory==='function')renderHistory(p)});
   });
   $$('[data-hd]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hd);if(!h)return;
-    function del(){if(S.source==='account'){accountReaderBackground(accountReaderRemoveCard(p,h));return}if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});if(typeof RR!=='undefined'&&RR.pid===p.id&&RR.selected===h.id)clearReadingSelection(p);save();drawHl(p,h.page);drawHlList();if(typeof renderHistory==='function')renderHistory(p)}
+    var scope=S.source==='account' && accountReaderScope(p);
+    function del(){if(scope){if(scope.active()&&S.reader===p.id)accountReaderBackground(accountReaderRemoveCard(p,h));return}if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});if(typeof RR!=='undefined'&&RR.pid===p.id&&RR.selected===h.id)clearReadingSelection(p);save();drawHl(p,h.page);drawHlList();if(typeof renderHistory==='function')renderHistory(p)}
     ask(h.img?'이 캡처를 삭제할까요?':h.type==='note'?'이 메모를 삭제할까요?':'이 하이라이트를 삭제할까요?',h.img?'저장한 이미지와 "내가 이해한 것"이 함께 사라져요.':'선택한 기록과 메모가 목록에서 삭제돼요. 저장된 다음 할 일은 유지돼요.','삭제',del,true)})});
   $$('.hl-img',el).forEach(function(im){im.addEventListener('click',function(){
     var ov=document.createElement('div');ov.className='ov';ov.innerHTML='<img class="bigimg" src="'+im.src+'" alt="캡처한 부분 크게 보기">';

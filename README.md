@@ -74,7 +74,7 @@ npm run build
 python3 -m http.server 5500 --bind 127.0.0.1 --directory dist
 ```
 
-`SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY`를 모두 비워 두면 기존 브라우저 데모를 사용할 수 있습니다. 두 변수를 설정하면 빌드가 공개 프로젝트 URL과 게시용 키만 `dist/js/browser-config.js`에 기록하고 시작 화면에 **Google로 로그인**을 표시합니다. 로그인 후에는 현재 사이트의 루트로 돌아오며 새로고침해도 계정을 유지합니다. 새 기기에서 로그인하면 공유 타임라인이 계정에서 마지막으로 선택한 프로젝트를 엽니다. 이미 열어 둔 탭을 새로고침하면 그 탭의 프로젝트를 유지합니다. 선택한 프로젝트가 삭제되었거나 접근할 수 없으면 계정 목록의 첫 프로젝트가 열립니다. 프로젝트가 없으면 **새 프로젝트**로 첫 과업을 만드세요. 사이드바 옆 상단의 **프로젝트 이름**을 눌러 과업을 바꾸고 **+ 논문 추가**로 등록합니다. **이 브라우저에 저장한 작업 열기**에서 기기 안의 기존 논문과 메모를 열고 **계정 타임라인으로**를 눌러 돌아옵니다. 기기 자료는 로그인해도 자동으로 업로드되지 않습니다. **로그아웃**하면 이 브라우저의 작업공간으로 돌아갑니다.
+`SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY`를 모두 비워 두면 기존 브라우저 데모를 사용할 수 있습니다. 두 변수를 설정하면 빌드가 공개 프로젝트 URL과 게시용 키만 `dist/js/browser-config.js`에 기록하고 시작 화면에 **Google로 로그인**을 표시합니다. 로그인 후에는 현재 사이트의 루트로 돌아오며 새로고침해도 계정을 유지합니다. 새 기기에서 로그인하면 공유 타임라인이 계정에서 마지막으로 선택한 프로젝트를 엽니다. 이미 열어 둔 탭을 새로고침하면 그 탭의 프로젝트를 유지합니다. 선택한 프로젝트가 삭제되었거나 접근할 수 없으면 계정 목록의 첫 프로젝트가 열립니다. 프로젝트가 없으면 **새 프로젝트**로 첫 과업을 만드세요. 사이드바 옆 상단의 **프로젝트 이름**을 눌러 과업을 바꾸고 **+ 논문 추가**로 등록합니다. **로그아웃**하면 이 브라우저의 작업공간이 열립니다. 로그아웃 상태의 시작 페이지에서 **이 브라우저에 저장한 작업 열기**를 누르면 기기에 보관한 기존 논문과 메모를 다시 볼 수 있습니다. 기기 자료는 로그인해도 자동으로 업로드되지 않습니다.
 
 Google 로그인을 사용할 때는 Supabase Auth에서 Google 제공자를 설정하고, Google에 Supabase의 OAuth 콜백 URL을 등록합니다. Supabase의 허용 리디렉션 URL에는 앱을 여는 주소의 루트(예: `http://127.0.0.1:5500/`)를 등록합니다. 로컬 Supabase를 쓰는 경우 `supabase/config.toml`의 `[auth.external.google]`에 지정된 환경변수를 서버에 설정하고 해당 제공자를 활성화합니다. 모의 세션 검사는 `node tests/web_account_auth.test.cjs`로 실행합니다.
 
@@ -95,7 +95,7 @@ Google 로그인을 사용할 때는 Supabase Auth에서 Google 제공자를 설
 | Install Command | `npm ci` |
 | Build Command | `npm run build` |
 | Output Directory | `dist` |
-| Production Branch / Preview 브랜치 | `main` / `feature/unified-workspace-qa` |
+| Production Branch / 이번 Preview 브랜치 | `main` / `feature/server-backed-workspace-ui` |
 | Preview 환경변수 `SUPABASE_URL` | 테스트용 Supabase 프로젝트의 공개 HTTPS Project URL |
 | Preview 환경변수 `SUPABASE_PUBLISHABLE_KEY` | 같은 프로젝트의 Publishable key (`sb_publishable_`로 시작) |
 
@@ -113,13 +113,13 @@ Google 로그인을 사용할 때는 Supabase Auth에서 Google 제공자를 설
 
 #### 기존 계정 프로젝트의 배포 순서
 
-1. 배포할 Supabase 프로젝트의 적용 이력을 확인하고 `supabase/migrations/`의 누락된 파일을 타임스탬프 순서로 적용합니다. 기존 통합 작업공간(011)까지 적용한 프로젝트에는 `20261127001200_product_workspace.sql`이 필요합니다. 처음 설치할 때는 001부터 012까지 적용합니다. 색인 마이그레이션 008은 `extensions` 스키마의 pgvector를 사용합니다.
+1. 배포할 Supabase 프로젝트의 적용 이력을 확인하고 `supabase/migrations/`의 누락된 파일을 타임스탬프 순서로 적용합니다. 기존 통합 작업공간(011)까지 적용한 프로젝트에는 `20261127001200_product_workspace.sql`과 `20261127001300_workspace_reader_and_atomic_edits.sql`이 필요합니다. 012까지 적용했다면 013을 추가합니다. 처음 설치할 때는 001부터 013까지 적용합니다. 색인 마이그레이션 008은 `extensions` 스키마의 pgvector를 사용합니다.
 2. `supabase/functions/researchtrail/index.mjs`를 진입점으로 하는 **researchtrail** 함수를 새 버전으로 배포합니다. 같은 디렉터리의 `workspace.mjs`, `bytes.mjs`, `memo-summary.mjs`, PDF 처리 모듈과 형제 디렉터리 `_rag/`도 함께 포함합니다. 기존 로그인 확인과 서버의 임베딩 모델 설정을 유지합니다.
 3. 새 함수가 준비되면 사이트 루트에서 `npm ci`, `npm run build`로 생성한 `dist`를 배포합니다. 공개 빌드 설정은 해당 프로젝트의 `SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY`입니다. `OPENAI_API_KEY`는 함수의 서버 비밀값에만 둡니다.
 
-기존 과업·논문·메모·판본·PDF 파일과 색인은 같은 ID를 유지합니다. 과업 이름을 바꾸면 이전 메모도 그 과업에 계속 속합니다. 논문 상세에서 바꾼 제목과 저장 이유는 현재 과업의 해당 논문에만 적용됩니다. 프로젝트나 논문 삭제는 작업공간에서 항목을 숨기며, 이력에 연결된 원문 메모와 파일은 보존합니다. 기존 PDF 질문 API는 검색 범위를 생략한 호출의 연결 논문 계약을 유지합니다. 기기 안에 있던 자료는 기존 브라우저 주소에서 다시 열 수 있습니다.
+기존 과업·논문·메모·판본·PDF 파일과 색인은 같은 ID를 유지합니다. 013은 이미 삭제되어 목록을 가리던 태그 필터를 해제합니다. 과업 이름을 바꾸면 이전 메모도 그 과업에 계속 속합니다. 논문 상세에서 바꾼 제목과 저장 이유는 현재 과업의 해당 논문에만 적용됩니다. 프로젝트나 논문 삭제는 작업공간에서 항목을 숨기며, 이력에 연결된 원문 메모와 파일은 보존합니다. 기존 PDF 질문 API는 검색 범위를 생략한 호출의 연결 논문 계약을 유지합니다. 기기 안에 있던 자료는 기존 브라우저 주소에서 다시 열 수 있습니다.
 
-`GET /tasks?view=workspace`는 접근 가능한 프로젝트별 논문 수를, `GET /tasks/{task_id}/workspace`는 태그와 과업·논문·판본별 부가 데이터 및 버전을 반환합니다. 같은 경로로 보내는 `PATCH`는 저장 요청 ID와 버전을 검사합니다. 동시에 바뀐 데이터에 이전 버전으로 저장하면 HTTP 409가 돌아옵니다. 같은 요청의 재전송은 처음 저장한 버전의 응답을 돌려줍니다. 작업공간 변경 요청 하나의 JSON 크기 한도는 10 MiB입니다.
+`GET /tasks?view=workspace`는 접근 가능한 프로젝트별 논문 수를, `GET /tasks/{task_id}/workspace`는 태그와 과업·논문·판본별 부가 데이터 및 버전, 판본별 기존 하이라이트와 마지막으로 읽은 쪽을 반환합니다. 같은 경로로 보내는 `PATCH`는 저장 요청 ID와 버전을 검사합니다. 논문 수정은 제목과 날짜, 태그와 저자 등 한 번에 제출한 필드를 함께 저장합니다. 동시에 바뀐 데이터에 이전 버전으로 저장하면 HTTP 409가 돌아옵니다. 태그와 논문을 함께 삭제할 때는 화면에서 확인한 논문 목록도 검사합니다. 같은 요청의 재전송은 처음 저장한 버전의 응답을 돌려줍니다. 작업공간 변경 요청 하나의 JSON 크기 한도는 10 MiB입니다.
 
 #### 계정 논문의 비공개 PDF
 

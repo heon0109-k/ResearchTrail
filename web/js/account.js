@@ -1,8 +1,10 @@
 'use strict';
 
 (function startAccountPage() {
-  // Preserve direct links to the embedded example, without creating an Auth session for it.
-  if (new URLSearchParams(window.location.search).get('demo') === '1') {
+  const query = new URLSearchParams(window.location.search);
+  const callback = query.has('code') || query.has('error');
+  // A real callback takes priority over any stale entry-mode query.
+  if (!callback && query.get('demo') === '1') {
     window.location.replace('browser.html?demo=1');
     return;
   }
@@ -13,9 +15,7 @@
   const message = byId('authMessage');
   const login = byId('authLogin');
   const logout = byId('authLogout');
-  const back = byId('authBack');
-  const openLocal = byId('authOpenLocal');
-  const deviceTabKey = 'researchtrail.deviceView.' + window.RESEARCHTRAIL_CONFIG?.SUPABASE_URL;
+  const retry = byId('authRetry');
   let auth;
   let ready = false;
   let accountId = null;
@@ -24,8 +24,6 @@
   let generation = 0;
   let receivedChange = false;
   // The landing page's "use another account" link arrives as ?switch=1: sign this browser out, then open Google's account chooser.
-  const query = new URLSearchParams(window.location.search);
-  const callback = query.has('code') || query.has('error');
   let switching = !callback && query.get('switch') === '1';
   let startLogin = !callback && query.get('login') === '1';
   if (switching || startLogin) window.history?.replaceState(null, '', window.location.pathname);
@@ -41,35 +39,23 @@
     workspace.replaceChildren();
   }
 
-  function rememberDeviceView(enabled) {
-    try {
-      if (enabled) window.sessionStorage.setItem(deviceTabKey, accountId);
-      else window.sessionStorage.removeItem(deviceTabKey);
-    } catch { /* Storage preferences are optional. */ }
-  }
-
   function showLocal(restoreView = false) {
     closeWorkspace();
     const frame = document.createElement('iframe');
     frame.title = '이 브라우저에 저장하는 작업공간';
     frame.src = 'browser.html';
     if (restoreView) frame.name = 'rt-local-reload';
-    else if (accountId) frame.name = 'rt-device';
     workspace.appendChild(frame);
     byId('authMode').textContent = '이 브라우저에만 저장';
     message.textContent = '';
-    openLocal.hidden = true;
-    back.textContent = '계정 타임라인으로';
-    back.hidden = !accountId || !accessToken;
+    if(retry)retry.hidden = true;
   }
 
   function accountUnavailable(text) {
     closeWorkspace();
     byId('authMode').textContent = '현재 계정';
     message.textContent = text;
-    openLocal.hidden = false;
-    back.textContent = '계정 타임라인 다시 열기';
-    back.hidden = !accessToken;
+    if(retry)retry.hidden = !accountId || !accessToken;
   }
 
   function applySession(session) {
@@ -82,9 +68,6 @@
     if (ready && id === accountId && hadToken === !!accessToken) return;
 
     const reload = !ready && window.performance?.getEntriesByType('navigation')[0]?.type === 'reload';
-    let restoreDevice = false;
-    try { restoreDevice = reload && !callback && id && window.sessionStorage.getItem(deviceTabKey) === id; } catch {}
-    if (!restoreDevice) rememberDeviceView(false);
     if (accountId && id!==accountId) {
       const projectKey='researchtrail.account.'+window.RESEARCHTRAIL_CONFIG.SUPABASE_URL+'.'+accountId+'.task';
       try {window.sessionStorage.removeItem(projectKey);} catch {}
@@ -110,18 +93,13 @@
       }, 0);
       return;
     }
-    if (!id || restoreDevice) showLocal(reload);
+    if (!id) showLocal(reload);
     else if (accessToken) showTimeline();
     else accountUnavailable('계정 연결을 확인하고 있어요. 계속 열리지 않으면 다시 로그인해 주세요.');
   }
 
-  openLocal.addEventListener('click', () => {
-    rememberDeviceView(true);
-    showLocal();
-  });
   function showTimeline() {
     if (!accountId || !accessToken) return;
-    rememberDeviceView(false);
     closeWorkspace();
     const frame = document.createElement('iframe');
     const started = generation;
@@ -164,10 +142,9 @@
     workspace.appendChild(frame);
     message.textContent = '';
     byId('authMode').textContent = '계정에 저장';
-    openLocal.hidden = false;
-    back.hidden = true;
+    if(retry)retry.hidden = true;
   }
-  back.addEventListener('click', showTimeline);
+  retry?.addEventListener('click', showTimeline);
 
   login.addEventListener('click', async () => {
     if (!auth) { window.location.reload(); return; }

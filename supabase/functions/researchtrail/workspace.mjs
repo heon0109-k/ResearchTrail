@@ -44,18 +44,27 @@ export async function workspaceControl(request, route, {rpc,fail,cors,uuid}) {
     const selection=await rpc('rt_select_workspace_task',{task_id:task,revision:payload.revision,request_id});
     return selection.ok ? Response.json(await selection.json(),{headers:cors}) : selection;
   }
+  const paperFields=['title','date','purpose_text','reading_state_text','access_locator_text'];
   const fields={
     rename_task:['goal_text'],archive_task:[],archive_paper:[],
-    edit_paper:['title','date','purpose_text','reading_state_text','access_locator_text'],
-    patch_state:['target','id','version','patch','changes'], remove_tag:['tag_id','archive_papers','version'],
+    edit_paper:paperFields,patch_state:['target','id','version','patch','paper_fields','changes'],
+    remove_tag:['tag_id','archive_papers','version','expected_papers'],
   };
   if (Object.keys(payload).some(k=>!fields[operation].includes(k))) return fail(400,'INVALID_INPUT');
+  if (operation==='remove_tag' && 'expected_papers' in payload &&
+      (payload.archive_papers!==true || !Array.isArray(payload.expected_papers) ||
+       !payload.expected_papers.every(id=>typeof id==='string' && uuid.test(id)) ||
+       new Set(payload.expected_papers.map(id=>id.toLowerCase())).size!==payload.expected_papers.length))
+    return fail(400,'INVALID_INPUT');
   const validLeaf=leaf => leaf && typeof leaf==='object' && !Array.isArray(leaf) &&
     ['project','paper','artifact'].includes(leaf.target) &&
     (leaf.target==='project' ? leaf.id===undefined || leaf.id===task : typeof leaf.id==='string' && uuid.test(leaf.id)) &&
     Number.isSafeInteger(leaf.version) && leaf.version>=0 &&
     leaf.patch && typeof leaf.patch==='object' && !Array.isArray(leaf.patch) &&
-    Object.keys(leaf).every(k=>['target','id','version','patch'].includes(k));
+    Object.keys(leaf).every(k=>['target','id','version','patch','paper_fields'].includes(k)) &&
+    (!Object.hasOwn(leaf,'paper_fields') || (leaf.target==='paper' && leaf.paper_fields &&
+      typeof leaf.paper_fields==='object' && !Array.isArray(leaf.paper_fields) && Object.keys(leaf.paper_fields).length>0 &&
+      Object.keys(leaf.paper_fields).every(key=>paperFields.includes(key))));
   if (operation==='patch_state') {
     if ('changes' in payload) {
       if (Object.keys(payload).length!==1 || !Array.isArray(payload.changes) || !payload.changes.length ||

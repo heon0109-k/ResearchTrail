@@ -20,9 +20,10 @@ function accountPaperFromRow(row, extras = {}) {
 }
 
 function createAccountPaperOperations(workspace) {
-  const scope = () => {
+  const scope = paper => {
     const task = S.taskId;
     if (!task || !workspace.current()) throw Error('먼저 계정 프로젝트를 선택해 주세요.');
+    if (paper?.accountTaskId && paper.accountTaskId!==task) throw Error('논문이 속한 프로젝트가 변경되었어요.');
     return {task, path:'/tasks/'+encodeURIComponent(task), current:() => workspace.current() && S.taskId===task};
   };
   function paperLabel(id) {
@@ -31,7 +32,7 @@ function createAccountPaperOperations(workspace) {
     const brief=paper.title.length>45 ? paper.title.slice(0,45)+'…' : paper.title;
     return S.papers.some(other=>other.id!==id && other.title===paper.title) ? brief+' · '+id.slice(-8) : brief;
   }
-  const retries=new Map();
+  const retries=new Map(), editionIntents=new Map();
   function request(label,path,body,method) {
     const signature=JSON.stringify([path,method,body]);
     const id=retries.get(signature) || crypto.randomUUID();
@@ -41,10 +42,12 @@ function createAccountPaperOperations(workspace) {
       .then(result=>{acknowledged();return result;});
   }
   async function attach(paper,file,artifactId) {
-    return upload(scope(),paper,file,artifactId);
+    return upload(scope(paper),paper,file,artifactId);
   }
   async function upload(project,paper,file,artifactId,registration) {
     const prior=paper.artifacts?.find(a=>a.artifact_id===artifactId);
+    const initialEdition=paper.artifactId||null, key=project.task+'/'+paper.id;
+    const intent={};editionIntents.set(key,intent);
     const sha256=registration?.uploadJob?.sha256 || await validateAccountPdf(file,prior?.pdf?.sha256);
     if (!workspace.current()) throw Error('계정이 변경되었어요.');
     const job=registration?.uploadJob || workspace.saves.prepare(project.task,paper.id+'/'+(artifactId || ''),file);
@@ -61,10 +64,14 @@ function createAccountPaperOperations(workspace) {
       if (!project.current()) return;
       const currentPaper=paperBy(paper.id) || paper;
       const artifacts=(currentPaper.artifacts || []).filter(a=>a.artifact_id!==edition.artifact_id);
-      Object.assign(currentPaper,{artifacts:[...artifacts,edition],artifactId:edition.artifact_id,pdf:true,fname:edition.label_text});
-      if (currentPaper!==paper) Object.assign(paper,{artifacts:currentPaper.artifacts,artifactId:edition.artifact_id,pdf:true,fname:edition.label_text});
-      if (currentPaper.artifacts.filter(a=>a.pdf||a.can_attach_pdf).length>1) {
-        workspace.patchExtra('paper',paper.id,{selectedArtifactId:edition.artifact_id},{task:project.task,label:'읽을 PDF 판본'}).catch(()=>{});
+      currentPaper.artifacts=[...artifacts,edition];
+      if (currentPaper!==paper) paper.artifacts=currentPaper.artifacts;
+      const stillSelected=(currentPaper.artifactId||null)===initialEdition || currentPaper.artifactId===edition.artifact_id;
+      if (editionIntents.get(key)===intent && stillSelected) {
+        Object.assign(currentPaper,{artifactId:edition.artifact_id,pdf:true,fname:edition.label_text});
+        if (currentPaper.artifacts.filter(a=>a.pdf||a.can_attach_pdf).length>1) {
+          workspace.patchExtra('paper',paper.id,{selectedArtifactId:edition.artifact_id},{task:project.task,label:'읽을 PDF 판본'}).catch(()=>{});
+        }
       }
       if (!S.reader) renderAll();
     });
@@ -117,32 +124,32 @@ function createAccountPaperOperations(workspace) {
     }
   }
   async function update(p,changes) {
-    const project=scope(), fields={}, extra={};
+    const project=scope(p), fields={}, extra={};
     const names={title:'title',memo:'purpose_text',date:'date',link:'access_locator_text',state:'reading_state_text'};
     for (const [key,value] of Object.entries(changes)) {
       if (Object.hasOwn(names,key)) fields[names[key]]=key==='state' ? STATES[value]?.t || null : value || null;
       else if (key==='tag' || key==='resources' || key==='dismissedResourceUrls') extra[key]=value;
     }
-    const requests=[];
-    if (Object.keys(fields).length) requests.push(request(paperLabel(p.id)+' · 논문 정보',project.path+'/papers/'+p.id,fields,'PATCH').then(()=>{
-      if (!project.current()) return;
-      const restored=paperBy(p.id) || p;
-      for (const key of Object.keys(changes)) if (Object.hasOwn(names,key)) restored[key]=changes[key];
-      if ('state' in changes) restored.use={...restored.use,reading_state_text:fields.reading_state_text};
-    }));
-    if (Object.keys(extra).length) {
-      const signature=JSON.stringify([project.path,p.id,extra]);
+    const hasFields=Object.keys(fields).length>0;
+    const label=paperLabel(p.id)+' · 논문 정보';
+    if (!hasFields && !Object.keys(extra).length) return;
+    if (workspace.editPaper || Object.keys(extra).length) {
+      const signature=JSON.stringify([project.path,p.id,extra,fields]);
       const requestId=retries.get(signature) || crypto.randomUUID();
       retries.set(signature,requestId);
       const clear=()=>{if(retries.get(signature)===requestId)retries.delete(signature);};
-      requests.push(workspace.patchExtra('paper',p.id,extra,{task:project.task,requestId,onAck:clear,label:paperLabel(p.id)+' · 논문 정보'}).then(()=>{
-        clear();
-        if (project.current()) Object.assign(paperBy(p.id) || p,extra);
-      }));
+      const options={task:project.task,requestId,onAck:clear,label,...(hasFields ? {paperFields:fields} : {})};
+      if(workspace.editPaper) await workspace.editPaper(p.id,extra,options);
+      else await workspace.patchExtra('paper',p.id,extra,options);
+      clear();
+    } else if (hasFields) {
+      await request(label,project.path+'/papers/'+p.id,fields,'PATCH');
     }
-    const results=await Promise.allSettled(requests);
-    const failed=results.find(r=>r.status==='rejected');
-    if (failed) throw failed.reason;
+    if (!project.current()) return;
+    const restored=paperBy(p.id) || p;
+    Object.assign(restored,extra);
+    for (const key of Object.keys(changes)) if (Object.hasOwn(names,key)) restored[key]=changes[key];
+    if ('state' in changes) restored.use={...restored.use,reading_state_text:fields.reading_state_text};
   }
   async function link(from,to,reason,existing) {
     const project=scope(), path=project.path+'/paper-links', reason_text=reason || null;
@@ -167,7 +174,7 @@ function createAccountPaperOperations(workspace) {
     if (project.current()) S.links=S.links.filter(l=>l.id!==id);
   }
   async function remove(p) {
-    const project=scope();
+    const project=scope(p);
     await request(paperLabel(p.id)+' · 논문 삭제',project.path+'/papers/'+p.id,{},'DELETE');
     if (!project.current()) return;
     S.links=S.links.filter(l=>l.from!==p.id && l.to!==p.id);
@@ -175,11 +182,13 @@ function createAccountPaperOperations(workspace) {
   }
   const selections=new Map();
   function selectEdition(p,id) {
+    const project=scope(p);
     if (!p.artifacts.some(a=>a.artifact_id===id && (a.pdf || a.can_attach_pdf))) throw Error('PDF 판본을 확인해 주세요.');
-    const key=S.taskId+'/'+p.id, pending=selections.get(key);
+    const key=project.task+'/'+p.id, pending=selections.get(key);
+    editionIntents.set(key,id);
     if (pending?.id===id) return pending.promise;
     if (!pending && workspace.extra('paper',p.id)?.selectedArtifactId===id) return Promise.resolve();
-    const promise=workspace.patchExtra('paper',p.id,{selectedArtifactId:id},{label:paperLabel(p.id)+' · 읽을 PDF 판본'})
+    const promise=workspace.patchExtra('paper',p.id,{selectedArtifactId:id},{task:project.task,label:paperLabel(p.id)+' · 읽을 PDF 판본'})
       .finally(()=>{if(selections.get(key)?.promise===promise)selections.delete(key);});
     selections.set(key,{id,promise});
     return promise;
