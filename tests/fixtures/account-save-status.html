@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><title>읽기 기록 저장 상태 검사</title>
+<pre id="results" role="status"></pre>
+<script type="module">
+const results = document.querySelector('#results');
+const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+function check(value, message) { if (!value) throw Error(message); }
+async function until(condition, message) {
+  const end = performance.now() + 2500;
+  while (!condition()) {
+    if (performance.now() > end) throw Error(message);
+    await tick();
+  }
+}
+async function workspace() {
+  const frame = document.createElement('iframe');
+  frame.src = '../views/account-projects.html';
+  const loaded = new Promise(resolve => frame.onload = resolve);
+  document.body.append(frame);
+  await loaded;
+  const win = frame.contentWindow, $ = selector => frame.contentDocument.querySelector(selector);
+  const writes = {memo:[], pdf:[], paper:[]};
+  let failRead = false;
+  const account = crypto.randomUUID();
+  async function api(path, body, options) {
+    if (path === '/tasks') return {tasks:['a','b'].map(task_id => ({task_id, task:{goal_text:task_id}}))};
+    if (path === '/documents') return {documents:[]};
+    if (path.endsWith('/resume')) {
+      if (failRead) throw Error('합성 조회 실패');
+      return {task_id:path.split('/')[2], records:[], next_actions:[],
+        context:{questions:[], decisions:[], document_contexts:[{document_id:'doc', document:{title:'합성 논문'},
+          document_use_id:'use', use:{}, artifacts:[]}]}};
+    }
+    if (path.endsWith('/papers')) { writes.paper.push(body); return {document_use_id:'new-use'}; }
+    const kind = path.endsWith('/records') ? 'memo' : 'pdf';
+    return new Promise((resolve,reject) => writes[kind].push({path,body,options,resolve,reject}));
+  }
+  await win.startAccountProjects(api, {projectUrl:'synthetic', accountId:account, current:()=>frame.isConnected});
+  function type(text) {
+    const field = $('#rNote');
+    field.focus(); field.value = text; field.dispatchEvent(new win.Event('input', {bubbles:true}));
+  }
+  async function file(selector, edition="합성") {
+    const data = new win.DataTransfer();
+    data.items.add(new win.File(['%PDF-1.4\n'+edition+'\n%%EOF\n'], edition+'.pdf', {type:'application/pdf'}));
+    const input = $(selector);
+    input.files = data.files;
+    input.dispatchEvent(new win.Event('change', {bubbles:true}));
+  }
+  const message = () => $('#memoStatus').textContent;
+  const shows = word => until(() => message().includes(word), '표시 누락 ['+word+'] '+message());
+  const unsafe = () => check(!message().includes('닫아도'), '미확인 상태에서 닫기 안내: '+message());
+  const click = selector => {
+    const button = $(selector);
+    check(button && button.getClientRects().length && !button.disabled, '사용할 수 없는 버튼 '+selector);
+    button.click();
+  };
+  const write = async (kind, index=0) => {
+    await until(()=>writes[kind][index], '요청 누락 '+kind+' '+index);
+    return writes[kind][index];
+  };
+  return {$,writes,write,type,file,shows,unsafe,click, message, end:()=>frame.remove(),
+    edit(text){ type(text); $('#rNote').blur(); }, failCatalog(){failRead=true;}};
+}
+
+const cases = {
+  async '메모 응답 후 PDF 실패 · 같은 파일만 재시도'(c) {
+    c.edit('  합성 메모\n원문  ');
+    const memo = await c.write('memo');
+    await c.shows('메모를 저장하는 중'); c.unsafe();
+    await c.file('[data-attach-pdf]');
+    const pdf = await c.write('pdf');
+    memo.resolve({record_id:'r1'});
+    await c.shows('메모를 계정에 저장했'); await c.shows('PDF를 업로드하는 중'); c.unsafe();
+    pdf.reject(Error('합성 전송 중단'));
+    await c.shows('PDF 업로드에 실패'); await c.shows('메모를 계정에 저장했'); c.unsafe();
+    c.click('#pdfUploadRetry');
+    const retry = await c.write('pdf',1);
+    check(retry.body === pdf.body && retry.path === pdf.path, '재시도에서 파일이나 대상이 바뀜');
+    check(c.writes.memo.length === 1 && memo.body.record.content_text === '  합성 메모\n원문  ', '메모가 변경되거나 재전송됨');
+    c.unsafe(); retry.resolve({artifact_id:'art'});
+    await c.shows('닫아도'); check(c.$('#pdfUploadRetry').hidden, '성공 후 업로드 재시도 버튼');
+  },
+  async 'PDF 응답 후 메모 미확인 · 같은 메모 요청만 재시도'(c) {
+    c.edit('메모'); const memo=await c.write('memo');
+    await c.file('[data-attach-pdf]'); const pdf=await c.write('pdf');
+    pdf.resolve({artifact_id:'art'}); await c.shows('PDF를 계정에 저장했'); c.unsafe();
+    memo.resolve({}); await c.shows('메모 저장을 확인하지 못했'); c.unsafe();
+    c.click('#memoRetry'); const retry=await c.write('memo',1);
+    check(retry.body.request_id === memo.body.request_id && c.writes.pdf.length === 1, '메모 재시도 범위 오류');
+    retry.resolve({record_id:'r1'}); await c.shows('닫아도');
+  },
+  async '이전 메모 응답과 PDF 응답이 도착해도 새 편집은 미확인'(c) {
+    c.edit('첫 메모'); const first=await c.write('memo');
+    await c.file('[data-attach-pdf]'); const pdf=await c.write('pdf');
+    c.edit('정정'); c.type('작성 중인 최신 메모');
+    first.resolve({record_id:'first'}); const second=await c.write('memo',1);
+    c.unsafe(); second.resolve({record_id:'second'}); pdf.resolve({artifact_id:'art'});
+    await c.shows('작성 중'); c.unsafe();
+    check(c.$('#rNote').value === '작성 중인 최신 메모' && second.body.revises_record_id === 'first', '후속 편집 손실');
+    c.$('#rNote').blur(); const latest=await c.write('memo',2); c.unsafe();
+    latest.resolve({record_id:'latest'}); await c.shows('닫아도');
+  },
+  async '각각 실패한 메모와 새 논문의 PDF를 독립적으로 재시도'(c) {
+    c.edit('폼을 여는 동안 저장'); const memo=await c.write('memo');
+    c.click('#addBtn'); await until(()=>c.$('#aTitle'),'등록 양식 열기');
+    c.$('#aTitle').value='새 합성 논문'; await c.file('#aFile');
+    c.click('#addForm button[type=submit]'); const pdf=await c.write('pdf');
+    memo.reject(Error('합성 메모 중단')); pdf.resolve({});
+    await c.shows('메모 저장을 확인하지 못했'); await c.shows('PDF 업로드에 실패'); c.unsafe();
+    check(c.$('#memoStatus').getClientRects().length, '등록 중 상태가 가려짐');
+    c.click('#pdfUploadRetry'); const retryPdf=await c.write('pdf',1);
+    check(c.writes.memo.length===1 && c.writes.paper.length===1 && retryPdf.path==='/tasks/a/papers/new-use/pdf', 'PDF 재시도 범위 오류');
+    retryPdf.resolve({artifact_id:'new-art'}); await c.shows('PDF를 계정에 저장했'); c.unsafe();
+    c.click('#memoRetry'); const retryMemo=await c.write('memo',1);
+    check(retryMemo.body.request_id===memo.body.request_id && c.writes.pdf.length===2, '메모 재시도 범위 오류');
+    retryMemo.resolve({record_id:'r1'}); await c.shows('닫아도');
+  },
+  async '같은 논문에서 다른 PDF를 올려도 실패한 판본을 계속 재시도할 수 있음'(c) {
+    await c.file('[data-attach-pdf]','첫째'); const first=await c.write('pdf');
+    first.reject(Error('합성 전송 중단')); await c.shows('PDF 업로드에 실패');
+    await c.file('[data-attach-pdf]','둘째'); const second=await c.write('pdf',1);
+    second.resolve({artifact_id:'second'}); await c.shows('PDF 업로드에 실패'); c.unsafe();
+    c.click('#pdfUploadRetry'); const retry=await c.write('pdf',2);
+    check(retry.body===first.body && c.writes.pdf.length===3, '실패한 판본이 바뀜');
+    retry.resolve({artifact_id:'first'}); await c.shows('닫아도');
+  },
+  async '확인된 메모 뒤에 선택한 PDF는 제출 또는 취소할 때까지 닫기 안내를 보류'(c) {
+    c.edit('메모만 저장'); const memo=await c.write('memo');
+    memo.resolve({record_id:'r'}); await c.shows('닫아도');
+    c.click('#addBtn'); await until(()=>c.$('#aFile'),'등록 양식 열기');
+    await c.file('#aFile'); c.unsafe();
+    c.click('#addForm button[type=submit]'); c.unsafe();
+    check(!c.$('#aErr').hidden && !c.writes.pdf.length, '제목 없는 등록이 전송됨');
+    c.click('#aCancel'); await c.shows('닫아도');
+    c.type('아직 전송하지 않은 수정'); c.unsafe();
+  },
+  async '다른 과업의 늦은 PDF 응답이 현재 과업의 메모를 확인하지 않음'(c) {
+    await c.file('[data-attach-pdf]'); const first=await c.write('pdf');
+    c.click('#tName'); c.click('[data-pj-go="b"]');
+    await until(()=>!c.$('#accountMemos').hidden, '두 번째 과업 열기');
+    c.edit('다른 과업 메모'); const memo=await c.write('memo');
+    first.resolve({artifact_id:'a-edition'}); await tick();
+    await c.shows('메모를 저장하는 중'); c.unsafe();
+    check(!c.message().includes('PDF') && memo.path==='/tasks/b/records','이전 과업 응답 혼입');
+    memo.resolve({record_id:'b-record'}); await c.shows('닫아도');
+  },
+  async 'PDF 단독 저장 · 목록 조회 실패가 업로드 재시도를 유발하지 않음'(c) {
+    c.unsafe(); await c.file('[data-attach-pdf]'); const pdf=await c.write('pdf');
+    c.failCatalog(); pdf.resolve({artifact_id:'art'});
+    await c.shows('닫아도'); await until(()=>c.$('#projectStatus').textContent.includes('목록'), '목록 조회 오류');
+    check(!c.message().includes('메모') && c.writes.memo.length === 0 && c.$('#pdfUploadRetry').hidden, '요청하지 않은 저장이 표시됨');
+  },
+};
+let failures=0;
+for (const [name,run] of Object.entries(cases)) {
+  let c;
+  try { c=await workspace(); await run(c); results.textContent+='PASS '+name+'\n'; }
+  catch (error) { failures++; results.textContent+='FAIL '+name+' — '+error.message+'\n'; }
+  finally { c?.end(); }
+}
+results.dataset.failures=String(failures);
+</script></html>

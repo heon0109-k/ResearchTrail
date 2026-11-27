@@ -72,7 +72,7 @@ function readerSrc(p,page){
   var bundled=typeof samplePdfUrl==='function'?samplePdfUrl(p):null;
   if(bundled){
     box.innerHTML='<div class="rdempty">예시 PDF 불러오는 중…</div>';
-    openPv(p,{url:bundled},page).catch(function(){if(RD.id!==p.id)return;frame(bundled);toast('기본 PDF 뷰어로 열었어요. 형광펜 기능을 쓰려면 인터넷 연결을 확인하고 다시 열어 주세요.')});
+    openPv(p,{url:bundled},page).catch(function(){if(RD.id!==p.id)return;frame(bundled);toast('기본 PDF 뷰어로 열었어요. 형광펜 기능을 쓰려면 읽기 화면을 다시 열어 주세요.')});
     return;
   }
   var pu=pdfUrlOf(p.link);
@@ -133,6 +133,21 @@ function chooseReadingRecord(p,id){
   $$('.reading-card',$('#rRecords')).forEach(function(card){card.classList.toggle('is-selected',card.dataset.rid===id)});
 }
 function clearReadingSelection(p){RR.selected=null;naChooseSource(p,null)}
+// A change completes an edit. Blur also covers input methods that only dispatch input.
+function wireMemoEditor(field, onInput, onComplete) {
+  var editing=false;
+  field.addEventListener('input',function(){
+    var first=!editing;
+    editing=true;
+    onInput(field.value,first);
+  });
+  function finish(){
+    editing=false;
+    return onComplete(field.value);
+  }
+  field.addEventListener('change',finish);
+  field.addEventListener('blur',function(){if(editing)return finish()});
+}
 function legacyReadingRecordHtml(p){
   if(!p.note&&!(p.noteHistory||[]).some(function(e){return !e.source_highlight_id}))return '';
   return '<div class="reading-card legacy-reading-card'+(RR.selected==='legacy-note'?' is-selected':'')+'" data-rid="legacy-note" tabindex="0" aria-label="논문 메모 선택"><div class="hl-top"><b class="record-title">논문 메모</b><span class="record-selected">선택한 기록</span><button type="button" class="hl-copy" id="rLegacyCopy" aria-label="AI에게 물어볼 질문 복사" title="AI에게 물어볼 질문 복사">⧉</button></div><textarea id="rNote" rows="2" aria-label="읽기 기록 메모" placeholder="메모를 남겨 보세요">'+esc(p.note||'')+'</textarea><button type="button" class="record-candidate" data-record-candidate="legacy-note">다음 할 일 찾기 →</button></div>';
@@ -181,12 +196,11 @@ function renderRNotes(){
   $('#rMemo').addEventListener('input',function(e){p.memo=e.target.value;save()});
   resizeReaderTodo();
   $('#rTodo').addEventListener('input',function(e){resizeReaderTodo();if(typeof aiEditTodo==='function'&&aiEditTodo(p,e.target))return;p.todo=e.target.value;p.todoSrc='manual';save()});
-  var editingNote=false,noteField=$('#rNote');
-  if(noteField){noteField.addEventListener('input',function(e){
-    if(!editingNote){rememberNote(p,p.note||'');editingNote=true}
-    p.note=e.target.value;save();if(NA.pid===p.id&&NA.st==='cand')naRender(p,true);
-  });
-  noteField.addEventListener('change',function(){rememberNote(p,p.note||'');editingNote=false;save();renderHistory(p);if(NA.pid===p.id&&NA.st==='cand')naRender(p,true)})}
+  var noteField=$('#rNote');
+  if(noteField)wireMemoEditor(noteField,function(text,first){
+    if(first)rememberNote(p,p.note||'');
+    p.note=text;save();if(NA.pid===p.id&&NA.st==='cand')naRender(p,true);
+  },function(){rememberNote(p,p.note||'');save();renderHistory(p);if(NA.pid===p.id&&NA.st==='cand')naRender(p,true)});
   $('#rTodo').addEventListener('change',function(){if(typeof aiOn==='function'&&aiOn())return;rememberManualTodo(p);save();renderHistory(p)});
   naInit(p);renderHistory(p);
   if(typeof aiInit==='function')aiInit(p);

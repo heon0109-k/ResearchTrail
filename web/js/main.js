@@ -9,7 +9,7 @@ function startResearchTrail(){
   }
 }
 
-function isPageReload(){try{return performance.getEntriesByType('navigation')[0].type==='reload'}catch(e){return false}}
+function isPageReload(){try{return window.name==='rt-local-reload'||performance.getEntriesByType('navigation')[0].type==='reload'}catch(e){return false}}
 
 function restoreSessionScreen(){
   try{

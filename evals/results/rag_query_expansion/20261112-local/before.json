@@ -1,0 +1,516 @@
+{
+  "recordedAt": "2026-11-12T08:35:55.171Z",
+  "model": "gemini-3.5-flash-lite",
+  "cases": [
+    {
+      "id": "G1",
+      "pid": "s8",
+      "q": "TS와 SS 실험 조건은 각각 어떤 문맥을 사용해?",
+      "gold": [
+        7
+      ],
+      "expected": "TS: 원문 텍스트를 섞고 나눠 map-reduce 요약. SS: 텍스트 청크를 검색해 토큰 한도까지 문맥에 추가."
+    },
+    {
+      "id": "G2",
+      "pid": "s8",
+      "q": "원문을 섞어 나눠서 요약하는 비교 방법과, 질문에 맞는 글 조각을 찾아 넣는 비교 방법은 입력 내용을 어떻게 다르게 구성해?",
+      "gold": [
+        7
+      ],
+      "expected": "G1과 동일"
+    },
+    {
+      "id": "G3",
+      "pid": "s8",
+      "q": "TS와 SS 실험에 사용한 GPU 모델명과 GPU 개수는?",
+      "gold": [],
+      "expected": "미기재: 근거 부족 안내"
+    },
+    {
+      "id": "B1",
+      "pid": "s2",
+      "q": "Masked LM에서 예측 대상으로 고른 토큰은 [MASK], random token, unchanged token으로 각각 얼마나 처리해?",
+      "gold": [
+        4,
+        12
+      ],
+      "expected": "선택된 토큰 중 [MASK] 80%, 임의 토큰 10%, 유지 10%. 전체 토큰 중 선택은 15%."
+    },
+    {
+      "id": "B2",
+      "pid": "s2",
+      "q": "가린 낱말을 맞히는 학습에서 예측 대상으로 뽑은 낱말을 가림 표시로 바꾸거나, 임의 낱말로 바꾸거나, 그대로 두는 비율은 각각 얼마야?",
+      "gold": [
+        4,
+        12
+      ],
+      "expected": "B1과 동일"
+    },
+    {
+      "id": "B3",
+      "pid": "s2",
+      "q": "BERT 사전학습에 사용된 전력량은 몇 kWh야?",
+      "gold": [],
+      "expected": "미기재: 근거 부족 안내"
+    },
+    {
+      "id": "V1",
+      "pid": "s3",
+      "q": "BioBERT가 original WordPiece vocabulary를 그대로 사용한 두 가지 이유는?",
+      "gold": [
+        3
+      ],
+      "expected": "기존 BERT와 호환·재사용·교환 가능. 기존 WordPiece로 새 단어도 표현하고 의생명 분야에 맞게 학습 가능."
+    },
+    {
+      "id": "V2",
+      "pid": "s3",
+      "q": "의생명 분야에 맞춰 추가 학습하면서도 기존 낱말 사전을 새로 만들지 않은 두 가지 이유는?",
+      "gold": [
+        3
+      ],
+      "expected": "V1과 동일"
+    },
+    {
+      "id": "V3",
+      "pid": "s3",
+      "q": "BioBERT를 환자 대상 무작위 임상시험으로 검증했을 때 등록 환자 수는?",
+      "gold": [],
+      "expected": "미기재: 근거 부족 안내"
+    }
+  ],
+  "results": [
+    {
+      "id": "G1",
+      "question": "TS와 SS 실험 조건은 각각 어떤 문맥을 사용해?",
+      "startPage": 1,
+      "initialMessages": 0,
+      "retrieval": {
+        "pages": [
+          {
+            "n": 7,
+            "text": "3.3 Conditions We compare six different conditions in our analysis, including Graph RAG using four levels of graph communities ( C0 , C1 , C2 , C3 ), a text summarization method applying our map-reduce approach directly to source texts ( TS ), and a na ̈ ıve \"semantic search\" RAG approach ( SS ): • CO . Uses root-level community summaries (fewest in number) to answer user queries. • C1 . Uses high-level community summaries to answer queries. These are sub-communities of C0, if present, otherwise C0 communities projected down. • C2 . Uses intermediate-level community summaries to answer queries. These are subcommunities of C1, if present, otherwise C1 communities projected down. • C3 . Uses low-level community summaries (greatest in number) to answer queries. These are sub-communities of C2, if present, otherwise C2 communities projected down. • TS . The same method as in subsection 2.6, except source texts (rather than community summaries) are shuffled and chunked for the map-reduce summarization stages. • SS . An implementation of na ̈ ıve RAG in which text chunks are retrieved and added to the available context window until the specified token limit is reached. The size of the context window and the prompts used for answer generation are the same across all six conditions (except for minor modifications to reference styles to match the types of context information used). Conditions only differ in how the contents of the context window are created. The graph index supporting conditions C0 - C3 was created using our generic prompts for entity and relationship extraction"
+          },
+          {
+            "n": 9,
+            "text": "Podcast transcripts 50 17 28 25 22 21 83 50 50 48 43 44 72 50 50 53 50 49 75 52 47 50 52 50 78 57 50 48 50 52 79 56 51 50 48 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Comprehensiveness 50 18 23 25 19 19 82 50 50 50 43 46 77 50 50 50 46 44 75 50 50 50 44 45 81 57 54 56 50 48 81 54 56 55 52 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Diversity 50 42 57 52 49 51 58 50 59 55 52 51 43 41 50 49 47 48 48 45 51 50 49 50 51 48 53 51 50 51 49 49 52 50 49 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Empowerment 50 56 65 60 60 60 44 50 55 52 51 52 35 45 50 47 48 48 40 48 53 50 50 50 40 49 52 50 50 50 40 48 52 50 50 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Directness News articles 50 20 28 25 21 21 80 50 44 41 38 36 72 56 50 52 54 52 75 59 48 50 58 55 79 62 46 42 50 59 79 64 48 45 41 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Comprehensiveness 50 33 38 35 29 31 67 50 53 45 44 40 62 47 50 40 41 41 65 55 60 50 50 50 71 56 59 50 50 51 69 60 59 50 49 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Diversity 50 47 57 49 50 50 53 50 58 50 50 48 43 42 50 42 45 44 51 50 58 50 52 51 50 50 55 48 50 50 50 52 56 49 50 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Empowerment 50 54 59 55 55 54 46 50 55 53 52 52 41 45 50 48 48 47 45 47 52 50 49 49 45 48 52 51 50 49 46 48 53 51 51 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Directness Figure 4: Head-to-head win rate percentages of (row condition) over (column condition) across two datasets, four metrics, and 125 questions per comparison (each repeated five times and averaged). The overall winner per dataset and metric is shown in bold. Self-win rates were not computed but are shown as the expected 50% for reference. All Graph RAG conditions outperformed na ̈ ıve RAG on comprehensiveness and diversity. Conditions C1-C3 also showed slight improvements in answer comprehensiveness and diversity over TS (global text summarization without a graph index). 3.5 Configuration The effect of context window size on any particular task is unclear, especially for models like gpt-4-turbo with a large context size of 128k tokens. Given the potential for information to be \"lost in the middle\" of longer contexts (Kuratov et al., 2024; Liu et al., 2023), we wanted to explore the effects of varying the context window size for our combinations of datasets, questions, and metrics. In particular, our goal was to determine the optimum context size for our baseline condition ( SS ) and then use this uniformly for all query-time LLM use. To that end, we tested four context window sizes: 8k, 16k, 32k and 64k. Surprisingly, the smallest context window size tested (8k) was universally better for all comparisons on comprehensiveness (average win rate of 58.1%), while performing comparably with larger context sizes on diversity (average win rate = 52.4%), and empowerment (average win rate = 51.3%). Given our preference for more comprehensive and diverse answers, we therefore used a fixed context window size of 8k tokens for the final evaluation. 3.6 Results The indexing process resulted in a graph consisting of 8564 nodes and 20691 edges for the Podcast dataset, and a larger graph of 15754 nodes and 19520 edges for the News dataset. Table 3 shows the number of community summaries at different levels of each graph community hierarchy. Global approaches vs. na ̈ ıve RAG . As shown in Figure 4, global approaches consistently outperformed the na ̈ ıve RAG ( SS ) approach in both comprehensiveness and diversity metrics across datasets. Specifically, global approaches achieved comprehensiveness win rates between 72-83% for Podcast transcripts and 72-80% for News articles, while diversity win rates ranged from 75-82% and 62-71% respectively. Our use of directness as a validity test also achieved the expected results, i.e., that na ̈ ıve RAG produces the most direct responses across all comparisons. 9"
+          },
+          {
+            "n": 10,
+            "text": "Podcast Transcripts News Articles C0 C1 C2 C3 TS C0 C1 C2 C3 TS Units 34 367 969 1310 1669 55 555 1797 2142 3197 Tokens 26657 225756 565720 746100 1014611 39770 352641 980898 1140266 1707694 % Max 2.6 22.2 55.8 73.5 100 2.3 20.7 57.4 66.8 100 Table 3: Number of context units (community summaries for C0-C3 and text chunks for TS ), corresponding token counts, and percentage of the maximum token count. Map-reduce summarization of source texts is the most resource-intensive approach requiring the highest number of context tokens. Root-level community summaries ( C0 ) require dramatically fewer tokens per query (9x-43x). Community summaries vs. source texts. When comparing community summaries to source texts using Graph RAG, community summaries generally provided a small but consistent improvement in answer comprehensiveness and diversity, except for root-level summaries. Intermediate-level summaries in the Podcast dataset and low-level community summaries in the News dataset achieved comprehensiveness win rates of 57% and 64%, respectively. Diversity win rates were 57% for Podcast intermediate-level summaries and 60% for News low-level community summaries. Table 3 also illustrates the scalability advantages of Graph RAG compared to source text summarization: for low-level community summaries ( C3 ), Graph RAG required 26-33% fewer context tokens, while for root-level community summaries ( C0 ), it required over 97% fewer tokens. For a modest drop in performance compared with other global methods, root-level Graph RAG offers a highly efficient method for the iterative question answering that characterizes sensemaking activity, while retaining advantages in comprehensiveness (72% win rate) and diversity (62% win rate) over na ̈ ıve RAG. Empowerment . Empowerment comparisons showed mixed results for both global approaches versus na ̈ ıve RAG ( SS ) and Graph RAG approaches versus source text summarization ( TS ). Ad-hoc LLM use to analyze LLM reasoning for this measure indicated that the ability to provide specific examples, quotes, and citations was judged to be key to helping users reach an informed understanding. Tuning element extraction prompts may help to retain more of these details in the Graph RAG index. 4 Related Work 4.1 RAG Approaches and Systems When using LLMs, RAG involves first retrieving relevant information from external data sources, then adding this information to the context window of the LLM along with the original query (Ram et al., 2023). Na ̈ ıve RAG approaches (Gao et al., 2023) do this by converting documents to text, splitting text into chunks, and embedding these chunks into a vector space in which similar positions represent similar semantics. Queries are then embedded into the same vector space, with the text chunks of the nearest k vectors used as context. More advanced variations exist, but all solve"
+          }
+        ],
+        "matched": true,
+        "chunkCount": 6,
+        "totalPages": 15
+      },
+      "answer": {
+        "role": "bot",
+        "kind": "answer",
+        "text": "SS 조건은 지정된 토큰 한계에 도달할 때까지 텍스트 청크를 검색하여 사용하고, TS 조건은 맵-레코드 요약 단계를 위해 원본 텍스트를 섞고 청크로 나누어 사용해요. [p.7]",
+        "pages": [
+          7
+        ],
+        "sent": [
+          7
+        ],
+        "at": 1794471972068
+      },
+      "linkOpened": 7,
+      "rawStatus": "not captured"
+    },
+    {
+      "id": "G2",
+      "question": "원문을 섞어 나눠서 요약하는 비교 방법과, 질문에 맞는 글 조각을 찾아 넣는 비교 방법은 입력 내용을 어떻게 다르게 구성해?",
+      "startPage": 1,
+      "initialMessages": 0,
+      "retrieval": {
+        "pages": [
+          {
+            "n": 1,
+            "text": "From Local to Global: A Graph RAG Approach to Query-Focused Summarization Darren Edge 1† Ha Trinh 1† Newman Cheng 2 Joshua Bradley 2 Alex Chao 3 Apurva Mody 3 Steven Truitt 2 Jonathan Larson 1 1 Microsoft Research 2 Microsoft Strategic Missions and Technologies 3 Microsoft Office of the CTO { daedge,trinhha,newmancheng,joshbradley,achao,moapurva,steventruitt,jolarso } @microsoft.com † These authors contributed equally to this work Abstract The use of retrieval-augmented generation (RAG) to retrieve relevant information from an external knowledge source enables large language models (LLMs) to answer questions over private and/or previously unseen document collections. However, RAG fails on global questions directed at an entire text corpus, such as \"What are the main themes in the dataset?\", since this is inherently a queryfocused summarization (QFS) task, rather than an explicit retrieval task. Prior QFS methods, meanwhile, fail to scale to the quantities of text indexed by typical RAG systems. To combine the strengths of these contrasting methods, we propose a Graph RAG approach to question answering over private text corpora that scales with both the generality of user questions and the quantity of source text to be indexed. Our approach uses an LLM to build a graph-based text index in two stages: first to derive an entity knowledge graph from the source documents, then to pregenerate community summaries for all groups of closely-related entities. Given a question, each community summary is used to generate a partial response, before all partial responses are again summarized in a final response to the user. For a class of global sensemaking questions over datasets in the 1 million token range, we show that Graph RAG leads to substantial improvements over a na ̈ ıve RAG baseline for both the comprehensiveness and diversity of generated answers. An open-source, Python-based implementation of both global and local Graph RAG approaches is forthcoming at https://aka . ms/graphrag . 1 Introduction Human endeavors across a range of domains rely on our ability to read and reason about large collections of documents, often reaching conclusions that go beyond anything stated in the source texts themselves. With the emergence of large language models (LLMs), we are already witnessing attempts to automate human-like sensemaking in complex domains like scientific discovery (Microsoft, 2023) and intelligence analysis (Ranade and Joshi, 2023), where sensemaking is defined as Preprint. Under review. arXiv:2404.16130v1 [cs.CL] 24 Apr 2024"
+          }
+        ],
+        "matched": false,
+        "chunkCount": 2,
+        "totalPages": 15
+      },
+      "raw": {
+        "in_scope": true,
+        "found": false,
+        "answer": "",
+        "pages": [],
+        "evidence": {
+          "page": 0,
+          "quote": ""
+        }
+      },
+      "answer": {
+        "role": "bot",
+        "kind": "notfound",
+        "text": "검색해 보낸 구절에서 답의 근거를 찾지 못했어요. 질문에 논문의 용어나 쪽 번호를 넣어 다시 물어봐 주세요.",
+        "pages": [],
+        "sent": [],
+        "at": 1794472023536
+      },
+      "error": "",
+      "outboundConfirmed": true,
+      "historySent": false
+    },
+    {
+      "id": "G3",
+      "question": "TS와 SS 실험에 사용한 GPU 모델명과 GPU 개수는?",
+      "startPage": 1,
+      "initialMessages": 0,
+      "selected": false,
+      "retrieval": {
+        "pages": [
+          {
+            "n": 7,
+            "text": "3.3 Conditions We compare six different conditions in our analysis, including Graph RAG using four levels of graph communities ( C0 , C1 , C2 , C3 ), a text summarization method applying our map-reduce approach directly to source texts ( TS ), and a na ̈ ıve \"semantic search\" RAG approach ( SS ): • CO . Uses root-level community summaries (fewest in number) to answer user queries. • C1 . Uses high-level community summaries to answer queries. These are sub-communities of C0, if present, otherwise C0 communities projected down. • C2 . Uses intermediate-level community summaries to answer queries. These are subcommunities of C1, if present, otherwise C1 communities projected down. • C3 . Uses low-level community summaries (greatest in number) to answer queries. These are sub-communities of C2, if present, otherwise C2 communities projected down. • TS . The same method as in subsection 2.6, except source texts (rather than community summaries) are shuffled and chunked for the map-reduce summarization stages. • SS . An implementation of na ̈ ıve RAG in which text chunks are retrieved and added to the available context window until the specified token limit is reached. The size of the context window and the prompts used for answer generation are the same across all six conditions (except for minor modifications to reference styles to match the types of context information used). Conditions only differ in how the contents of the context window are created. The graph index supporting conditions C0 - C3 was created using our generic prompts for entity and relationship extraction"
+          },
+          {
+            "n": 9,
+            "text": "Podcast transcripts 50 17 28 25 22 21 83 50 50 48 43 44 72 50 50 53 50 49 75 52 47 50 52 50 78 57 50 48 50 52 79 56 51 50 48 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Comprehensiveness 50 18 23 25 19 19 82 50 50 50 43 46 77 50 50 50 46 44 75 50 50 50 44 45 81 57 54 56 50 48 81 54 56 55 52 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Diversity 50 42 57 52 49 51 58 50 59 55 52 51 43 41 50 49 47 48 48 45 51 50 49 50 51 48 53 51 50 51 49 49 52 50 49 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Empowerment 50 56 65 60 60 60 44 50 55 52 51 52 35 45 50 47 48 48 40 48 53 50 50 50 40 49 52 50 50 50 40 48 52 50 50 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Directness News articles 50 20 28 25 21 21 80 50 44 41 38 36 72 56 50 52 54 52 75 59 48 50 58 55 79 62 46 42 50 59 79 64 48 45 41 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Comprehensiveness 50 33 38 35 29 31 67 50 53 45 44 40 62 47 50 40 41 41 65 55 60 50 50 50 71 56 59 50 50 51 69 60 59 50 49 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Diversity 50 47 57 49 50 50 53 50 58 50 50 48 43 42 50 42 45 44 51 50 58 50 52 51 50 50 55 48 50 50 50 52 56 49 50 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Empowerment 50 54 59 55 55 54 46 50 55 53 52 52 41 45 50 48 48 47 45 47 52 50 49 49 45 48 52 51 50 49 46 48 53 51 51 50 SS TS C0 C1 C2 C3 SS TS C0 C1 C2 C3 Directness Figure 4: Head-to-head win rate percentages of (row condition) over (column condition) across two datasets, four metrics, and 125 questions per comparison (each repeated five times and averaged). The overall winner per dataset and metric is shown in bold. Self-win rates were not computed but are shown as the expected 50% for reference. All Graph RAG conditions outperformed na ̈ ıve RAG on comprehensiveness and diversity. Conditions C1-C3 also showed slight improvements in answer comprehensiveness and diversity over TS (global text summarization without a graph index). 3.5 Configuration The effect of context window size on any particular task is unclear, especially for models like gpt-4-turbo with a large context size of 128k tokens. Given the potential for information to be \"lost in the middle\" of longer contexts (Kuratov et al., 2024; Liu et al., 2023), we wanted to explore the effects of varying the context window size for our combinations of datasets, questions, and metrics. In particular, our goal was to determine the optimum context size for our baseline condition ( SS ) and then use this uniformly for all query-time LLM use. To that end, we tested four context window sizes: 8k, 16k, 32k and 64k. Surprisingly, the smallest context window size tested (8k) was universally better for all comparisons on comprehensiveness (average win rate of 58.1%), while performing comparably with larger context sizes on diversity (average win rate = 52.4%), and empowerment (average win rate = 51.3%). Given our preference for more comprehensive and diverse answers, we therefore used a fixed context window size of 8k tokens for the final evaluation. 3.6 Results The indexing process resulted in a graph consisting of 8564 nodes and 20691 edges for the Podcast dataset, and a larger graph of 15754 nodes and 19520 edges for the News dataset. Table 3 shows the number of community summaries at different levels of each graph community hierarchy. Global approaches vs. na ̈ ıve RAG . As shown in Figure 4, global approaches consistently outperformed the na ̈ ıve RAG ( SS ) approach in both comprehensiveness and diversity metrics across datasets. Specifically, global approaches achieved comprehensiveness win rates between 72-83% for Podcast transcripts and 72-80% for News articles, while diversity win rates ranged from 75-82% and 62-71% respectively. Our use of directness as a validity test also achieved the expected results, i.e., that na ̈ ıve RAG produces the most direct responses across all comparisons. 9"
+          },
+          {
+            "n": 10,
+            "text": "Podcast Transcripts News Articles C0 C1 C2 C3 TS C0 C1 C2 C3 TS Units 34 367 969 1310 1669 55 555 1797 2142 3197 Tokens 26657 225756 565720 746100 1014611 39770 352641 980898 1140266 1707694 % Max 2.6 22.2 55.8 73.5 100 2.3 20.7 57.4 66.8 100 Table 3: Number of context units (community summaries for C0-C3 and text chunks for TS ), corresponding token counts, and percentage of the maximum token count. Map-reduce summarization of source texts is the most resource-intensive approach requiring the highest number of context tokens. Root-level community summaries ( C0 ) require dramatically fewer tokens per query (9x-43x). Community summaries vs. source texts. When comparing community summaries to source texts using Graph RAG, community summaries generally provided a small but consistent improvement in answer comprehensiveness and diversity, except for root-level summaries. Intermediate-level summaries in the Podcast dataset and low-level community summaries in the News dataset achieved comprehensiveness win rates of 57% and 64%, respectively. Diversity win rates were 57% for Podcast intermediate-level summaries and 60% for News low-level community summaries. Table 3 also illustrates the scalability advantages of Graph RAG compared to source text summarization: for low-level community summaries ( C3 ), Graph RAG required 26-33% fewer context tokens, while for root-level community summaries ( C0 ), it required over 97% fewer tokens. For a modest drop in performance compared with other global methods, root-level Graph RAG offers a highly efficient method for the iterative question answering that characterizes sensemaking activity, while retaining advantages in comprehensiveness (72% win rate) and diversity (62% win rate) over na ̈ ıve RAG. Empowerment . Empowerment comparisons showed mixed results for both global approaches versus na ̈ ıve RAG ( SS ) and Graph RAG approaches versus source text summarization ( TS ). Ad-hoc LLM use to analyze LLM reasoning for this measure indicated that the ability to provide specific examples, quotes, and citations was judged to be key to helping users reach an informed understanding. Tuning element extraction prompts may help to retain more of these details in the Graph RAG index. 4 Related Work 4.1 RAG Approaches and Systems When using LLMs, RAG involves first retrieving relevant information from external data sources, then adding this information to the context window of the LLM along with the original query (Ram et al., 2023). Na ̈ ıve RAG approaches (Gao et al., 2023) do this by converting documents to text, splitting text into chunks, and embedding these chunks into a vector space in which similar positions represent similar semantics. Queries are then embedded into the same vector space, with the text chunks of the nearest k vectors used as context. More advanced variations exist, but all solve"
+          }
+        ],
+        "matched": true,
+        "chunkCount": 6,
+        "totalPages": 15
+      },
+      "raw": {
+        "in_scope": true,
+        "found": false,
+        "answer": "",
+        "pages": [],
+        "evidence": {
+          "page": 0,
+          "quote": ""
+        }
+      },
+      "answer": {
+        "role": "bot",
+        "kind": "notfound",
+        "text": "검색해 보낸 구절에서 답의 근거를 찾지 못했어요. 질문에 논문의 용어나 쪽 번호를 넣어 다시 물어봐 주세요.",
+        "pages": [],
+        "sent": [],
+        "at": 1794472082691
+      },
+      "error": "",
+      "requests": 1,
+      "outboundConfirmed": true,
+      "historySent": false,
+      "linkOpened": []
+    },
+    {
+      "id": "B1",
+      "question": "Masked LM에서 예측 대상으로 고른 토큰은 [MASK], random token, unchanged token으로 각각 얼마나 처리해?",
+      "startPage": 1,
+      "initialMessages": 0,
+      "selected": false,
+      "retrieval": {
+        "pages": [
+          {
+            "n": 4,
+            "text": "is constructed by summing the corresponding token, segment, and position embeddings. A visualization of this construction can be seen in Figure 2. 3.1 Pre-training BERT Unlike Peters et al. (2018a) and Radford et al. (2018), we do not use traditional left-to-right or right-to-left language models to pre-train BERT. Instead, we pre-train BERT using two unsupervised tasks, described in this section. This step is presented in the left part of Figure 1. Task #1: Masked LM Intuitively, it is reasonable to believe that a deep bidirectional model is strictly more powerful than either a left-to-right model or the shallow concatenation of a left-toright and a right-to-left model. Unfortunately, standard conditional language models can only be trained left-to-right or right-to-left, since bidirectional conditioning would allow each word to indirectly \"see itself\", and the model could trivially predict the target word in a multi-layered context. former is often referred to as a \"Transformer encoder\" while the left-context-only version is referred to as a \"Transformer decoder\" since it can be used for text generation. In order to train a deep bidirectional representation, we simply mask some percentage of the input tokens at random, and then predict those masked tokens. We refer to this procedure as a \"masked LM\" (MLM), although it is often referred to as a Cloze task in the literature (Taylor, 1953). In this case, the final hidden vectors corresponding to the mask tokens are fed into an output softmax over the vocabulary, as in a standard LM. In all of our experiments, we mask 15% of all WordPiece tokens in each sequence at random. In contrast to denoising auto-encoders (Vincent et al., 2008), we only predict the masked words rather than reconstructing the entire input. Although this allows us to obtain a bidirectional pre-trained model, a downside is that we are creating a mismatch between pre-training and fine-tuning, since the [MASK] token does not appear during fine-tuning. To mitigate this, we do not always replace \"masked\" words with the actual [MASK] token. The training data generator chooses 15% of the token positions at random for prediction. If the i -th token is chosen, we replace the i -th token with (1) the [MASK] token 80% of the time (2) a random token 10% of the time (3) the unchanged i -th token 10% of the time. Then, T i will be used to predict the original token with cross entropy loss. We compare variations of this procedure in Appendix C.2. Task #2: Next Sentence Prediction (NSP) Many important downstream tasks such as Question Answering (QA) and Natural Language Inference (NLI) are based on understanding the relationship between two sentences, which is not directly captured by language modeling. In order to train a model that understands sentence relationships, we pre-train for a binarized next sentence prediction task"
+          },
+          {
+            "n": 12,
+            "text": "of the pre-training tasks in the following. Masked LM and the Masking Procedure Assuming the unlabeled sentence is my dog is hairy , and during the random masking procedure we chose the 4-th token (which corresponding to hairy ), our masking procedure can be further illustrated by • 80% of the time: Replace the word with the [MASK] token, e.g., my dog is hairy → my dog is [MASK] • 10% of the time: Replace the word with a random word, e.g., my dog is hairy → my dog is apple • 10% of the time: Keep the word unchanged, e.g., my dog is hairy → my dog is hairy . The purpose of this is to bias the representation towards the actual observed word. The advantage of this procedure is that the Transformer encoder does not know which words it will be asked to predict or which have been replaced by random words, so it is forced to keep a distributional contextual representation of every input token. Additionally, because random replacement only occurs for 1.5% of all tokens (i.e., 10% of 15%), this does not seem to harm the model's language understanding capability. In Section C.2, we evaluate the impact this procedure. Compared to standard langauge model training, the masked LM only make predictions on 15% of tokens in each batch, which suggests that more pre-training steps may be required for the model"
+          },
+          {
+            "n": 16,
+            "text": "MNLI Dev Accuracy BERT BASE (Masked LM) BERT BASE (Left-to-Right) Figure 5: Ablation over number of training steps. This shows the MNLI accuracy after fine-tuning, starting from model parameters that have been pre-trained for k steps. The x-axis is the value of k . and fine-tuning, as the [MASK] symbol never appears during the fine-tuning stage. We report the Dev results for both MNLI and NER. For NER, we report both fine-tuning and feature-based approaches, as we expect the mismatch will be amplified for the feature-based approach as the model will not have the chance to adjust the representations. Masking Rates Dev Set Results M ASK S AME R ND MNLI NER Fine-tune Fine-tune Feature-based 80% 10% 10% 84.2 95.4 94.9 100% 0% 0% 84.3 94.9 94.0 80% 0% 20% 84.1 95.2 94.6 80% 20% 0% 84.4 95.2 94.7 0% 20% 80% 83.7 94.8 94.6 0% 0% 100% 83.6 94.9 94.6 Table 8: Ablation over different masking strategies. The results are presented in Table 8. In the table, M ASK means that we replace the target token with the [MASK] symbol for MLM; S AME means that we keep the target token as is; R ND means that we replace the target token with another random token. The numbers in the left part of the table represent the probabilities of the specific strategies used during MLM pre-training (BERT uses 80%, 10%, 10%). The right part of the paper represents the Dev set results. For the feature-based approach, we concatenate the last 4 layers of BERT as the features, which was shown to be the best approach in Section 5.3. From the table it can be seen that fine-tuning is surprisingly robust to different"
+          },
+          {
+            "n": 13,
+            "text": "penguin [MASK] are flight ##less birds [SEP] Label = NotNext A.2 Pre-training Procedure To generate each training input sequence, we sample two spans of text from the corpus, which we refer to as \"sentences\" even though they are typically much longer than single sentences (but can be shorter also). The first sentence receives the A embedding and the second receives the B embedding. 50% of the time B is the actual next sentence that follows A and 50% of the time it is a random sentence, which is done for the \"next sentence prediction\" task. They are sampled such that the combined length is ≤ 512 tokens. The LM masking is applied after WordPiece tokenization with a uniform masking rate of 15%, and no special consideration given to partial word pieces. We train with batch size of 256 sequences (256 sequences * 512 tokens = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs over the 3.3 billion word corpus. We use Adam with learning rate of 1e-4, β 1 = 0 . 9 , β 2 = 0 . 999 , L2 weight decay of 0 . 01 , learning rate warmup over the first 10,000 steps, and linear decay of the learning rate. We use a dropout probability of 0.1 on all layers. We use a gelu activation (Hendrycks and Gimpel, 2016) rather than the standard relu , following OpenAI GPT. The training loss is the sum of the mean masked LM likelihood and the mean next sentence prediction likelihood. Training of BERT BASE was performed on 4 Cloud TPUs in Pod configuration (16 TPU chips total). 13 Training of BERT LARGE was performed on 16 Cloud TPUs (64 TPU chips total). Each pretraining took 4"
+          },
+          {
+            "n": 3,
+            "text": "4173 BERT BERT E [CLS] E 1 E [SEP] ... E N E 1 ' ... E M ' C T 1 T [SEP] ... T N T 1 ' ... T M ' [CLS] Tok 1 [SEP] ... Tok N Tok 1 ... TokM Question Paragraph Start/End Span BERT E [CLS] E 1 E [SEP] ... E N E 1 ' ... E M ' C T 1 T [SEP] ... T N T 1 ' ... T M ' [CLS] Tok 1 [SEP] ... Tok N Tok 1 ... TokM Masked Sentence A Masked Sentence B Pre-training Fine-Tuning NSP Mask LM Mask LM Unlabeled Sentence A and B Pair SQuAD Question Answer Pair NER MNLI Figure 1: Overall pre-training and fine-tuning procedures for BERT. Apart from output layers, the same architectures are used in both pre-training and fine-tuning. The same pre-trained model parameters are used to initialize models for different down-stream tasks. During fine-tuning, all parameters are fine-tuned. [CLS] is a special symbol added in front of every input example, and [SEP] is a special separator token (e.g. separating questions/answers). ing and auto-encoder objectives have been used for pre-training such models (Howard and Ruder, 2018; Radford et al., 2018; Dai and Le, 2015). 2.3 Transfer Learning from Supervised Data There has also been work showing effective transfer from supervised tasks with large datasets, such as natural language inference (Conneau et al., 2017) and machine translation (McCann et al., 2017). Computer vision research has also demonstrated the importance of transfer learning from large pre-trained models, where an effective recipe is to fine-tune models pre-trained with ImageNet (Deng et al., 2009; Yosinski et al., 2014). 3 BERT We introduce BERT and its detailed implementation in this"
+          }
+        ],
+        "matched": true,
+        "chunkCount": 6,
+        "totalPages": 16
+      },
+      "raw": {
+        "in_scope": true,
+        "found": true,
+        "answer": "Masked LM에서는 예측 대상으로 고른 토큰 중 80%는 [MASK] 토큰으로 바꾸고, 10%는 무작위 토큰으로 바꾸며, 나머지 10%는 원래 토큰 그대로 유지해요.",
+        "pages": [
+          4
+        ],
+        "evidence": {
+          "page": 4,
+          "quote": "If the i -th token is chosen, we replace the i -th token with (1) the [MASK] token 80% of the time (2) a random token 10% of the time (3) the unchanged i -th token 10% of the time."
+        }
+      },
+      "answer": {
+        "role": "bot",
+        "kind": "answer",
+        "text": "Masked LM에서는 예측 대상으로 고른 토큰 중 80%는 [MASK] 토큰으로 바꾸고, 10%는 무작위 토큰으로 바꾸며, 나머지 10%는 원래 토큰 그대로 유지해요. [p.4]",
+        "pages": [
+          4
+        ],
+        "sent": [
+          4
+        ],
+        "at": 1794472092357
+      },
+      "error": "",
+      "requests": 1,
+      "outboundConfirmed": true,
+      "historySent": false,
+      "linkOpened": [
+        {
+          "label": 4,
+          "actual": 4
+        }
+      ]
+    },
+    {
+      "id": "B2",
+      "question": "가린 낱말을 맞히는 학습에서 예측 대상으로 뽑은 낱말을 가림 표시로 바꾸거나, 임의 낱말로 바꾸거나, 그대로 두는 비율은 각각 얼마야?",
+      "startPage": 1,
+      "initialMessages": 0,
+      "selected": false,
+      "retrieval": {
+        "pages": [
+          {
+            "n": 1,
+            "text": "Proceedings of NAACL-HLT 2019 , pages 4171–4186 Minneapolis, Minnesota, June 2 - June 7, 2019. c © 2019 Association for Computational Linguistics 4171 BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding Jacob Devlin Ming-Wei Chang Kenton Lee Kristina Toutanova Google AI Language { jacobdevlin,mingweichang,kentonl,kristout } @google.com Abstract We introduce a new language representation model called BERT , which stands for B idirectional E ncoder R epresentations from T ransformers. Unlike recent language representation models (Peters et al., 2018a; Radford et al., 2018), BERT is designed to pretrain deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers. As a result, the pre-trained BERT model can be finetuned with just one additional output layer to create state-of-the-art models for a wide range of tasks, such as question answering and language inference, without substantial taskspecific architecture modifications. BERT is conceptually simple and empirically powerful. It obtains new state-of-the-art results on eleven natural language processing tasks, including pushing the GLUE score to 80.5% (7.7% point absolute improvement), MultiNLI accuracy to 86.7% (4.6% absolute improvement), SQuAD v1.1 question answering Test F1 to 93.2 (1.5 point absolute improvement) and SQuAD v2.0 Test F1 to 83.1 (5.1 point absolute improvement). 1 Introduction Language model pre-training has been shown to be effective for improving many natural language processing tasks (Dai and Le, 2015; Peters"
+          }
+        ],
+        "matched": false,
+        "chunkCount": 1,
+        "totalPages": 16
+      },
+      "raw": {
+        "in_scope": true,
+        "found": false,
+        "answer": "",
+        "pages": [],
+        "evidence": {
+          "page": 0,
+          "quote": ""
+        }
+      },
+      "answer": {
+        "role": "bot",
+        "kind": "notfound",
+        "text": "검색해 보낸 구절에서 답의 근거를 찾지 못했어요. 질문에 논문의 용어나 쪽 번호를 넣어 다시 물어봐 주세요.",
+        "pages": [],
+        "sent": [],
+        "at": 1794472100402
+      },
+      "error": "",
+      "requests": 1,
+      "outboundConfirmed": true,
+      "historySent": false,
+      "linkOpened": []
+    },
+    {
+      "id": "B3",
+      "question": "BERT 사전학습에 사용된 전력량은 몇 kWh야?",
+      "startPage": 1,
+      "initialMessages": 0,
+      "selected": false,
+      "retrieval": {
+        "pages": [
+          {
+            "n": 1,
+            "text": "Proceedings of NAACL-HLT 2019 , pages 4171–4186 Minneapolis, Minnesota, June 2 - June 7, 2019. c © 2019 Association for Computational Linguistics 4171 BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding Jacob Devlin Ming-Wei Chang Kenton Lee Kristina Toutanova Google AI Language { jacobdevlin,mingweichang,kentonl,kristout } @google.com Abstract We introduce a new language representation model called BERT , which stands for B idirectional E ncoder R epresentations from T ransformers. Unlike recent language representation models (Peters et al., 2018a; Radford et al., 2018), BERT is designed to pretrain deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers. As a result, the pre-trained BERT model can be finetuned with just one additional output layer to create state-of-the-art models for a wide range of tasks, such as question answering and language inference, without substantial taskspecific architecture modifications. BERT is conceptually simple and empirically powerful. It obtains new state-of-the-art results on eleven natural language processing tasks, including pushing the GLUE score to 80.5% (7.7% point absolute improvement), MultiNLI accuracy to 86.7% (4.6% absolute improvement), SQuAD v1.1 question answering Test F1 to 93.2 (1.5 point absolute improvement) and SQuAD v2.0 Test F1 to 83.1 (5.1 point absolute improvement). 1 Introduction Language model pre-training has been shown to be effective for improving many natural language processing tasks (Dai and Le, 2015; Peters\n[중략]\nminimal task-specific parameters, and is trained on the downstream tasks by simply fine-tuning all pretrained parameters. The two approaches share the same objective function during pre-training, where they use unidirectional language models to learn general language representations. We argue that current techniques restrict the power of the pre-trained representations, especially for the fine-tuning approaches. The major limitation is that standard language models are unidirectional, and this limits the choice of architectures that can be used during pre-training. For example, in OpenAI GPT, the authors use a left-toright architecture, where every token can only attend to previous tokens in the self-attention layers of the Transformer (Vaswani et al., 2017). Such restrictions are sub-optimal for sentence-level tasks, and could be very harmful when applying finetuning based approaches to token-level tasks such as question answering, where it is crucial to incorporate context from both directions. In this paper, we improve the fine-tuning based approaches by proposing BERT: B idirectional E ncoder R epresentations from T ransformers. BERT alleviates the previously mentioned unidirectionality constraint by using a \"masked language model\" (MLM) pre-training objective, inspired by the Cloze task (Taylor, 1953). The masked language model randomly masks some of the tokens from the input, and the objective is to predict the original vocabulary id of the masked"
+          },
+          {
+            "n": 2,
+            "text": "4172 word based only on its context. Unlike left-toright language model pre-training, the MLM objective enables the representation to fuse the left and the right context, which allows us to pretrain a deep bidirectional Transformer. In addition to the masked language model, we also use a \"next sentence prediction\" task that jointly pretrains text-pair representations. The contributions of our paper are as follows: • We demonstrate the importance of bidirectional pre-training for language representations. Unlike Radford et al. (2018), which uses unidirectional language models for pre-training, BERT uses masked language models to enable pretrained deep bidirectional representations. This is also in contrast to Peters et al. (2018a), which uses a shallow concatenation of independently trained left-to-right and right-to-left LMs. • We show that pre-trained representations reduce the need for many heavily-engineered taskspecific architectures. BERT is the first finetuning based representation model that achieves state-of-the-art performance on a large suite of sentence-level and token-level tasks, outperforming many task-specific architectures. • BERT advances the state of the art for eleven NLP tasks. The code and pre-trained models are available at https://github.com/ google-research/bert . 2 Related Work There is a long history of pre-training general language representations, and we briefly review the most widely-used approaches in this section. 2.1 Unsupervised Feature-based Approaches Learning widely applicable representations of words has been an active area of research for decades, including non-neural (Brown et al., 1992; Ando and Zhang, 2005; Blitzer et al., 2006) and neural (Mikolov et al., 2013; Pennington et al., 2014) methods. Pre-trained word embeddings are an integral part of modern NLP systems, offering significant improvements over embeddings learned from scratch (Turian et al., 2010). To pretrain word embedding vectors, left-to-right language modeling objectives have been used (Mnih and Hinton, 2009), as well as objectives to discriminate correct from incorrect words in left and right context (Mikolov et al., 2013). These approaches have been generalized to coarser granularities, such as sentence embeddings (Kiros et al., 2015; Logeswaran and Lee, 2018) or paragraph embeddings (Le and Mikolov, 2014). To train sentence representations, prior work has used objectives to rank candidate next sentences (Jernite et al., 2017; Logeswaran and Lee, 2018), left-to-right generation of next sentence words given a representation of the previous sentence (Kiros et al., 2015), or denoising autoencoder derived objectives (Hill et al., 2016). ELMo and its predecessor (Peters et al., 2017, 2018a) generalize traditional word embedding research along a different dimension. They extract context-sensitive features from a left-to-right and a"
+          },
+          {
+            "n": 3,
+            "text": "4173 BERT BERT E [CLS] E 1 E [SEP] ... E N E 1 ' ... E M ' C T 1 T [SEP] ... T N T 1 ' ... T M ' [CLS] Tok 1 [SEP] ... Tok N Tok 1 ... TokM Question Paragraph Start/End Span BERT E [CLS] E 1 E [SEP] ... E N E 1 ' ... E M ' C T 1 T [SEP] ... T N T 1 ' ... T M ' [CLS] Tok 1 [SEP] ... Tok N Tok 1 ... TokM Masked Sentence A Masked Sentence B Pre-training Fine-Tuning NSP Mask LM Mask LM Unlabeled Sentence A and B Pair SQuAD Question Answer Pair NER MNLI Figure 1: Overall pre-training and fine-tuning procedures for BERT. Apart from output layers, the same architectures are used in both pre-training and fine-tuning. The same pre-trained model parameters are used to initialize models for different down-stream tasks. During fine-tuning, all parameters are fine-tuned. [CLS] is a special symbol added in front of every input example, and [SEP] is a special separator token (e.g. separating questions/answers). ing and auto-encoder objectives have been used for pre-training such models (Howard and Ruder, 2018; Radford et al., 2018; Dai and Le, 2015). 2.3 Transfer Learning from Supervised Data There has also been work showing effective transfer from supervised tasks with large datasets, such as natural language inference (Conneau et al., 2017) and machine translation (McCann et al., 2017). Computer vision research has also demonstrated the importance of transfer learning from large pre-trained models, where an effective recipe is to fine-tune models pre-trained with ImageNet (Deng et al., 2009; Yosinski et al., 2014). 3 BERT We introduce BERT and its detailed implementation in this section. There are two steps in our framework: pre-training and fine-tuning . During pre-training, the model is trained on unlabeled data over different pre-training tasks. For finetuning, the BERT model is first initialized with the pre-trained parameters, and all of the parameters are fine-tuned using labeled data from the downstream tasks. Each downstream task has separate fine-tuned models, even though they are initialized with the same pre-trained parameters. The question-answering example in Figure 1 will serve as a running example for this section. A distinctive feature of BERT is its unified architecture across different tasks. There is minimal difference between the pre-trained architecture and the final downstream architecture. Model Architecture BERT's model architecture is a multi-layer bidirectional Transformer encoder based on the original implementation described in Vaswani et al. (2017) and released in the tensor2tensor library. 1 Because the use of Transformers has become common and our implementation is almost identical to the original, we will omit an exhaustive background description of the model architecture and refer readers to Vaswani et al. (2017) as well as excellent guides such as \"The Annotated Transformer.\" 2 In this work, we denote the"
+          }
+        ],
+        "matched": true,
+        "chunkCount": 6,
+        "totalPages": 16
+      },
+      "raw": {
+        "in_scope": true,
+        "found": false,
+        "answer": "",
+        "pages": [],
+        "evidence": {
+          "page": 0,
+          "quote": ""
+        }
+      },
+      "answer": {
+        "role": "bot",
+        "kind": "notfound",
+        "text": "검색해 보낸 구절에서 답의 근거를 찾지 못했어요. 질문에 논문의 용어나 쪽 번호를 넣어 다시 물어봐 주세요.",
+        "pages": [],
+        "sent": [],
+        "at": 1794472105958
+      },
+      "error": "",
+      "requests": 1,
+      "outboundConfirmed": true,
+      "historySent": false,
+      "linkOpened": []
+    },
+    {
+      "id": "V1",
+      "question": "BioBERT가 original WordPiece vocabulary를 그대로 사용한 두 가지 이유는?",
+      "startPage": 1,
+      "initialMessages": 0,
+      "selected": false,
+      "retrieval": {
+        "pages": [
+          {
+            "n": 3,
+            "text": "proper nouns (e.g. BRCA1, c.248T > C) and terms (e.g. transcriptional, antimicrobial), which are understood mostly by biomedical researchers. As a result, NLP models designed for general purpose language understanding often obtains poor performance in biomedical text mining tasks. In this work, we pre-train BioBERT on PubMed abstracts (PubMed) and PubMed Central full-text articles (PMC). The text corpora used for pre-training of BioBERT are listed in Table 1, and the tested combinations of text corpora are listed in Table 2. For computational efficiency, whenever the Wiki þ Books corpora were used for pre-training, we initialized BioBERT with the pre-trained BERT model provided by Devlin et al. (2019). We define BioBERT as a language representation model whose pre-training corpora includes biomedical corpora (e.g. BioBERT ( þ PubMed)). For tokenization, BioBERT uses WordPiece tokenization (Wu et al. , 2016), which mitigates the out-of-vocabulary issue. With WordPiece tokenization, any new words can be represented by frequent subwords (e.g. Immunoglobulin 1⁄4 > I ##mm ##uno ##g ##lo ##bul ##in ). We found that using cased vocabulary (not lowercasing) results in slightly better performances in downstream tasks. Although we could have constructed new WordPiece vocabulary based on biomedical corpora, we used the original vocabulary of BERT BASE for the following reasons: (i) compatibility of BioBERT with BERT, which allows BERT pre-trained on general domain corpora to be re-used, and makes it easier to interchangeably use existing models based on BERT and BioBERT and (ii) any new words may still be represented and fine-tuned for the biomedical domain using the original WordPiece vocabulary of BERT. 3.3 Fine-tuning BioBERT With minimal architectural modification, BioBERT can be applied to various downstream text mining tasks. We fine-tune BioBERT on the following three representative biomedical text mining tasks: NER, RE and QA. Named entity recognition is one of the most fundamental biomedical text mining tasks, which involves recognizing numerous domain-specific proper nouns in a biomedical corpus. While most previous works were built upon different combinations of LSTMs and CRFs (Giorgi and Bader, 2018; Habibi et al. , 2017; Wang et al. , 2018), BERT has a simple architecture based on bidirectional transformers. BERT uses a single output layer based on the representations from its last layer to compute only token level BIO2 probabilities. Note that while previous works in biomedical NER often used word embeddings trained on PubMed or PMC corpora (Habibi et al. , 2017; Yoon et al. , 2019), BioBERT directly learns WordPiece embeddings during pre-training and fine-tuning. For the evaluation metrics of NER, we used entity level precision, recall and F1 score. Relation extraction is a task of classifying relations of named entities in a biomedical corpus. We utilized the sentence classifier of the original version of BERT, which uses a [CLS] token for the classification of relations. Sentence classification is performed using a single output layer based on a [CLS] token representation from BERT. We anonymized target named entities in a sentence using pre-defined tags such as @GENE$ or @DISEASE$. For instance, a sentence with two target entities (gene and disease in this case) is represented as \" Serine at position 986 of @GENE$ may be an independent genetic predictor of angiographic @DISEASE$ .\" The precision, recall and F1 scores on the RE task are reported. Question answering is a task of answering questions posed in natural language given related passages. To fine-tune BioBERT for QA, we used the same BERT architecture used for SQuAD (Rajpurkar et al. , 2016). We used the BioASQ factoid datasets because their format is similar to that of SQuAD. Token level probabilities for the start/end location of answer phrases are computed using a single output layer. However, we observed that about 30% of the BioASQ factoid questions were unanswerable in an extractive QA setting as the exact answers did not appear in the given passages. Like Wiese et al. (2017), we excluded the samples with unanswerable questions from the training sets. Also, we used the same pre-training process of Wiese et al. (2017), which uses SQuAD, and it largely improved the performance of both BERT and BioBERT. We used the following evaluation metrics from BioASQ: strict accuracy, lenient accuracy and mean reciprocal rank. 4 Results 4.1 Datasets The statistics of biomedical NER datasets are listed in Table 3. We used the pre-processed versions of all the NER datasets provided by Wang et al. (2018) except the 2010 i2b2/VA, JNLPBA and Species- 800 datasets. The pre-processed NCBI Disease dataset has fewer annotations than the original dataset due to the removal of duplicate articles from its training set. We used the CoNLL format (https:// github.com/spyysalo/standoff2conll) for pre-processing the 2010 i2b2/VA and JNLPBA datasets. The Species-800 dataset was preprocessed and split based on the dataset of Pyysalo (https://github. com/spyysalo/s800). We did not use alternate annotations for the BC2GM dataset, and all NER evaluations are based on entity-level exact matches. Note that although there are several other recently introduced high quality biomedical NER datasets (Mohan and Li, 2019), we use datasets that are frequently used by many biomedical NLP researchers, which makes it much"
+          },
+          {
+            "n": 5,
+            "text": "entities. While BERT often gives incorrect answers to simple biomedical questions, BioBERT provides correct answers to such questions. Also, BioBERT can provide longer named entities as answers. 6 Conclusion In this article, we introduced BioBERT, which is a pre-trained language representation model for biomedical text mining. We showed that pre-training BERT on biomedical corpora is crucial in applying it to the biomedical domain. Requiring minimal task-specific architectural modification, BioBERT outperforms previous models on biomedical text mining tasks such as NER, RE and QA. The pre-released version of BioBERT (January 2019) has already been shown to be very effective in many biomedical text mining tasks such as NER for clinical notes (Alsentzer et al. , 2019), human phenotype-gene RE (Sousa et al. , 2019) and clinical temporal RE (Lin et al. , 2019). The following updated versions of BioBERT will be available to the bioNLP community: (i) BioBERT BASE and BioBERT LARGE trained on only PubMed abstracts without initialization from the existing BERT model and (ii) BioBERT BASE and BioBERT LARGE trained on domain-specific vocabulary based on WordPiece. Table 6. Test results in biomedical named entity recognition BERT BioBERT v1.0 BioBERT v1.1 Type Datasets Metrics SOTA (Wiki þ Books) ( þ PubMed) ( þ PMC) ( þ PubMed þ PMC) ( þ PubMed) Disease NCBI disease P 88.30 84.12 86.76 86.16 89.04 88.22 R 89.00 87.19 88.02 89.48 89.69 91.25 F 88.60 85.63 87.38 87.79 89.36 89.71 2010 i2b2/VA P 87.44 84.04 85.37 85.55 87.50 86.93 R 86.25 84.08 85.64 85.72 85.44 86.53 F 86.84 84.06"
+          },
+          {
+            "n": 1,
+            "text": "Lim and Kang, 2018) and question answering (QA) (Wiese et al. , 2017). V C The Author(s) 2019. Published by Oxford University Press. 1234 This is an Open Access article distributed under the terms of the Creative Commons Attribution License (http://creativecommons.org/licenses/by/4.0/), which permits unrestricted reuse, distribution, and reproduction in any medium, provided the original work is properly cited. Bioinformatics , 36(4), 2020, 1234–1240 doi: 10.1093/bioinformatics/btz682 Advance Access Publication Date: 10 September 2019 Original Paper"
+          }
+        ],
+        "matched": true,
+        "chunkCount": 6,
+        "totalPages": 7
+      },
+      "raw": {
+        "in_scope": true,
+        "found": true,
+        "answer": "바이오버트가 원래의 워드피스 단어장을 그대로 사용한 이유는 버트와의 호환성을 유지해서 일반 도메인용으로 사전 훈련된 버트를 다시 쓸 수 있게 하고 기존 모델들을 쉽게 같이 쓸 수 있도록 하기 위해서예요. 또한 새로운 단어들도 버트의 원래 워드피스 단어장을 사용해 바이오메디컬 도메인에 맞춰 표현하고 미세 조정할 수 있기 때문이랍니다.",
+        "pages": [
+          3
+        ],
+        "evidence": {
+          "page": 3,
+          "quote": "compatibility of BioBERT with BERT, which allows BERT pre-trained on general domain corpora to be re-used, and makes it easier to interchangeably use existing models based on BERT and BioBERT and (ii) any new words may still be represented and fine-tuned for the biomedical domain using the original WordPiece vocabulary of BERT."
+        }
+      },
+      "answer": {
+        "role": "bot",
+        "kind": "answer",
+        "text": "바이오버트가 원래의 워드피스 단어장을 그대로 사용한 이유는 버트와의 호환성을 유지해서 일반 도메인용으로 사전 훈련된 버트를 다시 쓸 수 있게 하고 기존 모델들을 쉽게 같이 쓸 수 있도록 하기 위해서예요. 또한 새로운 단어들도 버트의 원래 워드피스 단어장을 사용해 바이오메디컬 도메인에 맞춰 표현하고 미세 조정할 수 있기 때문이랍니다. [p.3]",
+        "pages": [
+          3
+        ],
+        "sent": [
+          3
+        ],
+        "at": 1794472133067
+      },
+      "error": "",
+      "requests": 1,
+      "outboundConfirmed": true,
+      "historySent": false,
+      "linkOpened": [
+        {
+          "label": 3,
+          "actual": 3
+        }
+      ]
+    },
+    {
+      "id": "V2",
+      "question": "의생명 분야에 맞춰 추가 학습하면서도 기존 낱말 사전을 새로 만들지 않은 두 가지 이유는?",
+      "startPage": 1,
+      "initialMessages": 0,
+      "selected": false,
+      "retrieval": {
+        "pages": [
+          {
+            "n": 1,
+            "text": "Data and text mining BioBERT: a pre-trained biomedical language representation model for biomedical text mining Jinhyuk Lee 1,† , Wonjin Yoon 1,† , Sungdong Kim 2 , Donghyeon Kim 1 , Sunkyu Kim 1 , Chan Ho So 3 and Jaewoo Kang 1,3, * 1 Department of Computer Science and Engineering, Korea University, Seoul 02841, Korea, 2 Clova AI Research, Naver Corp, Seong- Nam 13561, Korea and 3 Interdisciplinary Graduate Program in Bioinformatics, Korea University, Seoul 02841, Korea *To whom correspondence should be addressed. † The authors wish it to be known that the first two authors contributed equally. Associate Editor: Jonathan Wren Received on May 16, 2019; revised on July 29, 2019; editorial decision on August 25, 2019; accepted on September 5, 2019 Abstract Motivation: Biomedical text mining is becoming increasingly important as the number of biomedical documents rapidly grows. With the progress in natural language processing (NLP), extracting valuable information from biomedical literature has gained popularity among researchers, and deep learning has boosted the development of effective biomedical text mining models. However, directly applying the advancements in NLP to biomedical text mining often yields unsatisfactory results due to a word distribution shift from general domain corpora to biomedical corpora. In this article, we investigate how the recently introduced pre-trained language model BERT can be adapted for biomedical corpora. Results: We introduce BioBERT (Bidirectional Encoder Representations from Transformers for Biomedical Text Mining), which is a"
+          }
+        ],
+        "matched": false,
+        "chunkCount": 1,
+        "totalPages": 7
+      },
+      "raw": {
+        "in_scope": true,
+        "found": false,
+        "answer": "",
+        "pages": [],
+        "evidence": {
+          "page": 0,
+          "quote": ""
+        }
+      },
+      "answer": {
+        "role": "bot",
+        "kind": "notfound",
+        "text": "검색해 보낸 구절에서 답의 근거를 찾지 못했어요. 질문에 논문의 용어나 쪽 번호를 넣어 다시 물어봐 주세요.",
+        "pages": [],
+        "sent": [],
+        "at": 1794472146362
+      },
+      "error": "",
+      "requests": 1,
+      "outboundConfirmed": true,
+      "historySent": false,
+      "linkOpened": []
+    },
+    {
+      "id": "V3",
+      "question": "BioBERT를 환자 대상 무작위 임상시험으로 검증했을 때 등록 환자 수는?",
+      "startPage": 1,
+      "initialMessages": 0,
+      "selected": false,
+      "retrieval": {
+        "pages": [
+          {
+            "n": 1,
+            "text": "Data and text mining BioBERT: a pre-trained biomedical language representation model for biomedical text mining Jinhyuk Lee 1,† , Wonjin Yoon 1,† , Sungdong Kim 2 , Donghyeon Kim 1 , Sunkyu Kim 1 , Chan Ho So 3 and Jaewoo Kang 1,3, * 1 Department of Computer Science and Engineering, Korea University, Seoul 02841, Korea, 2 Clova AI Research, Naver Corp, Seong- Nam 13561, Korea and 3 Interdisciplinary Graduate Program in Bioinformatics, Korea University, Seoul 02841, Korea *To whom correspondence should be addressed. † The authors wish it to be known that the first two authors contributed equally. Associate Editor: Jonathan Wren Received on May 16, 2019; revised on July 29, 2019; editorial decision on August 25, 2019; accepted on September 5, 2019 Abstract Motivation: Biomedical text mining is becoming increasingly important as the number of biomedical documents rapidly grows. With the progress in natural language processing (NLP), extracting valuable information from biomedical literature has gained popularity among researchers, and deep learning has boosted the development of effective biomedical text mining models. However, directly applying the advancements in NLP to biomedical text mining often yields unsatisfactory results due to a word distribution shift from general domain corpora to biomedical corpora. In this article, we investigate how the recently introduced pre-trained language model BERT can be adapted for biomedical corpora. Results: We introduce BioBERT (Bidirectional Encoder Representations from Transformers for Biomedical Text Mining), which is a domain-specific language representation model pre-trained on large-scale biomedical corpora. With almost the same architecture across tasks, BioBERT largely outperforms BERT and previous state-of-the-art models in a variety of biomedical text mining tasks when pre-trained on biomedical corpora. While BERT obtains performance comparable to that of previous state-of-the-art models, BioBERT significantly outperforms them on the following three representative biomedical text mining tasks: biomedical named entity recognition (0.62% F1 score improvement), biomedical relation extraction (2.80% F1 score improvement) and biomedical question answering (12.24% MRR improvement). Our analysis results show that pre-training BERT on biomedical corpora helps it to understand complex biomedical texts. Availability and implementation: We make the pre-trained weights of BioBERT freely available at https://github. com/naver/biobert-pretrained, and the source code for fine-tuning BioBERT available at https://github.com/dmis-lab/ biobert. Contact: kangj@korea.ac.kr 1 Introduction The volume of biomedical literature continues to rapidly increase. On average, more than 3000 new articles are published every day in peer-reviewed journals, excluding pre-prints and technical reports such as clinical trial reports in various archives. PubMed alone has a total of 29M articles as of January 2019. Reports containing valuable information about new discoveries and new insights are continuously added to the already overwhelming amount of literature. Consequently, there is increasingly more demand for accurate biomedical text mining tools for extracting information from the literature. Recent progress of biomedical text mining models was made possible by the advancements of deep learning techniques used in natural language processing (NLP). For instance, Long Short-Term Memory (LSTM) and Conditional Random Field (CRF) have greatly improved performance in biomedical named entity recognition (NER) over the last few years (Giorgi and Bader, 2018; Habibi et al. , 2017; Wang et al. , 2018; Yoon et al. , 2019). Other deep learning based models have made improvements in biomedical text mining tasks such as relation extraction (RE) (Bhasuran and Natarajan, 2018; Lim and Kang, 2018) and question answering (QA) (Wiese et al. , 2017). V C The Author(s) 2019. Published by Oxford University Press. 1234 This is an Open Access article distributed under the terms of the Creative Commons Attribution License (http://creativecommons.org/licenses/by/4.0/), which permits unrestricted"
+          },
+          {
+            "n": 2,
+            "text": "cannot obtain high performance on biomedical corpora because they are pre-trained on only general domain corpora. As BERT achieves very strong results on various NLP tasks while using almost the same structure across the tasks, adapting BERT for the biomedical domain could potentially benefit numerous biomedical NLP researches. 2 Approach In this article, we introduce BioBERT, which is a pre-trained language representation model for the biomedical domain. The overall process of pre-training and fine-tuning BioBERT is illustrated in Figure 1. First, we initialize BioBERT with weights from BERT, which was pretrained on general domain corpora (English Wikipedia and BooksCorpus). Then, BioBERT is pre-trained on biomedical domain corpora (PubMed abstracts and PMC full-text articles). To show the effectiveness of our approach in biomedical text mining, BioBERT is fine-tuned and evaluated on three popular biomedical text mining tasks (NER, RE and QA). We test various pre-training strategies with different combinations and sizes of general domain corpora and biomedical corpora, and analyze the effect of each corpus on pre-training. We also provide in-depth analyses of BERT and BioBERT to show the necessity of our pre-training strategies. The contributions of our paper are as follows: • BioBERT is the first domain-specific BERT based model pretrained on biomedical corpora for 23 days on eight NVIDIA V100 GPUs. • We show that pre-training BERT on biomedical corpora largely improves its performance. BioBERT obtains higher F1 scores in biomedical NER ( 0.62 ) and biomedical RE ( 2.80 ), and a higher MRR score ( 12.24 ) in biomedical QA than the current state-ofthe-art models. • Compared with most previous biomedical text mining models that are mainly focused on a single task such as NER or QA, our model BioBERT achieves state-of-the-art performance on various biomedical text mining tasks, while requiring only minimal architectural modifications. • We make our pre-processed datasets, the pre-trained weights of BioBERT and the source code for fine-tuning BioBERT publicly available. 3 Materials and methods BioBERT basically has the same structure as BERT. We briefly discuss the recently proposed BERT, and then we describe in detail the pre-training and fine-tuning process of BioBERT. 3.1 BERT: bidirectional encoder representations from transformers Learning word representations from a large amount of unannotated text is a long-established method. While previous models (e.g. Word2Vec (Mikolov et al. , 2013), GloVe (Pennington et al. , 2014)) focused on learning context independent word representations, recent works have focused on learning context dependent word representations. For instance, ELMo (Peters et al. , 2018) uses a bidirectional language model, while CoVe (McCann et al. , 2017) uses machine translation to embed context information into word representations. BERT (Devlin et al. , 2019) is a contextualized word representation model that is based on a masked language model and pretrained using bidirectional transformers (Vaswani et al. , 2017). Due to the nature of language modeling where future words cannot be seen, previous language models were limited to a combination of two unidirectional language models (i.e. left-to-right and right-toleft). BERT uses a masked language model that predicts randomly masked words in a sequence, and hence can be used for learning bidirectional representations. Also, it obtains state-of-the-art performance on most NLP tasks, while requiring minimal task-specific architectural modification. According to the authors of BERT, incorporating information from bidirectional representations, rather than unidirectional representations, is crucial for representing words in natural language. We hypothesize that such bidirectional representations are also critical in biomedical text mining as complex relationships between biomedical terms often exist in a biomedical corpus (Krallinger et al. , 2017). Due to the space limitations, we refer readers to Devlin et al. (2019) for a more detailed description of BERT. 3.2 Pre-training BioBERT As a general purpose language"
+          }
+        ],
+        "matched": true,
+        "chunkCount": 6,
+        "totalPages": 7
+      },
+      "raw": {
+        "in_scope": true,
+        "found": false,
+        "answer": "",
+        "pages": [],
+        "evidence": {
+          "page": 0,
+          "quote": ""
+        }
+      },
+      "answer": {
+        "role": "bot",
+        "kind": "notfound",
+        "text": "검색해 보낸 구절에서 답의 근거를 찾지 못했어요. 질문에 논문의 용어나 쪽 번호를 넣어 다시 물어봐 주세요.",
+        "pages": [],
+        "sent": [],
+        "at": 1794472170483
+      },
+      "error": "",
+      "requests": 1,
+      "outboundConfirmed": true,
+      "historySent": false,
+      "linkOpened": []
+    }
+  ],
+  "humanSemanticReview": "미검증"
+}

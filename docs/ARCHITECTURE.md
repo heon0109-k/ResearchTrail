@@ -9,7 +9,7 @@
 
 논문 선택 → 메모 저장 → 규칙 기반 예시 후보 → 사용자 수정·확인 → 브라우저 저장 → 재방문 안내·이어 읽기
 
-실제 모델·서버 API는 연결하지 않는다. 메모 버전·최초 후보·최종값은 논문별 브라우저 이력에 보관한다. Python policy.py는 실험 러너에서 재사용하며 웹 앱과는 연결되지 않는다.
+규칙 기반 후보 생성과 확인 저장은 브라우저에서 동작한다. 선택 기능인 AI 정리·질문하기는 전송 동의 후 로컬 서버를 통해 OpenAI를 호출한다. 메모 버전·최초 후보·최종값은 논문별 브라우저 이력에 보관한다. Python policy.py는 실험 러너에서 재사용하며 웹 앱과는 연결되지 않는다.
 
 ### 1.2 실제 모델·서버의 후속 설계
 
@@ -22,18 +22,41 @@
 
 ## 2. 구성 요소
 
+### 2.1 현재 브라우저 MVP
+
+| 파일 | 하는 일 |
+|---|---|
+| `web/index.html`, `web/js/main.js` | 웹 진입점. 첫 화면과 예시를 열거나 브라우저에 저장된 타임라인을 복원한다. |
+| `web/js/core.js`, `web/js/frame.js`, `web/js/panel.js` | 브라우저 앱 상태와 화면 전환을 관리하고, 논문 등록·수정과 태그 선택을 처리한다. |
+| `web/js/timeline.js`, `web/js/helpers.js` | 논문 타임라인과 재방문 안내를 표시한다. `helpers.js`는 논문별 메모·다음 할 일·기록 이력을 localStorage에 저장하고 복원한다. |
+| `web/js/reader.js` | 논문 읽기 화면을 열고, 읽기 상태와 메모를 편집하고 이전 읽기 위치로 돌아갈 수 있게 한다. |
+| `web/js/next-action.js`, `web/js/ai-stub.js` | 선택한 메모에서 규칙 기반으로 후보를 제안한다. 후보 편집·취소·확인과 확정 이력 저장은 `next-action.js`가 처리한다. |
+| `web/js/pdf-viewer.js`, `web/js/capture.js`, `web/js/import.js` | PDF 표시·페이지 추적, 형광펜·영역 캡처, 첨부 PDF의 IndexedDB 저장을 담당한다. |
+| `web/js/paper-list.js`, `web/js/find.js`, `web/js/graph.js` | 논문 목록, 제목·읽기 기록 검색, 논문 간 연결 그래프를 표시한다. |
+| `scripts/serve_openai.py` | 웹 앱을 제공하고 서버에 설정한 키로 OpenAI 요청을 보낸다. |
+| `web/js/chat.js` | 질문 전송 동의 확인, OpenAI 답변 요청, 인용 검사와 PDF 쪽 링크 표시를 담당한다. |
+| `web/js/chat-retrieval.js` | 열린 PDF의 쪽별 텍스트를 분할·색인하고 키워드로 근거 구절을 찾는다. |
+| `web/js/chat-query-expansion.js` | 한국어 질문의 영어 검색어를 만들고 실패하면 원래 검색어를 사용하게 한다. |
+| `web/js/ai-summary.js` | 논문별 읽기 기록의 AI 정리와 다음 할 일 제안을 처리한다. |
+
+### 2.2 파서 실험에 사용하는 파일
+
 | 파일 | 하는 일 | 출처 | 상태 |
 |---|---|---|---|
-| `src/researchtrail/prompts/parse_query.md` | 파서 프롬프트. 마커 사이 텍스트만 LLM에 보냄 | 강의 3 산출물 | 있음 |
+| `src/researchtrail/prompts/parse_query.md` | 모델 호출 시 마커 사이 텍스트를 사용하는 파서 프롬프트 | 강의 3 산출물 | 있음 |
 | `src/researchtrail/schemas/next_action.schema.json` | `NextAction` 후보 네 필드 출력 스키마 | 강의 3 산출물 | 있음 |
-| `scripts/check_next_action_parser.py` | 파서 실험 러너. 오프라인 48개 검사. 제품 코드 아님 | 강의 3 실험 | 있음 |
-| `src/researchtrail/parser.py` (미생성) | 메모 한 건으로 LLM 호출, 형식 복구 1회, 시간 제한 | 강의 6 설계 (SPEC 5.3, AC7) | 미구현·현재 MVP 미포함 |
+| `scripts/check_next_action_parser.py` | 파서 실험 러너. 오프라인 48개 검사 | 강의 3 실험 | 있음 |
 | `src/researchtrail/policy.py` | 스키마 검사 뒤 정책 검사, 후속 처리 코드 계산 | 강의 6 구현 대상 (SPEC 5.3, AC1) | 구조·원문 구절 검사 구현, 의미 판정은 미검증 |
-| `src/researchtrail/store.py` (미생성) | 과업·기록·맥락·확정 작업 저장, 과업별 조회 | 강의 6 설계 (SPEC 5.1~5.5, AC4~AC6) | 미구현·현재 MVP 미포함 |
-| API | SPEC 5.1절 경로 여섯 개 | SPEC 5.1 | 프레임워크 (미정) |
-| 화면 | 메모 입력, 후보 확인, 재개 화면·기록 이력 | SPEC 3.1 | 브라우저 시연 구현. 서버 연동 미구현 |
 
-`policy.py`의 구조·정책 검사는 현재 실험 러너가 재사용한다. `parser.py`·`store.py`와 서버 API는 설계 단계이며 프레임워크·저장 방식은 미정이다.
+실험 러너가 `policy.py`를 사용한다. 브라우저 MVP의 후보 제안은 `web/js/ai-stub.js`에서 처리한다.
+
+### 2.3 미구현 서버 설계
+
+| 구성 요소 | 설계한 역할 | 근거 | 상태 |
+|---|---|---|---|
+| `src/researchtrail/parser.py` | 메모 한 건으로 LLM 호출, 형식 복구 1회, 시간 제한 | SPEC 5.3, AC7 | 미생성 |
+| `src/researchtrail/store.py` | 과업·기록·맥락·확정 작업의 서버 저장과 과업별 조회 | SPEC 5.1~5.5, AC4~AC6 | 미생성, 저장 방식 미정 |
+| 서버 API | 과업 선택·기록 저장·후보 파싱·확정·재개 조회 등 SPEC에 정의한 경로 여섯 개 제공 | SPEC 5.1 | 미구현, 프레임워크 미정 |
 
 ## 3. 도구
 
@@ -68,13 +91,11 @@ LLM 도구는 아니지만 강의 6 원칙(읽기·쓰기 구분, 쓰기 전 사
 
 ## 4. RAG
 
-이번 버전은 RAG를 쓰지 않는다. `config/rag.yaml`은 나중을 위해 남겨 두고, 지금은 어떤 코드도 읽지 않는다.
+다음 할 일 파싱·재개 조회와 실험 기능인 AI 정리는 RAG 없이 동작한다. 질문하기만 현재 열어 둔 PDF 한 편을 검색한다. 설정 근거는 [config/rag.yaml](../config/rag.yaml), 실험의 범위는 [단일 PDF 검색 변경안](spikes/single_pdf_rag.md)에 기록한다.
 
-- 파싱은 메모 한 건만 본다. 다른 기록이나 문헌을 검색해서 넣지 않는다. (SPEC 5.3)
-- 재개 조회는 `task_id`로 저장된 걸 꺼내면 된다. 정렬은 저장 시각 내림차순, 같으면 ID 오름차순이다. 유사도 검색을 쓰면 비슷한 다른 과업의 메모가 섞일 수 있다. (AC5)
-- 논문 검색·추천, 논문 질의응답은 SPEC 4.2절에서 뺐다.
-
-RAG를 넣게 되면 SPEC 4.2절부터 바꾸고, 그다음 이 절과 `rag.yaml`을 채운다. 그때도 과업이 섞이지 않게 하는 방법을 먼저 정한다.
+- 질문과 열린 PDF → 쪽별 텍스트 추출·분할 → 한국어 검색어 영어 확장 → 키워드 검색 → 관련 구절로 OpenAI 답변 생성 → 원문 인용 검증·쪽 링크 표시.
+- 동의와 키를 확인한 뒤에만 호출한다. 검색어 확장이 실패하면 원래 질문으로 검색한다. 모델이 근거를 찾지 못하거나 인용을 확인할 수 없으면 근거 부족을 안내한다. PDF 추출 및 답변 요청 실패는 오류로 안내한다.
+- 파서 명세는 메모 한 건을 처리하고 재개 조회는 해당 과업의 저장 기록을 조회한다. 질문하기의 색인은 열린 PDF 객체 한 편의 메모리에만 유지하며, PDF를 바꾼 뒤 도착한 응답은 버린다.
 
 ## 5. 오케스트레이션
 
@@ -138,7 +159,7 @@ workflow로 한다. 단계가 3절 함수 순서로 정해져 있어서 LLM이 �
 
 SPEC 4.2절, `ontology.yaml`의 `scope.out_of_scope`와 같다.
 
-- 논문 검색·추천, RAG 질의응답, 자동 비교·순위
+- 논문 검색·추천, 여러 논문을 검색하는 질의응답, 자동 비교·순위. 현재 PDF 한 편의 질문하기는 4절의 실험 기능으로 제공한다.
 - PDF·손글씨·수식 추출, OCR, 본문 다운로드
 - 연구 계획 추천, 요약 생성, 질문 자동 해결
 - 메일 전송, 알림 예약, 코드 실행, 모델 학습
@@ -151,7 +172,7 @@ SPEC 4.2절, `ontology.yaml`의 `scope.out_of_scope`와 같다.
 
 ## 10. 2026-11-08 구현 현황
 
-web/은 기존 HTML 앱의 시연 진입점이며 서버 API와 연결되기 전이다. localStorage·IndexedDB 저장을 사용하고 Python policy.py는 기존 실험 러너에서도 재사용한다. Python 프레임워크·DB·배포 방식은 미정이다. 기능 경계와 검사 현황은 [SPEC](SPEC.md) 7.5절과 SPEC 6.2절을 따른다.
+web/은 브라우저 시연 진입점이다. AI 요청에는 선택형 로컬 서버를 사용한다. localStorage·IndexedDB 저장을 사용하고 Python policy.py는 기존 실험 러너에서도 재사용한다. Python 프레임워크·DB·배포 방식은 미정이다. 기능 경계와 검사 현황은 [SPEC](SPEC.md) 7.5절과 SPEC 6.2절을 따른다.
 
 
 ## 11. 브라우저 이력 저장

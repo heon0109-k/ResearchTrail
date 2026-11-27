@@ -25,6 +25,9 @@ htmlcov/
 # Installed dependencies / generated build output (only relevant if used)
 node_modules/
 dist/
+.dist-*/
 build/
+supabase/.branches/
+supabase/.temp/
 
 # Do NOT ignore all JSON/YAML/JSONL files, tests/, data/, or evals/results/.

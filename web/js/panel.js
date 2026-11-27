@@ -346,28 +346,34 @@ function renderPanel(){
     },true);
   });
 }
-function renderAddPanel(pin){
+function renderAddPanel(pin,account){
   /* 이미 열려 있는 추가 폼은 다시 그리지 않는다. (다른 화면 갱신 때문에 쓰던 제목·링크·PDF가 지워지지 않게) */
-  if(pin.querySelector&&pin.querySelector('#addForm'))return;
-  var d=S.draft||{};var date=(d.date&&/^20\d\d-\d\d-\d\d$/.test(d.date))?d.date:todayStr();
+  if(!account&&pin.querySelector&&pin.querySelector('#addForm'))return;
+  var d=S.draft||{};var date=account?'':(d.date&&/^20\d\d-\d\d-\d\d$/.test(d.date))?d.date:todayStr();
   var tagOpts=paperTagOptions(d.tag);
   pin.innerHTML='<div class="ph"><span>새 논문</span><div class="ph-acts"><button type="button" class="ph-icon" id="pClose" title="닫기" aria-label="닫기"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button></div></div><form class="pb" id="addForm" novalidate>'+
   /* 제목 → 태그·읽은 정도·날짜 → 링크·PDF → 저장 이유 순서. 칸마다 작은 이름표와 옅은 바탕으로 구분한다. */
   '<div class="field"><span>논문 제목 <b>*</b></span><div class="a-title-wrap"><textarea id="aTitle" class="a-title" rows="1" autocomplete="off" aria-label="논문 제목" placeholder="논문 제목을 입력하세요"></textarea><div class="a-title-sub" id="aTitleSub" hidden></div><div class="a-bubble" id="aTitleTip" role="status" hidden><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v4.5M10 6.5v.01"/></svg><span>제목을 못 불러왔어요. 직접 입력해 주세요.</span></div></div>'+
-  '<div class="p-meta"><span class="tagrow p-tag"><i id="aTagDot" style="--c:'+tagBy(d.tag).color+'"></i><select id="aTag" class="p-chip" aria-label="태그">'+tagOpts+'</select></span><span class="p-dot" aria-hidden="true">·</span>'+
-  '<select id="aState" class="p-chip" aria-label="읽은 정도">'+stateOpts('reading')+'</select><span class="p-dot" aria-hidden="true">·</span>'+
-  '<label class="p-date" title="읽은 날짜 (눌러서 바꾸기)"><span class="p-date-text" id="aDateText">'+esc(date.replace(/-/g,'.'))+'</span><input type="date" id="aDate" aria-label="읽은 날짜" value="'+esc(date)+'"></label></div></div>'+
+  '<div class="p-meta">'+(account?'':'<span class="tagrow p-tag"><i id="aTagDot" style="--c:'+tagBy(d.tag).color+'"></i><select id="aTag" class="p-chip" aria-label="태그">'+tagOpts+'</select></span><span class="p-dot" aria-hidden="true">·</span>')+
+  '<select id="aState" class="p-chip" aria-label="읽은 정도">'+stateOpts(account?'':'reading')+'</select><span class="p-dot" aria-hidden="true">·</span>'+
+  '<label class="p-date" title="읽은 날짜 (눌러서 바꾸기)"><span class="p-date-text" id="aDateText">'+(date?esc(date.replace(/-/g,'.')):'읽은 날짜')+'</span><input type="date" id="aDate" aria-label="읽은 날짜" value="'+esc(date)+'"></label></div></div>'+
+  /* 로그인 모드: 이미 등록한 논문을 고를 수 있다 */
+  (account&&account.documents.length?'<label class="field"><span>등록한 논문 사용</span><select id="aDocument"><option value="">새 논문</option>'+account.documents.map(function(x){return '<option value="'+esc(x.document_id)+'">'+esc(x.title||'제목 미기록')+'</option>'}).join('')+'</select></label>':'')+
   '<div class="field a-src"><span>링크·PDF</span>'+
   '<div class="a-tabs" role="tablist" aria-label="논문 가져오기"><button type="button" role="tab" data-src-tab="pdf" aria-selected="true">PDF</button><button type="button" role="tab" data-src-tab="link" aria-selected="false">링크</button></div>'+
-  '<label class="a-drop" id="aDrop" data-src-pane="pdf"><input type="file" id="aFile" accept="application/pdf,.pdf" hidden><svg class="a-drop-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5"/><path d="M12 12v8M9 15l3-3 3 3"/></svg><b class="a-drop-title">PDF를 여기로 끌어오세요</b><span class="a-drop-text">또는 <u title="PDF는 이 브라우저에만 저장돼요. 다른 기기에서는 다시 올려야 해요.">파일 선택</u> · 60MB 이하</span><em id="aFname"></em></label>'+
+  '<label class="a-drop" id="aDrop" data-src-pane="pdf"><input type="file" id="aFile" accept="application/pdf,.pdf" hidden><svg class="a-drop-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5"/><path d="M12 12v8M9 15l3-3 3 3"/></svg><b class="a-drop-title">PDF를 여기로 끌어오세요</b>'+(account?'<span class="a-drop-text">또는 <u>파일 선택</u> · '+(account.uploadPdf?'계정에 비공개로 저장 · 10MiB 이하':'파일명만 계정에 기록')+'</span>':'<span class="a-drop-text">또는 <u title="PDF는 이 브라우저에만 저장돼요. 다른 기기에서는 다시 올려야 해요.">파일 선택</u> · 60MB 이하</span>')+'<em id="aFname"></em></label>'+
   '<div class="a-drop a-linkpane" data-src-pane="link" hidden><svg class="a-drop-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg><b class="a-drop-title">논문 링크를 붙여넣으세요</b>'+
   '<div class="srcrow"><span class="a-src-input"><input type="text" id="aSrc" placeholder="https://arxiv.org/abs/…" autocomplete="off"><i class="a-src-state" id="aSrcState" aria-hidden="true"></i></span></div></div>'+
   '<p class="empty" id="aSrcMsg" hidden></p></div>'+
-  '<label class="field a-memo-field"><span>저장 이유 <b>*</b></span><textarea id="aMemo" rows="4" class="a-memo" placeholder="이 논문을 왜 저장했나요?"></textarea></label>'+
+  '<label class="field a-memo-field"><span>저장 이유 '+(account?'<em class="opt">(선택)</em>':'<b>*</b>')+'</span><textarea id="aMemo" rows="4" class="a-memo" placeholder="이 논문을 왜 저장했나요?"></textarea></label>'+
   '<p class="empty" id="aErr" hidden></p>'+
-  '<div class="paper-form-actions"><button type="submit" class="btn pri">타임라인에 추가</button><button type="button" class="btn" id="aCancel">취소</button></div></form>';
-  $('#pClose').addEventListener('click',function(){S.panel='none';renderAll()});
-  $('#aCancel').addEventListener('click',function(){S.panel='none';renderAll()});
+  '<div class="paper-form-actions"><button type="submit" class="btn pri">'+(account?'프로젝트에 추가':'타임라인에 추가')+'</button><button type="button" class="btn" id="aCancel">취소</button></div></form>';
+  /* 로그인 모드: 저장(제출)·닫기는 계정 쪽(account-projects.js)이 먼저 맡고, 아래 화면 동작(탭·끌어오기·제목 불러오기)만 같이 쓴다. */
+  if(account)wireAccountPaperForm(account);
+  if(!account){
+    $('#pClose').addEventListener('click',function(){S.panel='none';renderAll()});
+    $('#aCancel').addEventListener('click',function(){S.panel='none';renderAll()});
+  }
   (function(){
     var memo=$('#aMemo');
     if(memo&&memo.style){var grow=function(){memo.style.height='auto';memo.style.height=Math.min(240,Math.max(104,memo.scrollHeight+2))+'px'};memo.addEventListener('input',grow)}
@@ -449,6 +455,7 @@ function renderAddPanel(pin){
       e.preventDefault();drop.classList.remove('is-over');
       var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;
       if(!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf'){msg('PDF 파일만 올릴 수 있어요.',true);return}
+      try{var fi=$('#aFile');if(fi&&e.dataTransfer.files){fi.files=e.dataTransfer.files;if(account){fi.dispatchEvent(new Event('change',{bubbles:true}));return}}}catch(_){}
       takeFile(f);
     });
   }
@@ -477,6 +484,7 @@ function renderAddPanel(pin){
       }).catch(function(){fetchState('');fill(r.title||fallback)});
     }).catch(function(){if(S.draftFile!==f)return;fetchState('');fill(fallback)});
   }
+  if(account)return;
   var adding=false;
   $('#addForm').addEventListener('submit',async function(e){
     e.preventDefault();

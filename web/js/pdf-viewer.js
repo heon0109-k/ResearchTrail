@@ -1,12 +1,12 @@
 'use strict';
 /* ---------- PDF.js viewer with highlights ---------- */
-var PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+var PDFJS='vendor/pdfjs-3.11.174/';
 var pdfJsLoading=null;
 function loadPdfJs(){
   if(window.pdfjsLib&&pdfjsLib.GlobalWorkerOptions.workerSrc)return Promise.resolve();
   if(pdfJsLoading)return pdfJsLoading;
   pdfJsLoading=new Promise(function(res,rej){
-    var go=function(){fetch(PDFJS+'pdf.worker.min.js').then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(t){pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t],{type:'text/javascript'}));res()}).catch(rej)};
+    var go=function(){pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';res()};
     if(window.pdfjsLib)return go();
     var sc=document.createElement('script');sc.src=PDFJS+'pdf.min.js';sc.onload=go;sc.onerror=rej;document.head.appendChild(sc);
   }).finally(function(){pdfJsLoading=null});
@@ -246,7 +246,11 @@ function pvReveal(h){
 }
 function drawHl(p,n){
   var pg=PV&&PV.pages[n];if(!pg||!pg.el)return;var l=pg.el.querySelector('.hlayer');if(!l)return;
-  l.innerHTML=(p.hl||[]).filter(function(h){return h.page===n}).map(function(h){return h.rects.map(function(r){var cls=(highlightBlocked(h)?'stk':'')+(PV.flash===h.id?' flash':'');return '<i data-hid="'+esc(h.id)+'"'+(cls.trim()?' class="'+cls.trim()+'"':'')+' style="left:'+r[0]*100+'%;top:'+r[1]*100+'%;width:'+r[2]*100+'%;height:'+r[3]*100+'%"></i>'}).join('')}).join('');
+  l.innerHTML=pdfHighlightMarkup(p.hl||[],n);
+}
+/* 하이라이트 사각형 그리기 (계정 PDF 보기에서도 같이 쓴다). 방금 이동한 기록은 잠깐 반짝인다. */
+function pdfHighlightMarkup(highlights,n){
+  return highlights.filter(function(h){return h.page===n}).map(function(h){return h.rects.map(function(r){var cls=(highlightBlocked(h)?'stk':'')+(typeof PV!=='undefined'&&PV&&PV.flash===h.id?' flash':'');return '<i data-hid="'+esc(h.id)+'"'+(cls.trim()?' class="'+cls.trim()+'"':'')+' style="left:'+r[0]*100+'%;top:'+r[1]*100+'%;width:'+r[2]*100+'%;height:'+r[3]*100+'%"></i>'}).join('')}).join('');
 }
 function pvGo(n,quiet){
   if(!PV)return;n=Math.max(1,Math.min(PV.doc.numPages,Math.round(n)||1));
@@ -294,19 +298,25 @@ function snapSentences(sel){
     r.setStart(s0.n,s0.o);r.setEnd(e0.n,e0.o);sel.removeAllRanges();sel.addRange(r);return true;
   }catch(e){return false}
 }
-function onSel(p,e){
-  var old=$('#hlbar');if(old)old.remove();
-  var sel=window.getSelection();if(!sel||sel.isCollapsed||!sel.rangeCount||!PV)return;
-  var text=sel.toString().replace(/\s+/g,' ').trim();if(text.length<2)return;
-  var r=sel.getRangeAt(0);var n0=r.startContainer.nodeType===1?r.startContainer:r.startContainer.parentElement;
-  var box=n0&&n0.closest&&n0.closest('.pgbox');if(!box)return;
+function pdfSelectionAnchor(sel,box){
+  if(!sel||sel.isCollapsed||!sel.rangeCount||!box)return null;
+  var text=sel.toString().replace(/\s+/g,' ').trim();if(text.length<2)return null;
+  var r=sel.getRangeAt(0);
   var bb=box.getBoundingClientRect(),page=+box.dataset.n;
   var rects=[].map.call(r.getClientRects(),function(q){
       /* 쪽 경계를 넘는 사각형은 버리지 않고 쪽 안으로 잘라서 쓴다 (줄 끝·가장자리 글자가 빠지던 문제) */
       var x0=Math.max(0,(q.left-bb.left)/bb.width),y0=Math.max(0,(q.top-bb.top)/bb.height),x1=Math.min(1,(q.right-bb.left)/bb.width),y1=Math.min(1,(q.bottom-bb.top)/bb.height);
       return [x0,y0,x1-x0,y1-y0]}).filter(function(q){return q[2]>0.002&&q[3]>0.002&&q[3]<0.2});
-  if(!rects.length)return;
-  rects=fitInk(box,mergeLineRects(rects));
+  if(!rects.length)return null;
+  return {page:page,text:text,rects:fitInk(box,mergeLineRects(rects))};
+}
+function onSel(p,e){
+  var old=$('#hlbar');if(old)old.remove();
+  var sel=window.getSelection();if(!sel||sel.isCollapsed||!sel.rangeCount||!PV)return;
+  var r=sel.getRangeAt(0);var n0=r.startContainer.nodeType===1?r.startContainer:r.startContainer.parentElement;
+  var box=n0&&n0.closest&&n0.closest('.pgbox');
+  var anchor=pdfSelectionAnchor(sel,box);if(!anchor)return;
+  var page=anchor.page,text=anchor.text,rects=anchor.rects;
   var last=r.getClientRects();var lr=last[last.length-1];
   var bar=document.createElement('div');bar.id='hlbar';bar.className='hlbar';
   bar.innerHTML='<button type="button" data-a="hl">형광펜</button>';
@@ -391,12 +401,10 @@ function drawHlList(){
   $$('[data-hask]',el).forEach(function(b){b.addEventListener('click',function(ev){ev.stopPropagation();if(typeof chatAskAboutCapture==='function')chatAskAboutCapture(b.dataset.hask)})});
   $$('[data-hq]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hq);if(!h)return;copyText(highlightQuestion(p,h),function(ok){toast(ok?(h.img?'질문을 복사했어요. 챗봇에 붙여넣고 캡처 이미지도 함께 첨부해 주세요.':'질문을 복사했어요. 원하는 챗봇에 붙여넣어 주세요.'):'복사하지 못했어요. 브라우저 권한을 확인해 주세요.')})})});
   $$('[data-hm]',el).forEach(function(i){
-    var editing=false;
-    i.addEventListener('input',function(){var h=hb(i.dataset.hm);if(!h)return;
-      if(!editing&&typeof rememberReadingMemo==='function'){rememberReadingMemo(p,h.id,h.mine||'');editing=true}
-      h.mine=i.value;save();if(typeof NA!=='undefined'&&NA.pid===p.id&&NA.sourceId===h.id&&NA.st==='cand')naRender(p,true);
-    });
-    i.addEventListener('change',function(){var h=hb(i.dataset.hm);if(!h)return;if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');editing=false;save();if(typeof renderHistory==='function')renderHistory(p)});
+    wireMemoEditor(i,function(text,first){var h=hb(i.dataset.hm);if(!h)return;
+      if(first&&typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');
+      h.mine=text;save();if(typeof NA!=='undefined'&&NA.pid===p.id&&NA.sourceId===h.id&&NA.st==='cand')naRender(p,true);
+    },function(){var h=hb(i.dataset.hm);if(!h)return;if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');save();if(typeof renderHistory==='function')renderHistory(p)});
   });
   $$('[data-hd]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hd);if(!h)return;
     function del(){if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});if(typeof RR!=='undefined'&&RR.pid===p.id&&RR.selected===h.id)clearReadingSelection(p);save();drawHl(p,h.page);drawHlList();if(typeof renderHistory==='function')renderHistory(p)}

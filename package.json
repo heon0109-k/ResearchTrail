@@ -1,0 +1,21 @@
+{
+  "name": "researchtrail",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@10.9.4",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build-web.mjs",
+    "test:build": "node tests/web_build.test.cjs",
+    "test:pdf": "node tests/built_pdf.test.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.119.2"
+  },
+  "devDependencies": {
+    "playwright-core": "1.57.0",
+    "supabase": "2.100.0"
+  }
+}
