@@ -118,6 +118,10 @@ function renderReader(){
     var t=e.target.closest&&e.target.closest('[data-tog]');if(!t)return;NOTES_OPEN=!NOTES_OPEN;try{localStorage.setItem('researchtrail.notes',NOTES_OPEN?'1':'0')}catch(x){}applyNotes();if(PV){setTimeout(function(){var cur=PV.cur;buildPages(p);pvGo(cur,true)},60)}};
   readerSrc(p,p.page);renderRNotes();
 }
+function readerPanelTabsHtml() {
+  return '<div class="rtabs" role="tablist" aria-label="오른쪽 패널"><button type="button" role="tab" data-rtab="notes">기록</button><button type="button" role="tab" data-rtab="chat">질문하기</button></div>'+
+   '<section class="reader-chat" id="rChat" aria-label="질문하기" hidden></section>';
+}
 // Mount the same account controls in the familiar split reader. Keep their controllers
 // alive when the reader closes so a receipt stays bound to its original operation.
 function createAccountWorkspaceReader(account,saves) {
@@ -127,7 +131,7 @@ function createAccountWorkspaceReader(account,saves) {
   $('#rdsrc').append(parts.getElementById('accountPdfReader'));
   $('#rdnotes').append(parts.getElementById('accountMemos'));
   $('#accountPdfClose').hidden=true;
-  $('[data-mtab="chat"]',shell).remove();
+  $('#rdnotes').insertAdjacentHTML('afterbegin',readerPanelTabsHtml());
   $('[data-side-tog]',shell).remove();
   $('.rdtog1',shell).remove();
   const back=$('#rdBack'), project=$('#workspaceRecords');
@@ -137,8 +141,24 @@ function createAccountWorkspaceReader(account,saves) {
   $('#rdnotes').prepend(alert);
   const memos=createAccountMemos(account.write,account,saves,()=>pdf.refreshRecords());
   const pdf=createAccountPdfReader(account.write,account.current,memos.records,saves);
+  const chat=createAccountReaderChat($('#rChat'),account,pdf,()=>{
+    if (window.matchMedia('(max-width: 600px)').matches) tab('pdf');
+    $('#accountPdfSheet').scrollIntoView?.({block:'nearest'});
+  });
+  const sheet=$('#accountPdfSheet');
+  sheet.addEventListener('pointerup',chat.syncSelection);
+  sheet.addEventListener('keyup',chat.syncSelection);
   let generation=0;
   function tab(value) {
+    const chatting=value==='chat';
+    $('#rdnotes').classList.toggle('chat-mode',chatting);
+    $('#rChat').hidden=!chatting;
+    for (const button of $$('[data-rtab]',shell)) {
+      const selected=button.dataset.rtab===(chatting?'chat':'notes');
+      button.classList.toggle('on',selected);
+      button.setAttribute('aria-selected',String(selected));
+    }
+    if (chatting) chat.show();
     for (const button of $$('[data-mtab]',shell)) {
       const selected=button.dataset.mtab===value;
       shell.classList.toggle('m-'+button.dataset.mtab,selected);
@@ -146,10 +166,11 @@ function createAccountWorkspaceReader(account,saves) {
       button.setAttribute('aria-selected',String(selected));
     }
   }
-  for (const button of $$('[data-mtab]',shell)) button.addEventListener('click',()=>tab(button.dataset.mtab));
+  for (const button of $$('[data-mtab],[data-rtab]',shell)) button.addEventListener('click',()=>tab(button.dataset.mtab || button.dataset.rtab));
   wireNotesResize(null);
   function close() {
     ++generation;
+    chat.close();
     pdf.close();
     memos.clear();
     shell.hidden=true;
@@ -171,7 +192,9 @@ function createAccountWorkspaceReader(account,saves) {
     back.focus();
     alert.textContent='읽기 기록을 불러오는 중…';
     try {
-      await Promise.all([memos.open(task,scope),scope && pdf.open(task,artifact.artifact_id,scope.label,artifact.pdf.available)]);
+      const loaded=scope && pdf.open(task,artifact.artifact_id,scope.label,artifact.pdf.available);
+      if (scope) chat.open(task,paper.document_use_id,artifact,loaded);
+      await Promise.all([memos.open(task,scope),loaded]);
       if (account.current() && version===generation) alert.textContent='';
     } catch {
       if (account.current() && version===generation)
@@ -242,8 +265,7 @@ function renderRNotes(){
   var others=S.papers.filter(function(x){return x.id!==p.id}).sort(function(a,b){return dnum(b.date)-dnum(a.date)});
   var meta=[p.authors?esc(short(p.authors,60)):'',p.year||''].filter(Boolean).join(' · ');
   el.innerHTML=
-   '<div class="rtabs" role="tablist" aria-label="오른쪽 패널"><button type="button" role="tab" data-rtab="notes">기록</button><button type="button" role="tab" data-rtab="chat">질문하기</button></div>'+
-   '<section class="reader-chat" id="rChat" aria-label="질문하기" hidden></section>'+
+   readerPanelTabsHtml()+
    (meta?'<div class="rmeta">'+meta+'</div>':'')+
    '<section class="reader-section reader-ai" id="rAi" aria-label="AI 정리"></section>'+
    '<section class="reader-section reader-records" aria-label="읽기 기록"><div class="records-heading"><h3>읽기 기록</h3><button type="button" class="record-add" id="rAddNote">+ 메모 추가</button></div><p class="reader-hint">문장이나 캡처에 짧게 메모를 남겨요. 메모 아래의 "다음 할 일 찾기"를 누르면 그 메모에서 후보를 찾아요.</p><div id="rRecords">'+legacyReadingRecordHtml(p)+'<div id="rHl"></div></div></section>'+

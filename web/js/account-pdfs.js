@@ -26,6 +26,11 @@ function accountPdfArtifactHtml(use,artifact,sameName) {
     (artifact.pdf.document_use_id===use ? accountPdfAttachHtml(use,artifact.pdf.sha256,artifact.artifact_id) : '');
 }
 
+async function accountPdfDigest(bytes) {
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+  return Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
+}
+
 async function validateAccountPdf(file,expectedSha) {
   if (!file || !/\.pdf$/i.test(file.name) || file.name.length<5 || file.name.length>255 ||
       /[\\/\x00-\x1f\x7f]/.test(file.name) || (file.type && file.type.toLowerCase()!=='application/pdf')) {
@@ -35,8 +40,7 @@ async function validateAccountPdf(file,expectedSha) {
   const [header,tail]=await Promise.all([file.slice(0,10).text(),file.slice(-1024).text()]);
   if (!/^%PDF-(?:1\.[0-7]|2\.0)[\r\n]/.test(header) || !/%%EOF[\x00\t\n\f\r ]*$/.test(tail))
     throw new Error('PDF 파일 내용을 확인해 주세요.');
-  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()));
-  const sha256=Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
+  const sha256=await accountPdfDigest(await file.arrayBuffer());
   if (expectedSha && sha256!==expectedSha) throw new Error('이 판본을 다시 올리려면 처음 선택한 PDF가 필요해요.');
   return sha256;
 }
@@ -224,7 +228,7 @@ function createAccountPdfReader(request, connected, records = () => [], saves, o
   }
   async function open(task,artifact,label,available=true) {
     close();
-    const v=view={task,label,key:'reader.'+task+'.'+artifact,base:'/tasks/'+task+'/artifacts/'+artifact,page:0,state:null};
+    const v=view={task,artifact,label,key:'reader.'+task+'.'+artifact,base:'/tasks/'+task+'/artifacts/'+artifact,page:0,state:null};
     box.hidden=false;
     $('#accountPdfTitle').textContent=label || 'PDF';
     status.textContent=available?'PDF를 불러오는 중…':'PDF 파일을 이용할 수 없어요.';
@@ -275,5 +279,16 @@ function createAccountPdfReader(request, connected, records = () => [], saves, o
   next.addEventListener('click',()=>{if (current(view)) return showPage(view,view.page+1,true);});
   if (window.ResizeObserver) new ResizeObserver(fitCurrentPage).observe(box);
   window.addEventListener?.('pagehide',close);
-  return {open,close,refreshRecords(){ if (current(view)) { memoOptions(); draw(view); } }};
+  function context(task,artifact) {
+    const v=view;
+    if (!current(v) || v.task!==task || v.artifact!==artifact) return null;
+    return {doc:v.pdf,page:v.page || null,selection:v.draft && {page:v.draft.page,text:v.draft.text.slice(0,1000)}};
+  }
+  async function goToPage(task,artifact,page) {
+    const v=view;
+    if (!context(task,artifact)?.doc || !Number.isSafeInteger(page) || page<1 || page>v.pdf.numPages) return false;
+    if (page!==v.page) await showPage(v,page,true);
+    return current(v) && page===v.page;
+  }
+  return {open,close,context,goToPage,refreshRecords(){ if (current(view)) { memoOptions(); draw(view); } }};
 }

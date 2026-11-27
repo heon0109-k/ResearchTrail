@@ -67,11 +67,11 @@
 
 .account-reading .work, .account-reading #undatedPapers,
 .account-reading #fcard, .account-reading #fdot,
-.project-records .rdsrc, .project-records .rdresize, .project-records .rdmtabs,
+.project-records .rtabs, .project-records .rdsrc, .project-records .rdresize, .project-records .rdmtabs,
 .reader-load-status:empty, #memoAssociation:empty { display: none; }
 .account-reading #rdsrc { display: block; overflow: auto; padding: 0 12px; }
 @media (max-width: 600px) {
-  .account-reading .m-notes #rdsrc { display: none; }
+  .account-reading .m-notes #rdsrc, .account-reading .m-chat #rdsrc { display: none; }
   .account-timeline .bar { flex-wrap: wrap; height: auto; }
 }
 .project-records #rdsrc { display: none; }
@@ -84,3 +84,4 @@
 
 #accountPdfText ::selection { background: rgba(47, 155, 238, .3); }
 .account-reading #accountPdfReader > header { display: none; }
+.account-chat-actions { display: flex; flex-wrap: wrap; gap: 8px; }
