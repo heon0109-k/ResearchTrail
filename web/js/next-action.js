@@ -3,7 +3,7 @@
    규칙: 후보는 사용자가 "확인"을 눌러야만 p.todo로 저장된다. 취소하면 메모만 남는다. */
 var NA={pid:null,st:'idle',cand:'',src:'',saveError:'',requestId:null,noteText:null,recordId:null,originalCandidate:null,candidateId:null,confirmationId:null,sourceId:null,sourcePage:null};
 // This flag only remembers the demo notice; it is not consent to future external AI processing.
-function naConsent(){try{return localStorage.getItem('researchtrail.consent')==='1'}catch(e){return false}}
+function naConsent(){if(typeof S!=='undefined'&&S.source==='account')return !!accountWorkspace.extra('project',null)?.actionNotice;try{return localStorage.getItem('researchtrail.consent')==='1'}catch(e){return false}}
 function naDraftKey(p){return 'researchtrail.action-draft.'+(S.example?'example.':'main.')+p.id}
 function naDraftStorage(){
   // Demo data remains tab-local; personal drafts survive closing a tab.
@@ -12,6 +12,14 @@ function naDraftStorage(){
 }
 function naStoreDraft(p){
   if(NA.pid!==p.id||NA.st!=='cand')return;
+  if(S.source==='account'){
+    const next={candidateId:NA.candidateId,sourceId:NA.sourceId,cand:NA.cand,previousDraft:NA.previousDraft||null};
+    if (JSON.stringify(next)!==p.accountDraftValue) {
+      p.accountDraftValue=JSON.stringify(next);
+      accountReaderBackground(accountReaderExtra(p,{actionDraft:next}));
+    }
+    return;
+  }
   try{
     var storage=naDraftStorage();if(!storage)throw new Error('STORAGE_FAILURE');
     if(!S.example&&typeof STORE_REVISION!=='undefined'&&STORE_REVISION!==null&&typeof KEY!=='undefined'){
@@ -23,16 +31,22 @@ function naStoreDraft(p){
   }catch(e){NA.draftError=true}
 }
 function naDropDraft(p){
+  if(S.source==='account'){delete p.accountDraftValue;accountReaderBackground(accountReaderExtra(p,{actionDraft:null}));return}
   try{var storage=naDraftStorage();if(storage)storage.removeItem(naDraftKey(p))}catch(e){}
   try{if(typeof sessionStorage!=='undefined')sessionStorage.removeItem(naDraftKey(p))}catch(e){}
 }
 function naRestoreDraft(p){
   try{
-    var storage=naDraftStorage();if(!storage)return false;
-    var raw=storage.getItem(naDraftKey(p));
-    // Recover edits made before persistent drafts were introduced, too.
-    if(!raw&&!S.example&&typeof sessionStorage!=='undefined')raw=sessionStorage.getItem(naDraftKey(p));
-    var draft=JSON.parse(raw||'null');if(!draft)return false;
+    var draft;
+    if(S.source==='account'){
+      var scope=accountReaderScope(p);draft=scope.w.extra(scope.target,scope.id)?.actionDraft;
+    }else{
+      var storage=naDraftStorage();if(!storage)return false;
+      var raw=storage.getItem(naDraftKey(p));
+      if(!raw&&!S.example&&typeof sessionStorage!=='undefined')raw=sessionStorage.getItem(naDraftKey(p));
+      draft=JSON.parse(raw||'null');
+    }
+    if(!draft)return false;
     var event=(p.actionHistory||[]).find(function(e){return e.kind==='candidate'&&e.id===draft.candidateId});
     var source=draft.sourceId?(typeof readingSource==='function'&&readingSource(p,draft.sourceId)):true;
     if(!event||!source||typeof draft.cand!=='string'||(event.source_highlight_id||null)!==(draft.sourceId||null)||(p.actionHistory||[]).some(function(e){return e.kind==='confirmed'&&e.candidate_id===event.id})){naDropDraft(p);return false}
@@ -112,16 +126,33 @@ function naRender(p,keep){
   var g=function(id,fn){var e=$('#'+id);if(e)e.addEventListener('click',fn)};
   g('naPrevious',function(){naRestorePrevious(p)});
   g('naMake',function(){naStart(p)});
-  g('naYes',function(){try{localStorage.setItem('researchtrail.consent','1')}catch(e){}naRun(p)});
+  g('naYes',function(){
+    if(S.source==='account')accountReaderBackground(accountWorkspace.patchExtra('project',null,{actionNotice:true}));
+    else try{localStorage.setItem('researchtrail.consent','1')}catch(e){}
+    naRun(p);
+  });
   g('naNo',function(){NA.st='idle';naRender(p);naFocusTodo()});
   g('naRetry',function(){naRun(p)});
   g('naRefresh',function(){naStart(p)});
   g('naBack',function(){NA.st='idle';naRender(p);naFocusTodo()});
-  wireActionConfirmation(function(value){
+  wireActionConfirmation(async function(value){
     if(NA.pid!==p.id||NA.st!=='cand')return;
     if(NA.sourceId&&!naInput(p)){NA.st='idle';naRender(p);return}
     var v=value.trim();
     NA.cand=v;
+    if(S.source==='account'){
+      const scope=accountReaderScope(p),candidateId=NA.candidateId;
+      const button=$('#naOk');if(button)button.disabled=true;
+      try {
+        const ack=await accountReaderConfirmAction(p,{sourceId:NA.sourceId,sourceText:NA.noteText,recordId:NA.recordId,original:NA.originalCandidate,reviewed:v,key:candidateId});
+        if(!scope.active()||S.reader!==p.id||NA.candidateId!==candidateId)return;
+        rememberAction(p,{id:ack.next_action_id,kind:'confirmed',candidate_id:candidateId,source_record_id:ack.source_record_id,
+          source_note:NA.noteText,original_candidate:NA.originalCandidate,final_action:v,...naSourceFields()});
+        p.todo=v;p.todoSrc='confirmed';naDropDraft(p);NA.st='idle';NA.saveError='';
+        var t=$('#rTodo');if(t)t.value=v;naRender(p);renderHistory(p);
+      }catch{if(scope.active()&&S.reader===p.id){NA.saveError='다음 작업을 저장하지 못했어요. 같은 확인을 다시 시도해 주세요.';naRender(p,true);}}
+      return;
+    }
     var oldTodo=p.todo,oldSource=p.todoSrc;
     if(!NA.confirmationId)NA.confirmationId=nid('cf');
     if(!Array.isArray(p.actionHistory))p.actionHistory=[];
@@ -141,6 +172,9 @@ function naRender(p,keep){
 }
 function naRestorePrevious(p){
   if(!NA.previousDraft)return;
+  if(S.source==='account'){
+    accountReaderBackground(accountReaderExtra(p,{actionDraft:NA.previousDraft}).then(()=>{if(S.reader===p.id&&naRestoreDraft(p))naRender(p)}));return;
+  }
   try{
     var storage=naDraftStorage();if(!storage)throw new Error('STORAGE_FAILURE');
     storage.setItem(naDraftKey(p),JSON.stringify(NA.previousDraft));
@@ -148,6 +182,7 @@ function naRestorePrevious(p){
   }catch(e){NA.draftError=true;naRender(p,true)}
 }
 function naDraftStatus(){
+  if(S.source==='account')return '확정 전 초안이에요. 다음 작업으로 저장하려면 내용을 확인해 주세요.';
   if(NA.draftError)return '초안을 보관하지 못했어요. 화면을 닫기 전에 편집 내용을 복사해 주세요.';
   return (S.example?'예시의 초안은 이 탭에만 임시 보관돼요.':'초안은 이 브라우저에 보관돼요. 탭을 닫아도 이 논문을 열면 이어서 편집할 수 있어요.')+' 확인·저장 전에는 기존 다음 할 일을 바꾸지 않아요.';
 }
@@ -166,12 +201,18 @@ function naRun(p){
     NA.previousDraft={candidateId:NA.candidateId,sourceId:NA.sourceId,cand:NA.cand};
   }
   NA.st='loading';
-  var pid=p.id,memo=input.text,record=NA.sourceId?rememberReadingMemo(p,NA.sourceId,memo):rememberNote(p,memo),requestId=nid('rq');
+  var pid=p.id,memo=input.text,record=S.source==='account'?null:NA.sourceId?rememberReadingMemo(p,NA.sourceId,memo):rememberNote(p,memo),requestId=nid('rq');
   NA.sourcePage=input.page;
   NA.requestId=requestId;NA.noteText=memo;NA.recordId=record?record.id:null;
   NA.originalCandidate=null;NA.candidateId=null;NA.confirmationId=null;
   save();naRender(p);renderHistory(p);
-  return aiSuggest(memo).then(function(r){
+  var sourceCard=S.source==='account'&&(p.hl||[]).find(h=>h.id===NA.sourceId);
+  var suggestion=sourceCard?accountReaderSourceRecord(p,sourceCard,memo).then(id=>{
+    if (!id) throw Error('원문 메모를 먼저 저장해 주세요.');
+    if(NA.requestId===requestId)NA.recordId=id;
+    return aiSuggest(memo);
+  }):aiSuggest(memo);
+  return suggestion.then(function(r){
     if(NA.pid!==pid||NA.requestId!==requestId||NA.st!=='loading')return;
     var cp=paperBy(pid);if(!cp)return;
     if(NA.sourceId&&!naInput(cp)){NA.st='idle';naRender(cp);return}
@@ -179,8 +220,9 @@ function naRun(p){
     else if(!r.action)NA.st='unclear';
     else{
       NA.st='cand';NA.cand=r.action;NA.src=r.source;NA.originalCandidate=r.action;
-      var event=rememberAction(cp,Object.assign({kind:'candidate',source_record_id:NA.recordId,source_note:memo,original_candidate:r.action,original_output:{ok:r.ok,action:r.action,source:r.source}},naSourceFields()));
-      NA.candidateId=event.id;save();
+      var event=rememberAction(cp,Object.assign({...(S.source==='account'?{id:crypto.randomUUID()}:{}),kind:'candidate',source_record_id:NA.recordId,source_note:memo,original_candidate:r.action,original_output:{ok:r.ok,action:r.action,source:r.source}},naSourceFields()));
+      NA.candidateId=event.id;
+      if(S.source==='account')accountReaderBackground(accountReaderCandidate(cp,event));else save();
     }
     if($('#naBox'))naRender(cp);
     renderHistory(cp);

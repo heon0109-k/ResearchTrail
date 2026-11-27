@@ -1,13 +1,13 @@
 'use strict';
 
-function createAccountMemos(request, account, saves, drawPapers) {
-  const section = $('#accountMemos'), field = $('#rNote'), paper = $('#memoPaper');
-  const finish = $('#memoFinish'), add = $('#rAddNote');
-  const recordList = $('#accountRecords'), readStatus = $('#memoReadStatus');
+function createAccountMemos(request, account, saves, drawPapers, lookup=$) {
+  const section = lookup('#accountMemos'), field = lookup('#rNote'), paper = lookup('#memoPaper');
+  const finish = lookup('#memoFinish'), add = lookup('#rAddNote');
+  const recordList = lookup('#accountRecords'), readStatus = lookup('#memoReadStatus');
   const {read,store} = saves;
   const drafts = new Map();
   let view = null;
-  const actions = createAccountActionReview(request,{current,refresh,read,store,saves});
+  const actions = createAccountActionReview(request,{current,refresh,read,store,saves,lookup});
 
   function blank(scope) {
     return {text:'', original:'', recordId:null, documentId:scope?.documentId || '',
@@ -27,7 +27,7 @@ function createAccountMemos(request, account, saves, drawPapers) {
   }
   function controls(v) {
     const d = v.draft;
-    $('#memoLabel').textContent = d.recordId ? '메모 수정' : '새 메모';
+    lookup('#memoLabel').textContent = d.recordId ? '메모 수정' : '새 메모';
     let phase = 'idle';
     if (v.sending) phase = 'saving';
     else if (d.operations.length) phase = 'failed';
@@ -36,14 +36,15 @@ function createAccountMemos(request, account, saves, drawPapers) {
     saves.track(v.key,v.id,'메모',phase,d.label || '프로젝트 기록');
     const edited = hasNewVersion(d);
     const retry = d.operations.length && !v.sending && !edited;
+    lookup('#memoRetry').hidden = !retry;
     finish.hidden = !!retry;
     finish.disabled = !retry && !edited;
     add.disabled = !!d.operations.length || !!(d.text.trim() && d.text !== d.original);
     paper.disabled = !!v.scope || !!d.operations.length || !!d.recordId;
-    $('#memoPaperLabel').textContent=paper.disabled?'이 메모의 논문':'연결할 논문 (선택)';
+    lookup('#memoPaperLabel').textContent=paper.disabled?'이 메모의 논문':'연결할 논문 (선택)';
     const multiple=d.recordContexts?.length>1;
-    $('#memoPaperField').hidden=multiple || (!v.scope && !v.snapshot?.context.document_contexts.length);
-    const hint=$('#memoAssociation');
+    lookup('#memoPaperField').hidden=multiple || (!v.scope && !v.snapshot?.context.document_contexts.length);
+    const hint=lookup('#memoAssociation');
     if (multiple) hint.textContent='정정 기록은 원래 메모에 연결된 자료들을 유지해요.';
     else if (v.scope && !d.artifactId) hint.textContent='원래 메모와 같은 논문에 정정 내용을 저장해요.';
     else hint.textContent=v.scope?'이 판본에 저장 · '+v.scope.label:'';
@@ -84,9 +85,9 @@ function createAccountMemos(request, account, saves, drawPapers) {
     }
     const sources=new Set(visible.map(r=>r.record_id));
     const inScope=id=>!v.scope || sources.has(id);
-    $('#accountContext').innerHTML = group('질문',data.context.questions.filter(q=>inScope(q.record_id)).map(q=>q.question_text)) +
+    lookup('#accountContext').innerHTML = group('질문',data.context.questions.filter(q=>inScope(q.record_id)).map(q=>q.question_text)) +
       group('판단',data.context.decisions.filter(d=>inScope(d.record_id)).map(d=>d.decision_text));
-    $('#accountActions').innerHTML = accountActionHistory(data.next_actions.filter(a=>inScope(a.source_record_id)),v.records);
+    lookup('#accountActions').innerHTML = accountActionHistory(data.next_actions.filter(a=>inScope(a.source_record_id)),v.records);
     readStatus.textContent = '';
     drawPapers(docs);
   }
@@ -109,7 +110,7 @@ function createAccountMemos(request, account, saves, drawPapers) {
     section.hidden = true;
     field.value = '';
     readStatus.textContent = '';
-    recordList.innerHTML = $('#accountContext').innerHTML = $('#accountActions').innerHTML = '';
+    recordList.innerHTML = lookup('#accountContext').innerHTML = lookup('#accountActions').innerHTML = '';
     paper.innerHTML = '';
   }
   async function open(id,scope=null) {
@@ -180,7 +181,7 @@ function createAccountMemos(request, account, saves, drawPapers) {
   // completing a focused edit so the user can still choose its paper.
   let focused=false, choosingPaper=false;
   field.addEventListener('focus',()=>{ focused=true; choosingPaper=false; });
-  $('#memoPaperField').addEventListener('pointerdown',()=>{ choosingPaper=focused && !paper.disabled; });
+  lookup('#memoPaperField').addEventListener('pointerdown',()=>{ choosingPaper=focused && !paper.disabled; });
   field.addEventListener('input',()=>{
     const v = view;
     if (!current(v)) return;
@@ -194,10 +195,10 @@ function createAccountMemos(request, account, saves, drawPapers) {
     const target=event.relatedTarget;
     const movingToPaper=target===paper || (!target && choosingPaper);
     choosingPaper=false;
-    if (!movingToPaper && target!==finish && target!==$('#memoRetry')) return complete();
+    if (!movingToPaper && target!==finish && target!==lookup('#memoRetry')) return complete();
   });
   finish.addEventListener('click',()=>complete(true));
-  $('#memoRetry').addEventListener('click',()=>{ if (current(view)) return sendCompleted(view); });
+  lookup('#memoRetry').addEventListener('click',()=>{ if (current(view)) return sendCompleted(view); });
   paper.addEventListener('change',()=>{
     if (current(view) && !paper.disabled) { view.draft.documentId=paper.value; keep(view); }
   });

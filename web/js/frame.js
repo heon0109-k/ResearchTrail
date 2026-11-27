@@ -46,11 +46,11 @@ function showMain(){
     tn.addEventListener('click',projMenuToggle);if(tch)tch.addEventListener('click',projMenuToggle);
     tn.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();projMenuToggle()}})}
   else if(tch)tch.hidden=true;
-  $('#ownBtn').addEventListener('click',function(){if(TOUR)tourEnd(true);if(RET){RET=false;S.example=false;if(load()){showMain();renderAll();return}}startEmpty();firstRunTour()});
+  $('#ownBtn').addEventListener('click',function(){if(returnFromStandaloneExample())return;if(TOUR)tourEnd(true);if(RET){RET=false;S.example=false;if(load()){showMain();renderAll();return}}startEmpty();firstRunTour()});
   $('#bBand').addEventListener('click',function(){S.bands=!S.bands;renderAll()});
   $('#bWhy').addEventListener('click',function(){S.why=!S.why;renderAll()});
   $('#addBtn').addEventListener('click',function(){openAdd(null)});
-  $('#homeBtn').addEventListener('click',function(){showLanding()});
+  $('#homeBtn').addEventListener('click',function(){if(!returnFromStandaloneExample())showLanding()});
   $('#mm').addEventListener('keydown',function(e){var step=e.key==='ArrowLeft'?-7:e.key==='ArrowRight'?7:0;if(!step)return;e.preventDefault();var sc=$('#scroller');scrollToDay(S.zoom==='all'?(L.a+L.b)/2+(S.overviewPan||0)*(L.b-L.a)+step:L.a+(sc.scrollLeft+(sc.clientWidth-LABELW)/2)/L.px+step)});
   $('#zoomSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(b)setZoom(b.dataset.z)});
   $('#relayout').addEventListener('click',function(){relayoutDots()});
@@ -75,7 +75,7 @@ function showMain(){
   var _st=0;sc.addEventListener('scroll',function(){clearTimeout(_st);_st=setTimeout(function(){if(sc.isConnected&&S.view==='card'&&!S.reader){S.scroll=timelineScrollState(sc);save()}},250)});
 }
 function setView(v){S.reader=null;if(v==='list'){S.bubble=null;S.panel='none';S.sel=null}S.view=v;renderAll();if(v==='dot'){D.alpha=Math.max(D.alpha,.6);kick()}}
-function openAdd(draft){if(S.source==='account')return accountTimelineActions?.addPaper();S.reader=null;S.draft=Object.assign({},S.filterTag!=null?{tag:S.filterTag}:{},draft,{date:todayStr()});S.panel='add';S.sel=null;S.linking=null;var pin0=$('#pin');if(pin0)pin0.innerHTML='';renderAll();var t=$('#aTitle');if(t)t.focus()}
+function openAdd(draft){if(S.source==='account'&&!S.taskId){projNewFromWorkspace();return}S.reader=null;S.draft=Object.assign({},S.filterTag!=null?{tag:S.filterTag}:{},draft,{date:todayStr()});S.panel='add';S.sel=null;S.linking=null;var pin0=$('#pin');if(pin0)pin0.innerHTML='';renderAll();var t=$('#aTitle');if(t)t.focus()}
 
 function select(id){
   if(!id){closeDetailPanel();return}
@@ -103,7 +103,6 @@ function closeDetailPanel(){
   save();
 }
 function onPick(id){
-  if(S.source==='account'){showAccountPaper(id);return}
   if(S.linking){if(id!==S.linking.from){var er=linkError(S.linking.from,id);if(er){S.linking.to=null;S.linking.err=er}else{S.linking.to=id;S.linking.err=null}renderAll()}return}
   select(id);
 }
@@ -130,7 +129,6 @@ function matches(p){return true}
 function renderMe(){}
 function wireMe(){}
 function renderAll({keepTagInputs=false}={}){
-  if(S.source==='account'){renderAccountWorkspace();return}
   if(S.panel!=='detail'||S.view!=='card'||(S.detailScroll&&S.detailScroll.z!==S.zoom))S.detailScroll=null;
   var ex=$('#exTag');if(ex)ex.hidden=!S.example;var ob=$('#ownBtn');if(ob){ob.hidden=!S.example;ob.textContent=RET?'내 타임라인으로 돌아가기':'내 타임라인 시작'}
   renderMe();
@@ -152,13 +150,29 @@ function renderAll({keepTagInputs=false}={}){
   $('#mm').setAttribute('role','slider');$('#mm').setAttribute('tabindex','0');$('#mm').setAttribute('aria-label','타임라인 날짜 이동');
   $$('#zoomSeg button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.z===S.zoom)});
   renderRbar();
-  var em=!list&&!S.papers.some(visible)&&(!card||!S.tags.length);$('#emptyBox').hidden=!em;
+  var needsProject=S.source==='account'&&!S.taskId;
+  var em=needsProject||(!list&&!S.papers.some(visible)&&(!card||!S.tags.length));$('#emptyBox').hidden=!em;
   $('#emptyBox').innerHTML='<p class="eb-hint">'+(S.papers.length?'이 태그에 등록된 논문이 없어요.':'<span class="hint-dir">왼쪽 위 </span><b>+ 논문 추가</b>로 시작하세요.')+'</p>';
+  if(needsProject){
+    var hasProjects=!!projAccountMenu?.catalog().list.length;
+    $('#emptyBox').innerHTML='<p class="eb-hint">'+(hasProjects?'열 프로젝트를 선택해 주세요.':'아직 계정 프로젝트가 없어요.')+'</p><button type="button" class="btn pri" id="workspaceNew">'+(hasProjects?'프로젝트 선택':'새 프로젝트')+'</button>';
+    $('#workspaceNew').addEventListener('click',projNewFromWorkspace);
+  }
+  var onlyUndated=renderUndatedPapers(card);
+  $('#canvas').hidden=onlyUndated;
   if(em){$('#timelineMonth').hidden=true;$('#fcard').hidden=true;$('#fdot').hidden=true;$('#canvas').innerHTML='';$('#dotsvg').innerHTML='';D.els={};D.edges={};$('#bandsw').hidden=true}
-  else if(card){renderCards();renderMinimap()}else if(list){renderPaperList()}else{renderDots()}
+  else if(onlyUndated){
+    $('#timelineMonth').hidden=$('#overviewControls').hidden=$('#bandsw').hidden=$('#fcard').hidden=true;
+    $('#canvas').innerHTML='';L.pos={};
+  }else if(card){renderCards();renderMinimap()}else if(list){renderPaperList()}else{renderDots()}
   save();
 }
 var TAGEDIT=false,TAGMANAGE=false,NEWCOLOR=null,COLOREDIT=null;
+function resetPaperWorkspaceControls(){
+  TAGEDIT=false;TAGMANAGE=false;NEWCOLOR=null;COLOREDIT=null;
+  if(typeof PSNAP!=='undefined'){PEDIT=null;PSNAP=null;PSUGOPEN=null;}
+  if(typeof flushGraphGesture==='function')flushGraphGesture();
+}
 /* 태그 색: 사용자가 고른 색은 태그 점에만 쓰인다(카드·그래프 색은 읽기 상태). */
 function colorSwatches(cur,attr){return '<div class="tag-color-palette" role="group" aria-label="태그 색">'+PAL.map(function(c){return '<button type="button" '+attr+'="'+c+'" style="--c:'+c+'" aria-label="색 '+c+'" aria-pressed="'+(c===cur)+'"></button>'}).join('')+'</div>'}
 document.addEventListener('click',function(e){var b=document.getElementById('ghB');if(!b)return;if(e.target.closest&&e.target.closest('#ghB')){b.setAttribute('aria-expanded',b.getAttribute('aria-expanded')==='true'?'false':'true')}else b.setAttribute('aria-expanded','false')});
@@ -174,6 +188,7 @@ document.addEventListener('click',function(e){
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&TAGMANAGE&&!document.querySelector('.ov')){TAGMANAGE=false;renderTagbar();var b=$('#tagEdit');if(b)b.focus()}});
 document.addEventListener('click',function(e){
   if(!e.target.closest||!e.target.closest('#tagAdd'))return;
+  if(S.source==='account'&&!S.taskId){projNewFromWorkspace();return}
   if(TAGEDIT){commitTag();return}
   TAGMANAGE=false;
   COLOREDIT=null;
@@ -242,7 +257,7 @@ function renderTagbar(){
     inp.addEventListener('keydown',function(e){if(e.isComposing||e.keyCode===229)return;if(e.key==='Enter'){e.preventDefault();inp.blur()}else if(e.key==='Escape'){e.stopPropagation();inp.value=tagBy(inp.dataset.renameTag).name;inp.blur()}});
     inp.addEventListener('change',function(){renameTag(inp)});
   });
-  var ti=$('#tagNew');if(ti){ti.focus();ti.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();commitTag()}else if(e.key==='Escape'){TAGEDIT=false;renderTagbar()}});ti.addEventListener('blur',function(){setTimeout(function(){if(TAGEDIT)commitTag()},120)})}
+  var ti=$('#tagNew');if(ti){ti.focus();ti.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();commitTag()}else if(e.key==='Escape'){TAGEDIT=false;renderTagbar()}});ti.addEventListener('blur',function(){setTimeout(function(){if(TAGEDIT && ti.isConnected && $('#tagNew')===ti)commitTag()},120)})}
   var cnt={done:0,reading:0,skim:0,unknown:0};S.papers.forEach(function(p){cnt[readingStateKey(p.state)]++});
   var sl=$('#stl');if(sl)sl.innerHTML=['done','reading','skim'].concat(cnt.unknown?['unknown']:[]).map(function(k){return '<div class="stl st-'+k+'"><i></i>'+readingState(k).t+'<em>'+cnt[k]+'</em></div>'}).join('');
 }
@@ -274,9 +289,14 @@ function renameTag(input){
 }
 function deleteTag(id){
   var tag=S.tags.find(function(t){return t.id===id});if(!tag)return;
-  var count=S.papers.filter(function(p){return p.tag===id}).length;
+  var confirmedPapers=S.papers.filter(p=>p.tag===id).map(p=>p.id).sort();
+  var count=confirmedPapers.length;
   var ov=document.createElement('div');ov.className='ov';
   ov.innerHTML='<div class="dlg tag-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="tagDeleteTitle"><button type="button" class="tag-dialog-close" aria-label="닫기">×</button><h3 id="tagDeleteTitle">태그 삭제</h3><p>'+esc(tag.name)+' 태그를 어떻게 삭제할까요?</p><fieldset class="tag-delete-options"><legend class="sr-only">삭제 범위</legend><label><input type="radio" name="tagDeleteScope" value="tag" checked><span><b>태그만 삭제</b><small>논문 '+count+'편은 ‘태그 없음’으로 이동해요.</small></span></label><label><input type="radio" name="tagDeleteScope" value="papers"><span><b>태그와 논문 모두 삭제</b><small>논문 '+count+'편과 메모·하이라이트도 함께 삭제해요.</small></span></label></fieldset><div class="dact"><button type="button" class="btn" id="tagDeleteCancel">취소</button><button type="button" class="btn pri" id="tagDeleteContinue">태그 삭제</button></div></div>';
+  if(S.source==='account'){
+    $('input[value="papers"]',ov).parentElement.querySelector('small').textContent='이 프로젝트의 목록에서 해당 논문 '+count+'편을 함께 삭제해요.';
+  }
+  var project=S.taskId;
   var previous=document.activeElement,ok=$('#tagDeleteContinue',ov);
   $('.tag-dialog-close',ov).setAttribute('aria-label','닫기');
   function close(){document.removeEventListener('keydown',key,true);ov.remove();if(previous&&document.contains(previous))previous.focus()}
@@ -294,13 +314,21 @@ function deleteTag(id){
   ov.addEventListener('mousedown',function(e){if(e.target===ov)close()});
   ok.addEventListener('click',function(){
     var all=ov.querySelector('input[value="papers"]').checked;close();
-    if(all&&count)ask('논문 '+count+'편을 모두 삭제할까요?','“'+tag.name+'” 태그와 논문 '+count+'편의 메모·하이라이트·기록 이력·첨부 PDF 및 관련 연결이 삭제됩니다. 되돌릴 수 없어요.','논문 '+count+'편 삭제',function(){applyTagDeletion(id,true)},true);
-    else applyTagDeletion(id,all);
+    function remove(){
+      if(S.source==='account'&&S.taskId!==project)return;
+      applyTagDeletion(id,all,confirmedPapers);
+    }
+    if(all&&count){
+      const effect=S.source==='account'?'이 프로젝트의 목록에서 “'+tag.name+'” 태그와 논문 '+count+'편을 함께 삭제해요.':
+        '“'+tag.name+'” 태그와 논문 '+count+'편의 메모·하이라이트·기록 이력·첨부 PDF 및 관련 연결이 삭제됩니다. 되돌릴 수 없어요.';
+      ask('논문 '+count+'편을 모두 삭제할까요?',effect,'논문 '+count+'편 삭제',remove,true);
+    }else remove();
   });
   document.body.appendChild(ov);document.addEventListener('keydown',key,true);$('#tagDeleteCancel',ov).focus();
 }
-function applyTagDeletion(id,withPapers){
+function applyTagDeletion(id,withPapers,confirmedPapers){
   if(!S.tags.some(function(t){return t.id===id}))return false;
+  if(S.source==='account')return removeAccountTag(id,withPapers,confirmedPapers);
   var removed=S.papers.filter(function(p){return p.tag===id}),ids=new Set(removed.map(function(p){return p.id}));
   var oldPapers=S.papers,oldTags=S.tags,oldLinks=S.links,oldFilter=S.filterTag;
   S.papers=withPapers?S.papers.filter(function(p){return !ids.has(p.id)}):S.papers.map(function(p){return p.tag===id?Object.assign({},p,{tag:''}):p});
@@ -319,4 +347,22 @@ function applyTagDeletion(id,withPapers){
     removed.forEach(function(p){D.pos.delete(p.id);if(!S.example)idbDel(p.id)});
   }
   S.hidden.delete(id);D.inited=false;renderAll();return true;
+}
+
+async function removeAccountTag(tagId,archivePapers,confirmedPapers){
+  const task=S.taskId,workspace=accountWorkspace;
+  try{
+    if(!workspace.current()||S.taskId!==task)return false;
+    if(workspace.removeTag){
+      await workspace.removeTag(task,tagId,archivePapers,archivePapers?confirmedPapers:undefined);
+    }else{
+      const body={tag_id:tagId,archive_papers:archivePapers,version:workspace.extraVersion('project')};
+      await workspace.mutate('태그 삭제','/tasks/'+encodeURIComponent(task)+'/tag-removal',body);
+    }
+    if(workspace.current()&&S.taskId===task)await workspace.select(task);
+    return true;
+  }catch{
+    if(workspace.current()&&S.taskId===task)toast('태그 삭제를 확인하지 못했어요. 저장 상태를 확인해 주세요.');
+    return false;
+  }
 }

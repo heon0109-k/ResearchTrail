@@ -1,8 +1,8 @@
 'use strict';
 
-// Each opening owns its consent, conversation and indexing cursor. The parent transport
+// Each opening owns its consent and indexing cursor. Saved turns belong to the exact account edition. The parent transport
 // supplies the signed-in session. The local development chatbot has a separate entry point.
-function createAccountReaderChat(box,account,pdf,revealPage) {
+function createAccountReaderChat(box,account,pdf,revealPage,store) {
   const batchSize=32, maxChunks=5000; // researchtrail rag-index/chunks and rt_rag_add_chunks
   let activeSession=null;
   const current=session=>session && activeSession===session && account.current();
@@ -10,15 +10,16 @@ function createAccountReaderChat(box,account,pdf,revealPage) {
   const isReady=index=>compatible(index) && index.status==='ready' && Number.isSafeInteger(index.chunk_count) && index.chunk_count>0;
   const action=(key,label,style='btn sm')=>'<button type="button" class="'+style+'" data-chat-action="'+key+'">'+label+'</button>';
 
-  function open(task,use,artifact,loaded) {
+  function open(task,use,artifact,loaded,paper) {
     close();
     activeSession={task,use,id:artifact.artifact_id,sha:artifact.pdf.sha256,available:artifact.pdf.available,loaded,
       base:'/tasks/'+task+'/artifacts/'+artifact.artifact_id,stage:'idle',messages:[],draft:'',depth:'auto',
-      consent:false,offset:0,beginAttempt:false};
+      consent:false,offset:0,beginAttempt:false,paper:paper||{},turns:{}};
+    restore(activeSession);
   }
   function close() {
     activeSession=null;
-    box.innerHTML='';
+    if (box) box.innerHTML='';
   }
   function transition(session,stage,status) {
     if (!current(session)) return;
@@ -27,39 +28,72 @@ function createAccountReaderChat(box,account,pdf,revealPage) {
     render(session);
   }
   function render(session) {
-    if (!current(session)) return;
+    if (!current(session) || !box) return;
     let controls='';
     if (session.stage==='consent') {
       const reuse=isReady(session.index);
-      controls='<div class="chat-empty"><p>색인을 준비하면 PDF에서 추출한 본문을 구절로 나누어 OpenAI 임베딩 서비스에 보내고, 이 판본의 검색 색인을 계정에 저장해요.</p>'+
-        '<p>질문을 보내면 질문과 최근 대화, 선택한 문장, 이 PDF에서 검색한 구절을 OpenAI에 전송해요.</p></div>'+
-        '<div class="account-chat-actions">'+action('consent',reuse?'동의하고 질문하기':session.index?'동의하고 색인 다시 만들기':'동의하고 색인 준비')+
-        action('decline','동의하지 않음')+(session.index?.status==='indexing'?action('refresh','색인 상태 다시 확인'):'')+'</div>';
+      controls=chatSetupHtml({
+        details:'색인을 준비하면 PDF에서 추출한 본문을 구절로 나누어 OpenAI 임베딩 서비스에 보내고, 이 판본의 검색 색인을 계정에 저장해요. 질문할 때는 질문과 최근 대화, 선택한 문장이나 첨부한 캡처의 텍스트·메모, 검색한 구절을 OpenAI에 보내요. 질문과 답은 이 계정에 저장해요.',
+        label:reuse?'동의하고 질문하기':session.index?'동의하고 색인 다시 만들기':'동의하고 색인 준비',
+        actions:action('decline','동의하지 않음')+(session.index?.status==='indexing'?action('refresh','색인 상태 다시 확인'):'')
+      });
+      if(session.messages.length) controls='<div class="chat-list" id="chatList">'+chatMessagesHtml(session.paper,session.messages)+'</div>'+controls;
     } else if (session.stage==='declined') controls=action('review','동의 안내 보기');
     else if (session.stage==='status-error') controls=action('refresh','색인 상태 다시 확인');
     else if (session.stage==='index-error') controls=action('retry-index','색인 다시 시도');
-    else if (session.stage==='ready' || session.stage==='asking') controls=conversation(session);
+    else if (['ready','asking','saving'].includes(session.stage)) controls=conversation(session);
     box.innerHTML='<p class="reader-hint" role="status">'+esc(session.status)+'</p>'+controls;
+    chatWireEffort(box.querySelector('.chat-effort'),false);
+    chatWireExamples(box.querySelector('#chatEx'));
     const list=box.querySelector('#chatList');
     if (list) list.scrollTop=list.scrollHeight;
   }
+  function restore(session) {
+    const qa=store?.extra('artifact',session.id)?.qa;
+    if (!qa) return;
+    if (CHAT_EFFORT_CHOICES.includes(qa.depth)) session.depth=qa.depth;
+    session.turns=Object.fromEntries(Object.entries(qa.turns || {}).filter(([,turn])=>
+      turn && typeof turn.question==='string' && turn.answer?.role==='bot' && typeof turn.answer.text==='string' &&
+      Array.isArray(turn.answer.evidence) && turn.answer.evidence.every(e=>e?.artifact_id===session.id &&
+        e.document_use_id===session.use && Number.isSafeInteger(e.page) && e.page>0 && typeof e.quote==='string')));
+    showTurns(session);
+  }
+  function orderedTurns(session) {
+    return Object.entries(session.turns).sort(([a,x],[b,y])=>x.at-y.at || a.localeCompare(b));
+  }
+  function showTurns(session) {
+    session.messages=orderedTurns(session)
+      .flatMap(([,turn])=>[{role:'user',text:turn.question,att:turn.att,sel:turn.sel},turn.answer]);
+  }
   function conversation(session) {
-    const disabled=session.stage==='asking'?' disabled':'';
-    const examples=['이 논문의 핵심은 뭐야?','이 쪽 쉽게 설명해 줘','이 표는 무엇을 비교해?'];
-    const turns=session.messages.map(m=>{
-      const quotes=(m.evidence || []).map(e=>'<p><button type="button" class="chat-pg" data-chat-action="cite" data-page="'+e.page+
-        '" aria-label="'+e.page+'쪽 원문 보기">'+e.page+'쪽</button> '+esc(e.quote)+'</p>').join('');
-      return '<div class="chat-m '+(m.role==='user'?'chat-u':'chat-b')+'"><p>'+esc(m.text)+'</p>'+quotes+'</div>';
-    }).join('');
-    return (session.messages.length && !disabled?'<div class="chat-top">'+action('clear','새 대화','chat-new')+'</div>':'')+
-      '<div class="chat-list" id="chatList" role="log">'+(turns || '<div class="chat-empty"><p>열어 둔 PDF 전체에서 관련 구절을 찾아 답해요.</p></div>')+'</div>'+
-      (session.error?'<p class="ai-err" role="alert">'+esc(session.error)+'</p>':'')+
+    const locked=session.stage!=='ready' || !!session.pending;
+    const state={busy:locked,lockInput:locked,err:session.error,sel:session.selection,att:session.att,
+      pick:session.pick,draft:session.draft};
+    return chatConversationHtml(session.paper,state,session.messages,session.depth,1000)+
       (session.checkIndex?action('refresh','색인 상태 다시 확인'):'')+
-      (disabled?'':'<div class="chat-ex-row">'+examples.map(q=>action('example',q,'chat-exb')).join('')+'</div>')+
-      '<form class="chat-box">'+(session.selection?'<div class="chat-sel"><span>'+session.selection.page+'쪽 · '+esc(session.selection.text.slice(0,80))+
-        '</span>'+action('unselect','선택 취소')+'</div>':'')+
-      '<textarea id="chatQ" rows="2" maxlength="1000" placeholder="이 논문에 대해 물어보세요" aria-label="질문 입력"'+disabled+'>'+esc(session.draft)+'</textarea>'+
-      '<div class="chat-row">'+(disabled?esc(chatEffortLabel(session.depth)):chatEffortHtml(session.depth))+'<button type="submit" class="chat-send" aria-label="질문 보내기" title="질문 보내기"'+disabled+'>↑</button></div></form>';
+      (session.pending && session.stage==='ready'?action('retry-save','대화 저장 다시 시도'):'');
+  }
+  async function saveChange(session,patch,ack) {
+    const job=session.pending || {id:crypto.randomUUID(),patch,ack};
+    session.pending=job;
+    function saved() {
+      if (!current(session) || session.pending!==job) return;
+      job.ack();
+      session.pending=null;
+      session.error='';
+      restore(session);
+      transition(session,'ready','이 판본의 검색 색인이 준비됐어요.');
+    }
+    transition(session,'saving','질문하기 변경을 계정에 저장하고 있어요.');
+    try {
+      if (store) await store.patchExtra('artifact',session.id,{qa:job.patch},
+        {request_id:job.id,task:session.task,label:'질문 대화·설정',onAck:saved});
+      saved();
+    } catch {
+      if (!current(session) || session.pending!==job) return;
+      session.error='대화나 설정 저장을 확인하지 못했어요. 대화 저장 다시 시도를 눌러 주세요.';
+      transition(session,'ready','이 판본의 검색 색인이 준비됐어요.');
+    }
   }
   async function readIndex(session) {
     const result=await account.write('/tasks/'+session.task+'/rag-index');
@@ -100,6 +134,7 @@ function createAccountReaderChat(box,account,pdf,revealPage) {
     if (!session.available) return transition(session,'unavailable','이 판본의 PDF를 이용할 수 없어 질문을 보낼 수 없어요.');
     if (session.stage==='idle') return check(session);
     if (session.stage==='ready') syncSelection();
+    render(session);
   }
   function syncSelection() {
     const session=activeSession;
@@ -205,7 +240,7 @@ function createAccountReaderChat(box,account,pdf,revealPage) {
     return {role:'bot',text:result.text,evidence};
   }
   async function submitQuestion(session) {
-    if (!session.consent || session.stage!=='ready') return;
+    if (session.pending || !session.consent || session.stage!=='ready') return;
     const question=session.draft.trim();
     if (!question || question.length>1000) {
       session.error='질문을 1자에서 1,000자 사이로 적어 주세요.';
@@ -213,6 +248,7 @@ function createAccountReaderChat(box,account,pdf,revealPage) {
     }
     const ctx=pdf.context(session.task,session.id);
     if (!ctx?.doc) return transition(session,'unavailable','질문할 PDF 판본을 다시 열어 주세요.');
+    const cap=session.att && chatCaptureById(session.paper,session.att);
     const body={question,scope:'open_pdf',consent:true,answer_depth:session.depth,current_page:ctx.page,
       history:session.messages.slice(-6).map(({role,text})=>({role,text:text.slice(0,1200)}))};
     if (session.selection) body.selection=session.selection;
@@ -220,12 +256,31 @@ function createAccountReaderChat(box,account,pdf,revealPage) {
     session.checkIndex=false;
     transition(session,'asking','이 PDF에서 근거를 찾아 답변을 준비하는 중이에요.');
     try {
+      if (cap) {
+        const attachment=await chatCaptureContext(ctx.doc,cap);
+        if (!current(session)) return;
+        body.current_page=attachment.page;
+        const text=attachment.text || attachment.caption;
+        if (text) body.selection={text:text.slice(0,1000),page:attachment.page};
+        body.capture={page:attachment.page,note:attachment.mine};
+      }
       const result=await account.write(session.base+'/ask',body);
       if (!current(session)) return;
       const answer=checkedAnswer(result,session,ctx.doc.numPages);
-      session.messages.push({role:'user',text:question},answer);
-      session.draft='';
-      session.selection=null;
+      const turnId=crypto.randomUUID();
+      const turn={at:Date.now(),question,answer};
+      if (cap) turn.att={id:cap.id,page:cap.page};
+      if (session.selection) turn.sel=session.selection.text;
+      const older=orderedTurns(session).slice(0,Math.max(0,Object.keys(session.turns).length+1-Math.floor(CHAT_KEEP/2)));
+      const turns=Object.fromEntries(older.map(([id])=>[id,null]));
+      turns[turnId]=turn;
+      await saveChange(session,{turns},()=>{
+        for(const [id] of older)delete session.turns[id];
+        session.turns[turnId]=turn;
+        showTurns(session);
+        session.draft='';session.att=null;session.selection=null;session.pick=false;
+      });
+      return;
     } catch {
       if (!current(session)) return;
       session.checkIndex=true;
@@ -235,54 +290,119 @@ function createAccountReaderChat(box,account,pdf,revealPage) {
     if (!box.hidden) box.querySelector('#chatQ')?.focus();
   }
 
-  box.addEventListener('input',e=>{if (current(activeSession) && e.target.id==='chatQ' && activeSession.stage==='ready') activeSession.draft=e.target.value;});
-  box.addEventListener('change',e=>{
-    if (!current(activeSession) || activeSession.stage!=='ready' || e.target.name!=='chatEffort' || !CHAT_EFFORT_CHOICES.includes(e.target.value)) return;
-    activeSession.depth=e.target.value;
-    render(activeSession);
-    box.querySelector('.chat-effort summary')?.focus();
-  });
-  box.addEventListener('submit',e=>{e.preventDefault();if (current(activeSession)) submitQuestion(activeSession);});
-  box.addEventListener('keydown',e=>{
-    if (current(activeSession) && e.target.id==='chatQ' && e.key==='Enter' && !e.shiftKey && !e.isComposing && e.keyCode!==229) {
-      e.preventDefault(); submitQuestion(activeSession);
-    }
-  });
-  box.addEventListener('click',async e=>{
-    const session=activeSession, button=e.target.closest('[data-chat-action]');
-    if (!current(session) || !button) return;
-    const key=button.dataset.chatAction;
-    if (key==='consent' && session.stage==='consent') {
-      session.consent=true;
-      if (isReady(session.index)) enableQuestions(session); else await prepare(session);
-    } else if (key==='decline' && session.stage==='consent') {
-      transition(session,'declined','PDF 본문이나 질문을 보내지 않았어요. 계속 읽을 수 있어요.');
-    } else if (key==='review' && session.stage==='declined') offerConsent(session,session.index);
-    else if (key==='refresh' && (['consent','status-error'].includes(session.stage) || (session.stage==='ready' && session.checkIndex))) await check(session);
-    else if (key==='retry-index' && session.stage==='index-error' && session.consent) await prepare(session);
-    else if (key==='cite' && ['ready','asking'].includes(session.stage)) {
-      const page=Number(button.dataset.page);
-      if (!session.messages.some(m=>m.evidence?.some(e=>e.page===page))) return;
-      const ok=await pdf.goToPage(session.task,session.id,page);
-      if (!current(session)) return;
-      if (ok) { syncSelection(); revealPage(); }
-      else {session.error='인용한 쪽을 열지 못했어요. PDF 로딩이나 읽기 위치 저장 상태를 확인한 뒤 다시 눌러 주세요.';render(session);}
-    } else if (key==='example' && session.stage==='ready') {
-      session.draft=button.textContent;
-      render(session);
-      box.querySelector('#chatQ')?.focus();
-    } else if (key==='clear' && session.stage==='ready') {
-      ask('이 판본의 대화를 지울까요?','지금까지 나눈 질문과 답이 사라져요.','지우기',()=>{
+  const wired=new WeakSet();
+  function mount(host) {
+    box=host;
+    if (!host || wired.has(host)) return;
+    wired.add(host);
+    host.addEventListener('input',e=>{if (host===box && current(activeSession) && e.target.id==='chatQ' && activeSession.stage==='ready') activeSession.draft=e.target.value;});
+    host.addEventListener('change',e=>{
+      if (host!==box || !current(activeSession) || activeSession.stage!=='ready' || e.target.name!=='chatEffort' || !CHAT_EFFORT_CHOICES.includes(e.target.value)) return;
+      if (activeSession.pending) return;
+      const session=activeSession,depth=e.target.value;
+      saveChange(session,{depth},()=>{session.depth=depth;});
+    });
+    host.addEventListener('submit',e=>{e.preventDefault();if (host===box && current(activeSession)) submitQuestion(activeSession);});
+    host.addEventListener('keydown',e=>{
+      if (host===box && current(activeSession) && e.target.id==='chatQ' && e.key==='Enter' && !e.shiftKey && !e.isComposing && e.keyCode!==229) {
+        e.preventDefault(); submitQuestion(activeSession);
+      }
+    });
+    host.addEventListener('click',async e=>{
+      const session=activeSession, button=e.target.closest('[data-chat-action]');
+      if (box!==host || !current(session) || !button) return;
+      const key=button.dataset.chatAction;
+      if (key==='retry-save' && session.pending && session.stage==='ready') {
+        await saveChange(session,session.pending.patch,session.pending.ack);
+      } else if (session.pending) return;
+      else if (key==='send' && session.stage==='ready') await submitQuestion(session);
+      else if (key==='pick' && session.stage==='ready') {session.pick=!session.pick;render(session);}
+      else if (key==='detach' && session.stage==='ready') {session.att=null;render(session);}
+      else if (key==='attach' && session.stage==='ready' && chatCaptureById(session.paper,button.dataset.att)) {
+        session.att=button.dataset.att;session.pick=false;render(session);
+      } else if (key==='consent' && session.stage==='consent') {
+        const checkbox=box.querySelector('#chatConsent');
+        if (checkbox && !checkbox.checked) {
+          box.querySelector('#chatMsg').textContent='PDF 본문과 질문 전송에 동의해 주세요.';
+          checkbox.focus();
+          return;
+        }
+        session.consent=true;
+        if (isReady(session.index)) enableQuestions(session); else await prepare(session);
+      } else if (key==='decline' && session.stage==='consent') {
+        transition(session,'declined','PDF 본문이나 질문을 보내지 않았어요. 계속 읽을 수 있어요.');
+      } else if (key==='review' && session.stage==='declined') offerConsent(session,session.index);
+      else if (key==='refresh' && (['consent','status-error'].includes(session.stage) || (session.stage==='ready' && session.checkIndex))) await check(session);
+      else if (key==='retry-index' && session.stage==='index-error' && session.consent) await prepare(session);
+      else if (key==='cite' && ['ready','asking','consent'].includes(session.stage)) {
+        const page=Number(button.dataset.page);
+        if (!session.messages.some(m=>m.evidence?.some(e=>e.page===page))) return;
+        const ok=await pdf.goToPage(session.task,session.id,page);
         if (!current(session)) return;
-        session.messages=[];
-        session.draft='';
-        session.error='';
-        session.checkIndex=false;
-        session.selection=null;
+        if (ok) { syncSelection(); revealPage(); }
+        else {session.error='인용한 쪽을 열지 못했어요. PDF 로딩이나 읽기 위치 저장 상태를 확인한 뒤 다시 눌러 주세요.';render(session);}
+      } else if (key==='example' && session.stage==='ready') {
+        session.draft=button.textContent;
         render(session);
         box.querySelector('#chatQ')?.focus();
-      },true);
-    } else if (key==='unselect' && session.stage==='ready') {session.selection=null;render(session);}
-  });
-  return {open,close,show,syncSelection};
+      } else if (key==='clear' && session.stage==='ready') {
+        ask('이 판본의 대화를 지울까요?','지금까지 나눈 질문과 답이 사라져요.','지우기',()=>{
+          if (!current(session)) return;
+          const removed=Object.fromEntries(Object.keys(session.turns).map(id=>[id,null]));
+          saveChange(session,{turns:removed},()=>{
+            session.turns={};session.messages=[];session.draft='';session.att=null;session.pick=false;
+            session.checkIndex=false;session.selection=null;
+          });
+        },true);
+      } else if (key==='unselect' && session.stage==='ready') {session.selection=null;render(session);}
+    });
+  }
+  mount(box);
+  return {open,close,show,syncSelection,mount,attach(id){
+    if (current(activeSession) && chatCaptureById(activeSession.paper,id)) {
+      activeSession.att=id;activeSession.pick=false;
+    }
+  }};
+}
+
+// The original reader reconstructs its notes sidebar when a record changes. Keep
+// the session bound to the selected edition and remount it on the original tab.
+var accountProductChat=null;
+function productAccountChatClose() {
+  accountProductChat?.close();
+  accountProductChat=null;
+  CHAT.token++;
+  CHAT.sel=null;CHAT.att=null;CHAT.pick=false;CHAT.draft='';CHAT.tab='notes';
+}
+function productAccountChatOpen(task,use,artifact,account,pdfLoaded) {
+  productAccountChatClose();
+  if (!artifact?.pdf) return;
+  const paper=paperBy(use);
+  let controller;
+  // A paper may change editions before its next PDF.js document is mounted.
+  // Recheck the product selection even when the Auth session has not changed.
+  const readerSession={write:account.write,current:()=>account.current() && accountProductChat===controller &&
+    S.taskId===task && S.reader===use && paperBy(use)===paper &&
+    (!paper?.artifactId || paper.artifactId===artifact.artifact_id)};
+  const active=(t,id)=>readerSession.current() && t===task && id===artifact.artifact_id &&
+    typeof PV!=='undefined' && PV?.pid===use && PV.doc;
+  const pdf={
+    context(t,id) {
+      if (!active(t,id)) return null;
+      const selected=CHAT.sel;
+      return {doc:PV.doc,page:PV.cur||1,selection:selected?.page ?
+        {page:selected.page,text:selected.text.slice(0,1000)}:null};
+    },
+    async goToPage(t,id,page) {
+      if (!active(t,id) || page>PV.doc.numPages) return false;
+      pvGo(page);
+      return true;
+    }
+  };
+  controller=createAccountReaderChat(null,readerSession,pdf,()=>{
+    if (window.matchMedia('(max-width:600px)').matches) {MTAB='pdf';applyMobileTab(paper,false);}
+    $('#pvs')?.focus();
+  },account);
+  accountProductChat=controller;
+  controller.open(task,use,artifact,pdfLoaded,paper);
 }

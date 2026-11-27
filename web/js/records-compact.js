@@ -145,10 +145,11 @@ function rcComposePageSync(){
   var n=rcComposePage(p);pg.textContent=n?'p.'+n:'쪽 없음';
 }
 function rcComposeSave(box,p){
-  var ta=box.querySelector('textarea'),v=String(ta.value||'').trim();if(!v)return;
-  var h={id:typeof nid==='function'?nid('h'):'h'+Date.now(),at:Date.now(),type:'note',page:rcComposePage(p),text:'',mine:v,rects:[]};
+  var ta=box.querySelector('textarea'),raw=String(ta.value||''),v=S.source==='account'?raw:raw.trim();if(!v.trim())return;
+  var h={id:typeof accountReaderNewId==='function'?accountReaderNewId():typeof nid==='function'?nid('h'):'h'+Date.now(),at:Date.now(),type:'note',page:rcComposePage(p),text:'',mine:v,rects:[]};
   p.hl=p.hl||[];p.hl.push(h);RC.seen.add(h.id);
-  if(typeof save==='function')save();
+  if(S.source==='account'){accountReaderNewCard(p,h);accountReaderBackground(accountReaderCompleteMemo(p,h));}
+  else if(typeof save==='function')save();
   ta.value='';rcComposeSync(box,p);
   if(typeof drawHlList==='function')drawHlList();
   var card=document.querySelector('#rRecords .reading-card[data-rid="'+h.id+'"]');
@@ -161,7 +162,13 @@ function rcCompose(){
   if(box&&box._pid===p.id)return;
   if(box)box.remove();
   box=document.createElement('div');box.id='rCompose';box.className='rq';box._pid=p.id;
-  box.innerHTML='<textarea rows="1" aria-label="바로 메모" placeholder="읽으면서 떠오른 생각을 적어 보세요"></textarea>'+
+  var destination='';
+  if(S.source==='account'){
+    var edition=accountReaderEdition(p), label=edition?.pdf
+      ? accountPdfEditionLabel(edition,p.artifacts.filter(a=>a.pdf).length>1) : edition?.label_text;
+    destination='<small>'+rcEsc(label?'이 판본에 저장 · '+label:'이 논문에 저장 · '+p.title)+'</small>';
+  }
+  box.innerHTML=destination+'<textarea rows="1" aria-label="바로 메모" placeholder="읽으면서 떠오른 생각을 적어 보세요"></textarea>'+
     '<div class="rq-foot"><span class="rq-page" title="지금 보고 있는 쪽에 남겨요"></span><button type="button" class="rq-save" disabled>저장</button></div>';
   list.parentNode.insertBefore(box,list);
   var ta=box.querySelector('textarea');

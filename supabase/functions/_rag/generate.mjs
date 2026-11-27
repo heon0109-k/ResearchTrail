@@ -17,7 +17,11 @@ const ENDPOINT = 'https://api.openai.com/v1/responses';
 const TIMEOUT_MS = 60000;
 
 // Returns the parsed reply. Any failure throws without the service's own message.
-export async function generateAnswer(prompt, { fetch, key, model = DEFAULT_ANSWER_MODEL, effort = 'none' }) {
+export function generateAnswer(prompt, options) {
+  return generateStructured(prompt,{...options,name:'researchtrail_answer',schema:ANSWER_SCHEMA});
+}
+
+export async function generateStructured(prompt, {fetch,key,model=DEFAULT_ANSWER_MODEL,effort='none',name,schema,instructions}) {
   if (!key) throw new Error('answer key is not configured');
   let response;
   try {
@@ -25,8 +29,8 @@ export async function generateAnswer(prompt, { fetch, key, model = DEFAULT_ANSWE
       method: 'POST',
       headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model, input: prompt, store: false, reasoning: { effort }, max_output_tokens: 3000,
-        text: { format: { type: 'json_schema', name: 'researchtrail_answer', strict: true, schema: ANSWER_SCHEMA } },
+        model, input: prompt, instructions, store: false, reasoning: { effort }, max_output_tokens: 3000,
+        text: { format: { type: 'json_schema', name, strict: true, schema } },
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });

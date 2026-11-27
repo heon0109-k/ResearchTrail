@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="referrer" content="no-referrer">
+  <title>ResearchTrail</title>
+</head>
+<body>
+  <a href="../" target="_top">ResearchTrail 열기</a>
+  <script>
+    const entry = new URL('../', location.href);
+    entry.search = location.search;
+    entry.hash = location.hash;
+    let destination = window;
+    try {
+      if (window.top.location.origin === location.origin) destination = window.top;
+    } catch {}
+    destination.location.replace(entry.href);
+  </script>
+</body>
+</html>

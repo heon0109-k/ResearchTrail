@@ -1,6 +1,48 @@
 'use strict';
 /* ---------- dot view ---------- */
 var D={pos:new Map(),alpha:0,raf:0,tx:0,ty:0,k:1,inited:false,els:{},edges:{},drag:null};
+// Graph navigation belongs to the project. Only a completed gesture or an explicit relayout
+// writes settings. Keep pan relative to the viewport centre for a differently sized client.
+function restoreAccountGraphLayout(layout){
+  flushGraphGesture();
+  D.savedView=null;
+  if(!layout || typeof layout!=='object')return;
+  for(var [id,point] of Object.entries(layout.points||{})){
+    if(paperBy(id) && Number.isFinite(point?.x) && Number.isFinite(point?.y))
+      D.pos.set(id,{x:point.x,y:point.y,vx:0,vy:0,fx:null,fy:null});
+  }
+  if(Number.isFinite(layout.k) && Number.isFinite(layout.x) && Number.isFinite(layout.y))
+    D.savedView={k:Math.min(3,Math.max(.15,layout.k)),x:layout.x,y:layout.y,fit:layout.fit===true};
+}
+function flushGraphGesture(){
+  if(!D.graphWrite)return;
+  clearTimeout(D.graphTimer);
+  var write=D.graphWrite;
+  D.graphWrite=null;D.graphTimer=null;
+  write();
+}
+function saveGraphGesture(nodeId,allNodes=false,deferred=false){
+  if(S.source!=='account'||typeof accountWorkspace==='undefined'||!accountWorkspace||!S.taskId)return;
+  var svg=$('#dotsvg'),workspace=accountWorkspace,task=S.taskId;
+  var patch={x:D.tx-svg.clientWidth/2,y:D.ty-svg.clientHeight/2,k:D.k,fit:!!D.fit};
+  if(nodeId||allNodes){
+    patch.points={};
+    D.pos.forEach(function(pos,id){
+      if((allNodes||id===nodeId) && paperBy(id) && Number.isFinite(pos.x) && Number.isFinite(pos.y))
+        patch.points[id]={x:pos.x,y:pos.y};
+    });
+  }
+  // Capture the project and the visible viewport now, even if the user opens another view.
+  var write=()=>{if(workspace.current())workspace.patchExtra('project',null,{graphLayout:patch},{task,label:'그래프 배치'}).catch(()=>{})};
+  if(deferred){
+    clearTimeout(D.graphTimer);
+    D.graphWrite=write;
+    D.graphTimer=setTimeout(flushGraphGesture,180);
+  }else{
+    flushGraphGesture();
+    write();
+  }
+}
 function anchorOf(tagId){
   var n=Math.max(S.tags.length,1);var i=Math.max(0,S.tags.findIndex(function(t){return t.id===tagId}));
   if(n===1)return {x:0,y:0};
@@ -11,7 +53,9 @@ function anchorOf(tagId){
 function nodeR(id,deg){return 5+Math.min(6,(deg[id]||0)*1.1)}
 function renderDots(){
   var svg=$('#dotsvg');var w=svg.clientWidth||800,h=svg.clientHeight||500;
-  if(!D.inited){D.tx=w/2;D.ty=h/2;D.k=1;D.inited=true;D.fit=true}
+  if(!D.inited){D.tx=w/2;D.ty=h/2;D.k=1;D.inited=true;D.fit=true;
+    if(D.savedView){D.tx+=D.savedView.x;D.ty+=D.savedView.y;D.k=D.savedView.k;D.fit=D.savedView.fit;D.savedView=null}
+  }
   S.papers.forEach(function(p){if(!D.pos.has(p.id)){var an=anchorOf(p.tag);D.pos.set(p.id,{x:an.x+(Math.random()-.5)*90,y:an.y+(Math.random()-.5)*90,vx:0,vy:0,fx:null,fy:null})}});
   var deg={};S.links.forEach(function(l){var a=paperBy(l.from),b=paperBy(l.to);if(!a||!b||!visible(a)||!visible(b))return;deg[l.from]=(deg[l.from]||0)+1;deg[l.to]=(deg[l.to]||0)+1});
   var nb=null;
@@ -27,7 +71,8 @@ function renderDots(){
     if(!visible(p))return;var t=tagBy(p.tag);
     var dim=(nb&&!nb.has(p.id))||!matches(p);
     var cls='dn st-'+readingStateKey(p.state)+(S.sel===p.id?' on':'')+(dim?' dim':'')+(S.linking&&S.linking.from===p.id?' on':'')+(S.linking&&S.linking.to===p.id?' on':'');
-    var label=S.source==='account' && accountTimelineActions ? accountTimelineActions.caption(p) : p.title;
+    var label=p.title;
+    if(S.papers.some(function(other){return other.id!==p.id&&other.title===p.title}))label+=' · '+String(p.id).slice(-8);
     var display=(p.title.length>26?p.title.slice(0,26)+'…':p.title)+label.slice(p.title.length);
     nh+='<g class="'+cls+'" data-id="'+esc(p.id)+'" tabindex="0" role="button" aria-label="'+esc(label)+'">'+
       (label!==p.title?'<title>'+esc(label)+'</title>':'')+'<circle class="ring"/><circle class="dot" fill="'+t.color+'"/><text class="dt">'+esc(display)+'</text></g>';
@@ -102,6 +147,7 @@ function kick(){
 function relayoutDots(){
   D.pos.forEach(function(o){o.x=(Math.random()-.5)*400;o.y=(Math.random()-.5)*400;o.vx=o.vy=0});
   D.fit=true;D.alpha=1;kick();
+  if(S.source==='account')saveGraphGesture(null,true);
 }
 function wireDots(){
   var svg=$('#dotsvg');
@@ -121,8 +167,9 @@ function wireDots(){
   });
   svg.addEventListener('pointerup',function(){
     var d=D.drag;D.drag=null;svg.style.cursor='';if(!d)return;
-    if(d.id){var o=D.pos.get(d.id);if(o){o.fx=null;o.fy=null}if(!d.moved)onPick(d.id)}
-    else if(!d.moved&&!S.linking&&(S.sel||S.panel==='add')){S.sel=null;S.panel='none';renderAll()}
+    if(d.id){var o=D.pos.get(d.id);if(o){if(d.moved && o.fx!=null){o.x=o.fx;o.y=o.fy}o.fx=null;o.fy=null}if(!d.moved)onPick(d.id);else saveGraphGesture(d.id)}
+    else if(d.moved)saveGraphGesture();
+    else if(!S.linking&&(S.sel||S.panel==='add')){S.sel=null;S.panel='none';renderAll()}
   });
   svg.addEventListener('keydown',function(e){
     var n=e.target.closest&&e.target.closest('.dn');
@@ -133,6 +180,9 @@ function wireDots(){
     var r=svg.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
     var k2=Math.min(3,Math.max(.3,D.k*Math.exp(-e.deltaY*0.0012)));
     D.tx=mx-(mx-D.tx)*(k2/D.k);D.ty=my-(my-D.ty)*(k2/D.k);D.k=k2;applyTransform();
+    if(S.source==='account')saveGraphGesture(null,false,true);
   },{passive:false});
 }
 if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('resize',function(){if(S.view==='dot'&&D.fit&&!S.reader)fitDots()});
+
+if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('pagehide',flushGraphGesture);

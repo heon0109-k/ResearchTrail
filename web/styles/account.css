@@ -65,23 +65,38 @@
 .account-save-feedback:not(:has(#memoStatus:empty)) { margin: 12px 0; }
 .account-save-feedback button[hidden], #memoFinish[hidden] { display: none; }
 
-.account-reading .work, .account-reading #undatedPapers,
-.account-reading #fcard, .account-reading #fdot,
-.project-records .rtabs, .project-records .rdsrc, .project-records .rdresize, .project-records .rdmtabs,
-.reader-load-status:empty, #memoAssociation:empty { display: none; }
-.account-reading #rdsrc { display: block; overflow: auto; padding: 0 12px; }
-@media (max-width: 600px) {
-  .account-reading .m-notes #rdsrc, .account-reading .m-chat #rdsrc { display: none; }
-  .account-timeline .bar { flex-wrap: wrap; height: auto; }
-}
-.project-records #rdsrc { display: none; }
-.account-reading .project-records .rdnotes { flex: 1; width: auto; max-height: none; }
-.account-reading #accountPdfReader, .account-reading #accountMemos { margin: 0; border: 0; padding: 8px 0; }
-.account-reading #accountPdfReader header { overflow-wrap: anywhere; }
-.account-reading #accountMemos header { display: flex; align-items: center; justify-content: space-between; }
-.account-reading #accountMemos ul { padding-inline-start: 18px; }
-.account-reading #accountMemos li p, #memoAssociation { white-space: pre-wrap; overflow-wrap: anywhere; }
-
+#memoAssociation:empty { display: none; }
+#memoAssociation { white-space: pre-wrap; overflow-wrap: anywhere; }
 #accountPdfText ::selection { background: rgba(47, 155, 238, .3); }
-.account-reading #accountPdfReader > header { display: none; }
 .account-chat-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* The account workspace uses the product layout. Feedback appears only when needed. */
+.product-save-feedback {
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  z-index: 120;
+  max-width: min(32rem, calc(100vw - 32px));
+  max-height: 25dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  border-radius: 10px;
+  background: var(--paper, #fff);
+  color: var(--ink, #282730);
+  font-size: 13px;
+}
+.product-save-feedback:has(#workspaceStatus:not(:empty), #memoStatus:not(:empty), button:not([hidden])) {
+  padding: 8px 12px;
+  box-shadow: 0 2px 12px #25213d26;
+}
+.product-save-feedback :empty, .product-save-feedback [hidden] { display: none; }
+@media (max-width: 600px) {
+  body:has(.app:not(.reading) .mnav) .product-save-feedback {
+    bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+}
+.product-records-dialog { width: min(42rem, 92vw); max-height: 85dvh; overflow: auto; border: 1px solid #dedce6; border-radius: 14px; padding: 20px; }
+.product-records-dialog::backdrop { background: #302c3b55; }

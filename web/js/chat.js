@@ -170,7 +170,7 @@ var CHAT_EFFORT_CHOICES=['auto','none','low','medium'];
 var CHAT_EFFORT_KEY='researchtrail.chatEffort';
 var chatEffortChoice='auto';
 try{
-  var savedEffort=localStorage.getItem(CHAT_EFFORT_KEY);
+  var savedEffort=typeof S!=='undefined'&&S.source==='account'?null:localStorage.getItem(CHAT_EFFORT_KEY);
   if(CHAT_EFFORT_CHOICES.includes(savedEffort))chatEffortChoice=savedEffort;
 }catch(e){}
 
@@ -199,8 +199,7 @@ function chatCloseOutsideEffort(event){
   if(picker&&!picker.contains(event.target))picker.open=false;
 }
 
-function chatWireEffort(){
-  var group=$('.chat-effort');
+function chatWireEffort(group=$('.chat-effort'),rememberDeviceChoice=true){
   if(!group)return;
   var summary=group.querySelector('summary');
   function close(){
@@ -222,9 +221,11 @@ function chatWireEffort(){
   group.addEventListener('change',function(event){
     var value=event.target.value;
     if(!CHAT_EFFORT_CHOICES.includes(value))return;
-    chatEffortChoice=value;
-    group.querySelector('.effort-current').textContent=chatEffortLabel(value);
-    try{localStorage.setItem(CHAT_EFFORT_KEY,value)}catch(e){}
+    if(rememberDeviceChoice){
+      chatEffortChoice=value;
+      group.querySelector('.effort-current').textContent=chatEffortLabel(value);
+      try{localStorage.setItem(CHAT_EFFORT_KEY,value)}catch(e){}
+    }
   });
 }
 
@@ -250,6 +251,7 @@ function chatCall(cfg,prompt,effort){
 }
 
 function chatAsk(p){
+  if(typeof S!=='undefined'&&S.source==='account')return;
   var input=$('#chatQ');if(!input)return;
   var q=input.value.trim(),now=Date.now(),block=chatPrecheck(q,now,CHAT.last);
   if(block){CHAT.err=block;chatRender(p);return}
@@ -296,53 +298,67 @@ function chatAsk(p){
   });
 }
 
-function chatSetupHtml(){
-  return '<div class="ai-setup"><p class="reader-hint">서버에 설정한 OpenAI를 사용해요. 한국어 질문은 영어 검색어 생성과 답변에 보통 2회 요청해요. 질문·PDF의 영문 어휘 목록·검색 구절이 OpenAI로 전송돼요.</p>'+
+function chatSetupHtml(accountOptions){
+  const details=accountOptions?.details || '서버에 설정한 OpenAI를 사용해요. 한국어 질문은 영어 검색어 생성과 답변에 보통 2회 요청해요. 질문·PDF의 영문 어휘 목록·검색 구절이 OpenAI로 전송돼요.';
+  return '<div class="ai-setup"><p class="reader-hint">'+esc(details)+'</p>'+
     '<label class="ai-consent"><input type="checkbox" id="chatConsent"> 본문과 질문이 OpenAI로 전송되는 것에 동의해요.</label>'+
-    '<div class="ai-row"><button type="button" class="btn pri sm" id="chatSaveKey">동의하고 연결</button></div><p class="ai-msg" id="chatMsg" role="status"></p></div>';
+    '<div class="ai-row"><button type="button" class="btn pri sm" id="chatSaveKey"'+(accountOptions?' data-chat-action="consent"':'')+'>'+
+    esc(accountOptions?.label||'동의하고 연결')+'</button>'+(accountOptions?.actions||'')+
+    '</div><p class="ai-msg" id="chatMsg" role="status"></p></div>';
 }
 function chatAttQuoteHtml(p,att){
   if(!att)return '';var h=chatCaptureById(p,att.id);
   return '<p class="chat-attq">'+(h?'<img src="'+esc(h.img)+'" alt="">':'')+'<span>'+(att.page?'p.'+att.page+' ':'')+(h?esc(h.kind||'표·그림'):'삭제된 캡처')+'</span></p>';
 }
-function chatAttChipHtml(p){
-  var h=CHAT.att?chatCaptureById(p,CHAT.att):null;if(!h)return '';
-  return '<div class="chat-att"><img src="'+esc(h.img)+'" alt=""><span>'+(h.page?'p.'+h.page+' · ':'')+esc(h.kind||'표·그림')+' 첨부'+(h.mine?'<em>'+esc(String(h.mine).slice(0,40))+'</em>':'')+'</span><button type="button" class="x" id="chatAttX" aria-label="첨부 취소">×</button></div>';
+function chatAttChipHtml(p,state){
+  var h=state.att?chatCaptureById(p,state.att):null;if(!h)return '';
+  return '<div class="chat-att"><img src="'+esc(h.img)+'" alt=""><span>'+(h.page?'p.'+h.page+' · ':'')+esc(h.kind||'표·그림')+' 첨부'+(h.mine?'<em>'+esc(String(h.mine).slice(0,40))+'</em>':'')+'</span><button type="button" class="x" id="chatAttX" data-chat-action="detach" aria-label="첨부 취소">×</button></div>';
 }
-function chatAttPickHtml(p){
-  if(!CHAT.pick)return '';var caps=chatCaptures(p);
+function chatAttPickHtml(p,state){
+  if(!state.pick)return '';var caps=chatCaptures(p);
   if(!caps.length)return '<div class="chat-pick empty"><p>아직 캡처한 표·그림이 없어요. PDF 위의 <b>영역 캡처</b>로 표나 그림을 잘라 두면 여기서 골라 물어볼 수 있어요.</p></div>';
-  return '<div class="chat-pick" role="listbox" aria-label="첨부할 캡처 고르기">'+caps.map(function(h){return '<button type="button" role="option" data-att="'+esc(h.id)+'" aria-selected="'+(CHAT.att===h.id)+'"><img src="'+esc(h.img)+'" alt=""><span>'+(h.page?'p.'+h.page:'쪽 미기록')+'</span></button>'}).join('')+'</div>';
+  return '<div class="chat-pick" role="listbox" aria-label="첨부할 캡처 고르기">'+caps.map(function(h){return '<button type="button" role="option" data-chat-action="attach" data-att="'+esc(h.id)+'" aria-selected="'+(state.att===h.id)+'"><img src="'+esc(h.img)+'" alt=""><span>'+(h.page?'p.'+h.page:'쪽 미기록')+'</span></button>'}).join('')+'</div>';
 }
 /* 기록 탭의 캡처 카드에서 "이걸로 질문하기"를 누르면: 첨부한 채로 질문하기 탭을 연다. */
 function chatAskAboutCapture(id){
   var p=paperBy(S.reader);if(!p||!chatCaptureById(p,id))return;
+  if(typeof accountProductChat!=='undefined'&&accountProductChat)accountProductChat.attach(id);
   CHAT.att=id;CHAT.pick=false;CHAT.err='';
   if(typeof MTAB!=='undefined'&&typeof applyMobileTab==='function'&&window.matchMedia&&window.matchMedia('(max-width:600px)').matches){MTAB='chat';applyMobileTab(p,false)}
   chatSetTab('chat');
 }
 function chatRender(p){
   var box=$('#rChat');if(!box||!p)return;
+  if(typeof S!=='undefined'&&S.source==='account'){
+    if(typeof accountProductChat!=='undefined'&&accountProductChat){accountProductChat.mount(box);accountProductChat.show();}
+    else box.innerHTML='<p class="reader-hint" role="status">질문하려면 연결된 PDF 판본을 열어 주세요.</p>';
+    return;
+  }
   if(!chatHasKey()){box.innerHTML=chatSetupHtml();chatWireSetup(p);return}
-  var list=chatLoad(p.id),hasPv=typeof PV!=='undefined'&&PV&&PV.doc;
-  var cur=hasPv?PV.cur||1:0,total=hasPv?PV.doc.numPages:0;
-  var msgs=list.length?list.map(function(m){
-    if(m.role==='user')return '<div class="chat-m chat-u">'+chatAttQuoteHtml(p,m.att)+(m.sel?'<p class="chat-quote">“'+esc(String(m.sel).slice(0,140))+(m.sel.length>140?'…':'')+'”</p>':'')+'<p>'+esc(m.text)+'</p></div>';
-    return '<div class="chat-m chat-b'+(m.kind==='refuse'?' chat-refuse':'')+'"><p>'+chatAnswerHtml(m)+'</p></div>';
-  }).join(''):'<div class="chat-empty"><p>열어 둔 PDF 전체에서 관련 구절을 찾아 답해요.</p><p>논문의 용어나 쪽 번호를 넣으면 찾기 쉬워요.</p></div>';
-  box.innerHTML=(list.length?'<div class="chat-top"><button type="button" class="chat-new" id="chatNew"'+(CHAT.busy?' disabled':'')+'>새 대화</button></div>':'')+'<div class="chat-list" id="chatList">'+msgs+(CHAT.busy?'<div class="chat-m chat-b chat-wait"><p>논문에서 근거를 찾아 답변을 준비하는 중…</p></div>':'')+'</div>'+
-    (CHAT.err?'<p class="ai-err" role="alert">'+esc(CHAT.err)+'</p>':'')+
-    (CHAT.searchNote?'<p class="reader-hint" role="status">'+esc(CHAT.searchNote)+'</p>':'')+
-    '<div class="chat-ex-row" id="chatEx">'+(CHAT.att&&chatCaptureById(p,CHAT.att)?'<button type="button" class="chat-exb chat-exb-sel">첨부한 표·그림 쉽게 설명해 줘</button><button type="button" class="chat-exb">이 표·그림의 핵심 결과는 뭐야?</button>':'')+(CHAT.sel?'<button type="button" class="chat-exb chat-exb-sel">선택한 부분 쉽게 풀어 줘</button>':'')+'<button type="button" class="chat-exb">이 논문의 핵심은 뭐야?</button><button type="button" class="chat-exb">이 쪽 쉽게 설명해 줘</button><button type="button" class="chat-exb">이 표는 무엇을 비교해?</button></div>'+
-    '<div class="chat-box">'+
-      (CHAT.sel?'<div class="chat-sel"><span>선택한 문장'+(CHAT.sel.page?' · p.'+CHAT.sel.page:'')+': “'+esc(CHAT.sel.text.slice(0,80))+(CHAT.sel.text.length>80?'…':'')+'”</span><button type="button" class="x" id="chatSelX" aria-label="선택 취소">×</button></div>':'')+
-      chatAttPickHtml(p)+chatAttChipHtml(p)+
-      '<textarea id="chatQ" rows="2" maxlength="'+CHAT_MAX_Q+'" placeholder="이 논문에 대해 물어보세요" aria-label="질문 입력">'+esc(CHAT.draft)+'</textarea>'+
-      '<div class="chat-row">'+'<button type="button" class="chat-clip" id="chatClip" aria-label="캡처한 표·그림 첨부" title="캡처한 표·그림 첨부" aria-expanded="'+!!CHAT.pick+'"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 7.5 8 13a2.1 2.1 0 0 1-3-3l6.2-6.2a3.3 3.3 0 0 1 4.7 4.7L9.6 14.8a4.6 4.6 0 0 1-6.5-6.5L8.5 3"/></svg><span>표·그림</span></button>'+chatEffortHtml()+
-      '<button type="button" class="chat-send" id="chatSend" aria-label="질문 보내기" title="질문 보내기"'+(CHAT.busy?' disabled':'')+'><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4m-6 6 6-6 6 6"/></svg></button></div>'+
-    '</div><p class="ai-foot">답이 틀릴 수 있으니 [p.N]을 눌러 원문을 확인해 주세요.</p>';
+  box.innerHTML=chatConversationHtml(p,CHAT,chatLoad(p.id),chatEffortChoice,CHAT_MAX_Q);
   var l=$('#chatList');if(l)l.scrollTop=l.scrollHeight;
   chatWireView(p);
+}
+// Device and account readers share the composer, attachment picker, examples, depth and send controls.
+function chatMessagesHtml(p,list){
+  return list.length?list.map(function(m){
+    if(m.role==='user')return '<div class="chat-m chat-u">'+chatAttQuoteHtml(p,m.att)+(m.sel?'<p class="chat-quote">“'+esc(String(m.sel).slice(0,140))+(m.sel.length>140?'…':'')+'”</p>':'')+'<p>'+esc(m.text)+'</p></div>';
+    return '<div class="chat-m chat-b'+(m.kind==='refuse'?' chat-refuse':'')+'"><p>'+(Array.isArray(m.evidence)?esc(m.text)+m.evidence.map(function(cite){return ' <button type="button" class="chat-pg" data-chat-action="cite" data-page="'+Number(cite.page)+'">[p.'+Number(cite.page)+']</button> '+esc(cite.quote)}).join(''):chatAnswerHtml(m))+'</p></div>';
+  }).join(''):'<div class="chat-empty"><p>열어 둔 PDF 전체에서 관련 구절을 찾아 답해요.</p><p>논문의 용어나 쪽 번호를 넣으면 찾기 쉬워요.</p></div>';
+}
+function chatConversationHtml(p,state,list,depth,limit){
+  var msgs=chatMessagesHtml(p,list);
+  return (list.length?'<div class="chat-top"><button type="button" class="chat-new" id="chatNew" data-chat-action="clear"'+(state.busy?' disabled':'')+'>새 대화</button></div>':'')+'<div class="chat-list" id="chatList">'+msgs+(state.busy?'<div class="chat-m chat-b chat-wait"><p>논문에서 근거를 찾아 답변을 준비하는 중…</p></div>':'')+'</div>'+
+    (state.err?'<p class="ai-err" role="alert">'+esc(state.err)+'</p>':'')+
+    (state.searchNote?'<p class="reader-hint" role="status">'+esc(state.searchNote)+'</p>':'')+
+    '<div class="chat-ex-row" id="chatEx">'+(state.att&&chatCaptureById(p,state.att)?'<button type="button" data-chat-action="example" class="chat-exb chat-exb-sel">첨부한 표·그림 쉽게 설명해 줘</button><button type="button" data-chat-action="example" class="chat-exb">이 표·그림의 핵심 결과는 뭐야?</button>':'')+(state.sel?'<button type="button" data-chat-action="example" class="chat-exb chat-exb-sel">선택한 부분 쉽게 풀어 줘</button>':'')+'<button type="button" data-chat-action="example" class="chat-exb">이 논문의 핵심은 뭐야?</button><button type="button" data-chat-action="example" class="chat-exb">이 쪽 쉽게 설명해 줘</button><button type="button" data-chat-action="example" class="chat-exb">이 표는 무엇을 비교해?</button></div>'+
+    '<div class="chat-box">'+
+      (state.sel?'<div class="chat-sel"><span>선택한 문장'+(state.sel.page?' · p.'+state.sel.page:'')+': “'+esc(state.sel.text.slice(0,80))+(state.sel.text.length>80?'…':'')+'”</span><button type="button" class="x" id="chatSelX" data-chat-action="unselect" aria-label="선택 취소">×</button></div>':'')+
+      chatAttPickHtml(p,state)+chatAttChipHtml(p,state)+
+      '<textarea id="chatQ" rows="2" maxlength="'+limit+'" placeholder="이 논문에 대해 물어보세요" aria-label="질문 입력"'+(state.lockInput?' disabled':'')+'>'+esc(state.draft||'')+'</textarea>'+
+      '<div class="chat-row">'+'<button type="button" class="chat-clip" id="chatClip" data-chat-action="pick" aria-label="캡처한 표·그림 첨부" title="캡처한 표·그림 첨부" aria-expanded="'+!!state.pick+'"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 7.5 8 13a2.1 2.1 0 0 1-3-3l6.2-6.2a3.3 3.3 0 0 1 4.7 4.7L9.6 14.8a4.6 4.6 0 0 1-6.5-6.5L8.5 3"/></svg><span>표·그림</span></button>'+chatEffortHtml(depth)+
+      '<button type="button" class="chat-send" id="chatSend" data-chat-action="send" aria-label="질문 보내기" title="질문 보내기"'+(state.busy?' disabled':'')+'><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4m-6 6 6-6 6 6"/></svg></button></div>'+
+    '</div><p class="ai-foot">답이 틀릴 수 있으니 [p.N]을 눌러 원문을 확인해 주세요.</p>';
 }
 function chatWireSetup(p){
   var b=$('#chatSaveKey');if(!b)return;
@@ -354,6 +370,13 @@ function chatWireSetup(p){
     aiPickModel(key).then(function(model){var c=aiCfg();aiSaveCfg({on:c.on,key:key,model:model,consent:true});chatRender(p)})
       .catch(function(e){b.disabled=false;msg.textContent=aiErrorText(e)});
   });
+}
+function chatWireExamples(ex){
+  if(!ex)return;
+  const edge=()=>ex.classList.toggle('at-end',ex.scrollLeft+ex.clientWidth>=ex.scrollWidth-2);
+  ex.addEventListener('scroll',edge,{passive:true});
+  edge();
+  ex.addEventListener('wheel',function(e){if(Math.abs(e.deltaY)>Math.abs(e.deltaX)&&ex.scrollWidth>ex.clientWidth){ex.scrollLeft+=e.deltaY;e.preventDefault()}},{passive:false});
 }
 function chatWireView(p){
   chatWireEffort();
@@ -369,8 +392,7 @@ function chatWireView(p){
       CHAT.token++;CHAT.busy=false;CHAT.err='';CHAT.draft='';CHAT.sel=null;CHAT.expansion=null;CHAT.searchNote='';chatRender(p);var t=$('#chatQ');if(t)t.focus();
     },true);
   });
-  var ex0=$('#chatEx');if(ex0){var edge=function(){ex0.classList.toggle('at-end',ex0.scrollLeft+ex0.clientWidth>=ex0.scrollWidth-2)};ex0.addEventListener('scroll',edge,{passive:true});edge()}
-  var ex=$('#chatEx');if(ex)ex.addEventListener('wheel',function(e){if(Math.abs(e.deltaY)>Math.abs(e.deltaX)&&ex.scrollWidth>ex.clientWidth){ex.scrollLeft+=e.deltaY;e.preventDefault()}},{passive:false});
+  chatWireExamples($('#chatEx'));
   var x=$('#chatSelX');if(x)x.addEventListener('click',function(){CHAT.sel=null;chatRender(p)});
   var clip=$('#chatClip');if(clip)clip.addEventListener('click',function(){CHAT.pick=!CHAT.pick;chatRender(p)});
   var ax=$('#chatAttX');if(ax)ax.addEventListener('click',function(){CHAT.att=null;chatRender(p);var t=$('#chatQ');if(t)t.focus()});
@@ -389,10 +411,13 @@ function chatSetTab(tab){
 function chatWatchSelection(){
   var src=$('#rdsrc');if(!src||src._chatWired)return;src._chatWired=true;
   src.addEventListener('mouseup',function(){
+    var sessionToken=CHAT.token,selectedPaper=S.reader;
     setTimeout(function(){
+      if(sessionToken!==CHAT.token || S.reader!==selectedPaper)return;
       var s=window.getSelection&&window.getSelection();if(!s||s.isCollapsed)return;
       var t=String(s.toString()).replace(/\s+/g,' ').trim();if(t.length<3)return;
       var node=s.anchorNode&&(s.anchorNode.nodeType===1?s.anchorNode:s.anchorNode.parentElement),box=node&&node.closest&&node.closest('[data-n]');
+      if(S.source==='account' && (!box || !src.contains(box) || !s.rangeCount || !box.contains(s.getRangeAt(0).endContainer)))return;
       CHAT.sel={text:t.slice(0,CHAT_SEL_CHARS),page:box?+box.dataset.n:null};
       if(CHAT.tab==='chat')chatRender(paperBy(S.reader));
     },0);

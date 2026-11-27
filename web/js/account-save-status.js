@@ -88,8 +88,10 @@ function createAccountSaveStatus(request, connected, account) {
       if (phases.has('blocked')) parts.add(where+'PDF 업로드를 시작하지 못했어요. 입력을 확인해 주세요.');
       if (phases.has('uploading')) parts.add(where+'PDF를 업로드하는 중이에요.');
       if (phases.has('failed')) parts.add(where+'PDF 업로드에 실패했어요.');
-      for (const job of t.uploads) if (job.phase==='reselect')
-        parts.add(where+'PDF 업로드 미확인 · 해당 논문에서 '+job.name+' 파일을 다시 선택해 주세요.');
+      for (const job of t.uploads) if (job.phase==='reselect') {
+        if (job.requestId && !job.use) parts.add(where+'논문 등록을 다시 확인한 뒤 '+job.name+' 파일을 다시 선택해 주세요.');
+        else parts.add(where+'PDF 업로드 미확인 · '+(job.title?job.title+' · ':'')+'해당 논문에서 '+job.name+' 파일을 다시 선택해 주세요.');
+      }
       if (task===active && !t.uploads.size && t.pdfSaved) {
         parts.add('PDF를 계정에 저장했어요.');
         acknowledged=true;
@@ -112,6 +114,22 @@ function createAccountSaveStatus(request, connected, account) {
   }
   function block(job) { job.phase = 'blocked'; render(); }
   function discard(job) { state(job.task).uploads.delete(job); render(); }
+  // A refresh can interrupt the initial paper request before it has returned its use ID.
+  function expectRegistrationPdf(job, requestId, sha256, title) {
+    Object.assign(job,{requestId,sha256,title,key:'upload.'+job.task+'.registration.'+requestId});
+    store(job.key,{task:job.task,name:job.name,requestId,sha256,title});
+  }
+  function registrationSaved(task, requestId, ack) {
+    if (!ack?.document_use_id) return;
+    const job=Array.from(state(task).uploads).find(item=>item.requestId===requestId && !item.use);
+    if (!job) return;
+    const old=job.key;
+    job.use=ack.document_use_id;
+    job.key='upload.'+task+'.'+job.use+'..'+job.sha256;
+    store(job.key,{task,use:job.use,name:job.name,title:job.title,sha256:job.sha256});
+    store(old,null);
+    render();
+  }
   // The retry retains the original File and destination until the storage receipt arrives.
   function upload(job, file, use, artifactId, afterSave) {
     const s = state(job.task);
@@ -151,7 +169,7 @@ function createAccountSaveStatus(request, connected, account) {
       }
       s.pdfSaved = true;
       render();
-      await afterSave();
+      await afterSave(ack);
       return true;
     };
     return job.retry();
@@ -163,9 +181,13 @@ function createAccountSaveStatus(request, connected, account) {
   try { restore(); } catch { /* Tab storage can be unavailable. */ }
   return {
     read,store,track,
+    recoveryKeys(task) {
+      return [...operations].filter(([key,op])=>op.task===task && op.phase!=='saved' &&
+        (key.startsWith('draft.'+task+'.') || key.startsWith('reader.'+task+'.'))).map(([key])=>key);
+    },
     projects(rows) { for (const t of rows) names.set(t.task_id,t.task.goal_text); render(); },
     focus(task) { active = task; editor=null; render(); },
     editor(key) { editor=key; render(); },
-    prepare, block, discard, upload,
+    prepare, block, discard, upload, expectRegistrationPdf, registrationSaved,
   };
 }

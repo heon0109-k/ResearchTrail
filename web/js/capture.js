@@ -2,42 +2,53 @@
 /* ---------- 영역 캡처: 깨지는 수식·그래프를 이미지로 저장 ----------
    PDF 위에서 사각형을 드래그하면 그 부분을 잘라 하이라이트 목록에 넣는다. */
 function pvCapInit(p){
-  var b=$('#pvCap'),sc=$('#pvs');if(!b||!sc)return;
-  var on=false,st=null,rc=null;
-  function mode(v){on=v;b.setAttribute('aria-pressed',on);b.textContent=on?'캡처 끄기':'영역 캡처';sc.classList.toggle('capmode',on)}
+  var b=$('#pvCap'),sc=$('#pvs');if(!b||!sc||!PV)return;
+  var on=false,st=null,rc=null,viewer=PV;
+  function clearDrag(){document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',finish);if(rc)rc.remove();rc=null;st=null;}
+  viewer.clearCapture=clearDrag;
+  function mode(v){if(!v)clearDrag();on=v;b.setAttribute('aria-pressed',on);b.textContent=on?'캡처 끄기':'영역 캡처';sc.classList.toggle('capmode',on)}
   b.addEventListener('click',function(){mode(!on)});
   sc.addEventListener('mousedown',function(e){
     if(!on||e.button!==0)return;var box=e.target.closest&&e.target.closest('.pgbox');if(!box)return;
-    e.preventDefault();var bb=box.getBoundingClientRect();
-    st={box:box,x:e.clientX-bb.left,y:e.clientY-bb.top,bb:bb};
+    clearDrag();e.preventDefault();var bb=box.getBoundingClientRect();
+    if(!bb.width || !bb.height)return;
+    st={box:box,x:Math.max(0,Math.min(bb.width,e.clientX-bb.left)),y:Math.max(0,Math.min(bb.height,e.clientY-bb.top)),bb:bb};
     rc=document.createElement('div');rc.className='caprect';box.appendChild(rc);
+    document.addEventListener('mousemove',move);document.addEventListener('mouseup',finish);
   });
-  document.addEventListener('mousemove',function(e){
+  function move(e){
     if(!st)return;var bb=st.bb;
     var x=Math.max(0,Math.min(bb.width,e.clientX-bb.left)),y=Math.max(0,Math.min(bb.height,e.clientY-bb.top));
     rc.style.left=Math.min(st.x,x)+'px';rc.style.top=Math.min(st.y,y)+'px';rc.style.width=Math.abs(x-st.x)+'px';rc.style.height=Math.abs(y-st.y)+'px';
     st.ex=x;st.ey=y;
-  });
-  document.addEventListener('mouseup',function(){
-    if(!st)return;var s=st;st=null;if(rc){rc.remove();rc=null}
-    if(s.ex==null)return;
+  }
+  function finish(){
+    if(!st)return;var s=st;clearDrag();
+    if(s.ex==null || PV!==viewer || S.reader!==p.id)return;
     var x=Math.min(s.x,s.ex),y=Math.min(s.y,s.ey),w=Math.abs(s.ex-s.x),h=Math.abs(s.ey-s.y);
     if(w<14||h<14)return;
     var cv=s.box.querySelector('canvas');if(!cv)return;
-    var r=cv.width/s.bb.width,out=document.createElement('canvas'),k=Math.min(1,720/(w*r));
+    var r=cv.width/s.bb.width,out=document.createElement('canvas'),k=Math.min(1,720/(w*r),S.source==='account'?1000/(h*r):1);
     out.width=Math.max(1,Math.round(w*r*k));out.height=Math.max(1,Math.round(h*r*k));
-    out.getContext('2d').drawImage(cv,x*r,y*r,w*r,h*r,0,0,out.width,out.height);
-    var img=out.toDataURL('image/png');if(img.length>260000)img=out.toDataURL('image/jpeg',.85);
+    var img;
+    try{
+      out.getContext('2d').drawImage(cv,x*r,y*r,w*r,h*r,0,0,out.width,out.height);
+      img=out.toDataURL('image/png');if(img.length>260000)img=out.toDataURL('image/jpeg',.85);
+      if(!/^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(img))throw Error();
+    }catch{
+      mode(false);toast('이 영역의 이미지를 캡처하지 못했어요. PDF 페이지를 다시 연 뒤 캡처해 주세요.');return;
+    }
     var page=+s.box.dataset.n;
-    p.hl=p.hl||[];p.hl.push({id:nid('h'),at:Date.now(),page:page,text:'',img:img,kind:'그래프·표',mine:'',rects:[[x/s.bb.width,y/s.bb.height,w/s.bb.width,h/s.bb.height]]});
-    save();drawHl(p,page);drawHlList();mode(false);
-    if(!S.example&&S.saved===false)toast('저장 공간이 부족해 캡처가 새로고침 후 사라질 수 있어요');
-  });
+    p.hl=p.hl||[];p.hl.push({id:typeof accountReaderNewId==='function'?accountReaderNewId():nid('h'),at:Date.now(),page:page,text:'',img:img,kind:'그래프·표',mine:'',rects:[[x/s.bb.width,y/s.bb.height,w/s.bb.width,h/s.bb.height]]});
+    if(S.source==='account')accountReaderNewCard(p,p.hl.at(-1));else save();drawHl(p,page);drawHlList();mode(false);
+    if(S.source!=='account'&&!S.example&&S.saved===false)toast('저장 공간이 부족해 캡처가 새로고침 후 사라질 수 있어요');
+  }
 }
 
 /* ---------- PDF 위의 하이라이트·캡처를 눌러서 바로 지우기 ---------- */
 function pvDelHl(p,h){
-  function del(){p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});save();drawHl(p,h.page);drawHlList()}
+  var scope=S.source==='account' && accountReaderScope(p);
+  function del(){if(scope){if(scope.active()&&S.reader===p.id)accountReaderBackground(accountReaderRemoveCard(p,h));return}p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});save();drawHl(p,h.page);drawHlList()}
   if(h.img)ask('이 캡처를 삭제할까요?','저장한 이미지와 "내가 이해한 것"이 함께 사라져요.','삭제',del,true);else del();
 }
 function pvHitInit(p){

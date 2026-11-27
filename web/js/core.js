@@ -7,8 +7,21 @@ var CHARS=[
  {id:'page',name:'페이지',rows:["............","..BBBBBB....","..BBBBBBDD..","..BBBBBBBLD.","..BKBBBBKBB.","..BKBBBBKBB.","..BBBBBBBBB.","..BLLLLLLBB.","..BBBBBBBBB.","..BLLLLBBBB.","..BBBBBBBBB.","...BB..BB...","...BB..BB..."]},
  {id:'blob',name:'말랑이',rows:["....BBBB....","...BBBBBB...","..BBBBBBBB..",".BBBBBBBBBB.",".BBKBBBBKBB.",".BBKBBBBKBB.",".BBBBBBBBBB.",".BBBBLLBBBB.","..BBBBBBBB..","...BBBBBB...","..DD....DD..","............"]},
  {id:'mark',name:'책갈피',rows:["............","...BBBBBB...","...BBBBBB...","...BKBBKB...","...BKBBKB...","...BBBBBB...","...BBLLBB...","...BBBBBB...","...BBBBBB...","...BBBBBB...","...BB..BB...","...B....B..."]}];
-var ME=(function(){try{var o=JSON.parse(localStorage.getItem('researchtrail.me')||'null');if(o&&o.c>=0&&o.c<CHARS.length)return {c:o.c,nick:String(o.nick||'').slice(0,12)}}catch(e){}return {c:0,nick:''}})();
-function saveMe(){try{localStorage.setItem('researchtrail.me',JSON.stringify(ME))}catch(e){}}
+// A bookmarked standalone product URL must enter through Auth before it can open
+// research data. The root explicitly embeds the signed-out or signed-in product.
+var explicitExample=typeof location!=='undefined' && /(?:^|[?&])(?:demo|sample)=1(?:&|$)/.test(location.search);
+var standaloneProduct=typeof window!=='undefined' && window.top===window &&
+  !!window.RESEARCHTRAIL_CONFIG?.SUPABASE_URL && /\/browser\.html$/.test(window.location.pathname);
+var directProductEntry=standaloneProduct && !explicitExample;
+if(directProductEntry)window.location.replace('./'+window.location.search+window.location.hash);
+function returnFromStandaloneExample(){
+  if(!standaloneProduct || !explicitExample)return false;
+  window.location.assign('./');
+  return true;
+}
+function isAccountFrame(){return directProductEntry || (typeof location!=='undefined' && /(?:^|[?&])workspace=account(?:&|$)/.test(location.search))}
+var ME=(function(){if(isAccountFrame()||explicitExample)return {c:0,nick:''};try{var o=JSON.parse(localStorage.getItem('researchtrail.me')||'null');if(o&&o.c>=0&&o.c<CHARS.length)return {c:o.c,nick:String(o.nick||'').slice(0,12)}}catch(e){}return {c:0,nick:''}})();
+function saveMe(){if(isAccountFrame()||explicitExample)return;try{localStorage.setItem('researchtrail.me',JSON.stringify(ME))}catch(e){}}
 function curChar(){return CHARS[0]}
 function chPick(sel,sc){return CHARS.map(function(c,i){return '<button type="button" class="chp" data-c="'+i+'" aria-pressed="'+(i===sel)+'" aria-label="'+c.name+'">'+spr(c.rows,sc,'')+'<span>'+c.name+'</span></button>'}).join('')}
 
@@ -25,15 +38,15 @@ var app=document.getElementById('app');
 function $(s,r){return (r||document).querySelector(s)}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function dnum(s){var p=s.split('-').map(Number);return Date.UTC(p[0],p[1]-1,p[2])/864e5}
+function dnum(s){if(typeof s!=='string')return NaN;var p=s.split('-').map(Number);return Date.UTC(p[0],p[1]-1,p[2])/864e5}
 function dstr(n){var d=new Date(n*864e5);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0')}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-var uid=100;function nid(p){return p+(uid++)}
+var uid=100;function nid(p){return S.source==='account'?crypto.randomUUID():p+(uid++)}
 var WD=['일','월','화','수','목','금','토'];
 
 var S={overviewPan:0,listQuery:'',listScroll:0,overviewZoom:1,filterTag:null,name:'',tags:[],papers:[],links:[],view:'card',bands:true,zoom:'month',sel:null,panel:'none',linking:null,hidden:new Set(),q:'',example:false,draft:null,why:false,judge:'',next:'',resumeOpen:true,prevSeen:0,saved:false};
 // Choose the workspace before project scripts can restore or initialize browser data.
-S.source = typeof location !== 'undefined' && /(?:^|[?&])workspace=account(?:&|$)/.test(location.search)
+S.source = isAccountFrame()
   ? 'account' : 'browser-local';
 var L={a:0,b:1,px:34,bandInfo:[],pos:{}};
 

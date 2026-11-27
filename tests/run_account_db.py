@@ -74,10 +74,20 @@ create policy fixture_permissive on storage.objects for all to public using(true
     execute((ROOT / "tests/sql/workspace_release_write.sql").read_text())
     execute((ROOT / "tests/sql/workspace_release.sql").read_text())
     print("PASS (draft cases): registered paper count, links, edition, memo, anchor, page and legacy catalog")
+    execute((ROOT / "tests/sql/product_selection.sql").read_text())
+    print("PASS (draft cases): account project selection across clients, replay and archive fallback")
+    execute((ROOT / "tests/sql/product_workspace.sql").read_text())
+    print("PASS (draft cases): project controls, task-specific paper edits, version conflicts, tag archives and reader deletion")
+    execute((ROOT / "tests/sql/product_workspace_client_write.sql").read_text())
+    execute((ROOT / "tests/sql/product_workspace_client_read.sql").read_text())
+    print("PASS (draft cases): independent product clients restored exact paper, private PDF metadata, memo, legacy anchor, page, tag, edits and capture")
     execute((ROOT / "tests/sql/account_rag_index.sql").read_text())
     print("PASS (draft cases): passage index start, repeated batches, completion count, replacement and account isolation")
     execute((ROOT / "tests/sql/account_rag_search.sql").read_text())
     print("PASS (draft cases): question scope, closest passages in a fixed order, unfinished indexes left out, task and account isolation")
+
+    execute((ROOT / "tests/sql/product_workspace_rag.sql").read_text())
+    print("PASS (draft cases): archived editions stay out of index, search and restart")
 
     if options.concurrent:
         pkglib = subprocess.check_output(["pg_config", "--pkglibdir"], text=True).strip()

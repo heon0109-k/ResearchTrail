@@ -6,10 +6,13 @@ function startResearchTrail(){
   }
   /* ?demo=1 : 시작 페이지 안에 끼워 넣는 미리보기. 저장된 기록을 읽지도 쓰지도 않고 예시만 보여 준다 */
   if(window.name==='rt-demo'||/[?&]demo=1/.test(location.search)){document.documentElement.classList.add('demo');loadSample();S.zoom='month';S.bubble=null;renderAll();lockDemo()}
+  else if(/(?:^|[?&])sample=1(?:&|$)/.test(location.search)){
+    history.replaceState(null,'',location.pathname);RET=standaloneProduct||hasMine();loadSample();
+  }
   else if(!(isPageReload()&&restoreSessionScreen())&&!load({timeline:!isPageReload(),restoreView:isPageReload()})){
     var seenLanding=landingSeen();
     landingMark();
-    if(seenLanding||window.name==='rt-device')startEmpty();else showLanding();
+    if(seenLanding)startEmpty();else showLanding();
   }
 }
 
@@ -37,222 +40,274 @@ function restoreSessionScreen(){
   }catch(e){return false}
 }
 
-var accountTimelineActions = null;
+var accountWorkspace=null;
 
-function mountAccountWorkspace(editable) {
-  app.innerHTML = screens.main;
-  const layout = $('.app');
-  layout.classList.add('account-timeline');
-  const nav = $('nav[aria-label="보기 방식"]');
-  const views = [$('#vCard'), $('#vList')];
-  if (editable) views.push($('#vDot'));
-  nav.replaceChildren(...views);
-  $('.side').replaceChildren(...(editable ? [$('#addBtn'), nav] : [nav]));
-  $('.bar').innerHTML = '<label>프로젝트 <select id="workspaceTask"></select></label>' +
-    (editable ? '<button type="button" id="workspaceNew" class="btn sm">새 프로젝트</button> <button type="button" id="workspaceRecords" class="btn sm" disabled>프로젝트 기록</button>' : '<span>읽기 전용</span>') +
-    '<button type="button" id="workspaceRetry" class="btn sm">다시 불러오기</button>';
-  $('#emptyBox').innerHTML = '<p class="eb-hint" id="workspaceStatus" role="status"></p>';
-  $('#bandsw').remove();
-  $('#panel').remove();
-  if (editable) {
-    $('.bar').insertAdjacentHTML('afterend','<div class="workspace-notices"><span id="workspaceActionStatus" role="status"></span> '+
-      '<button id="workspaceLinkCancel" type="button" class="btn sm" hidden>연결 취소</button> '+
-      '<span id="memoStatus" role="status" aria-atomic="true"></span> <button id="memoRetry" class="btn sm" hidden>메모 저장 다시 시도</button> <button id="pdfUploadRetry" type="button" class="btn sm" hidden></button></div>');
-    $('#vDot').addEventListener('click', () => setView('dot'));
-    $('#relayout').addEventListener('click', relayoutDots);
-    wireDots();
-  } else $('#fdot').remove();
-  $('#rbar').remove();
-  $('.work').insertAdjacentHTML('beforebegin', '<section id="undatedPapers" aria-label="날짜 미기록" hidden></section>' +
-    '<dialog id="accountPaperDetail" aria-label="논문 상세"></dialog>');
-
-  $('#vCard').addEventListener('click', () => setView('card'));
-  $('#vList').addEventListener('click', () => setView('list'));
-  $('#zoomSeg').addEventListener('click', event => {
-    const button = event.target.closest('[data-z]');
-    if (button) setZoom(button.dataset.z);
-  });
-  $('#overviewFit').addEventListener('click', () => adjustOverviewZoom(0));
-  $('#mm').addEventListener('keydown', event => {
-    const steps = {ArrowLeft:-7, ArrowRight:7};
-    if (steps[event.key]) {
-      event.preventDefault();
-      scrollToDay(Number($('#mm').getAttribute('aria-valuenow')) + steps[event.key]);
-    }
-  });
-  $('#undatedPapers').addEventListener('click', event => {
-    const button = event.target.closest('[data-paper]');
-    if (button) onPick(button.dataset.paper);
-  });
-  wireScroller();
-  wireMinimap();
-  wirePaperList();
-}
-
-// Rendering uses the read transport. Only explicit account controls get the write transport.
-async function startAccountTimeline(get, account) {
-  if (S.source !== 'account') return;
-  try { await screensReady; } catch { return; } // The screen loader displays its retry control.
+// Auth supplies transports and an owner. The shared frame and its controls mount
+// through showMain() exactly as they do after loading a device project.
+async function startAccountTimeline(get,account) {
+  if (S.source!=='account') return;
+  await screensReady;
   if (!account.current()) return;
-  const editable = !!account.write;
-  mountAccountWorkspace(editable);
-  const picker = $('#workspaceTask');
-  const key = 'researchtrail.account.' + account.projectUrl + '.' + account.accountId + '.task';
-  let selection = 0, read = 0;
-  let tasks = [];
-  const current = version => account.current() && version === selection;
-  S.accountId = account.accountId;
-  listSort = 'added';
+  const api=accountWorkspace={...account,write:account.write||get, tasks:[],resume:null,recordRequests:{}};
+  let generation=0, read=0, loading=true, projectBaseline={}, paperBaseline=new Map(), recordsDialog;
+  const publicKey='researchtrail.account.'+account.projectUrl+'.'+account.accountId+'.task';
+  const notice=document.createElement('aside');
+  notice.className='product-save-feedback';
+  notice.setAttribute('aria-label','계정 저장 상태');
+  notice.innerHTML='<span id="workspaceStatus" role="status"></span><span id="memoStatus" role="status"></span>'+
+    '<button type="button" id="pdfUploadRetry" class="btn sm" hidden></button><span class="product-retries"></span>';
+  document.body.appendChild(notice);
+  const status=$('#workspaceStatus'), retries=notice.querySelector('.product-retries');
+  const saves=api.saves=createAccountSaveStatus(api.write,account.current,account);
+  function showRetries(){
+    retries.replaceChildren();
+    for(const job of store.pending().filter(j=>j.phase==='failed')){
+      const btn=document.createElement('button');
+      btn.type='button'; btn.className='btn sm';
+      const name=api.tasks.find(t=>t.task_id===job.task)?.task.goal_text;
+      btn.textContent=(name?name+' · ':'')+job.label+(job.conflict?' · 내 변경으로 다시 저장':' 다시 저장');
+      if(job.reviewTag){
+        btn.textContent=(name?name+' · ':'')+'삭제할 논문 다시 확인';
+        btn.onclick=async()=>{
+          try{
+            if(job.task===S.taskId)await refresh();else await selectTask(job.task);
+            if(!account.current() || S.taskId!==job.task)return;
+            store.releaseTagReview(job.id);
+            if(S.tags.some(tag=>tag.id===job.tagRemoval.tag_id))deleteTag(job.tagRemoval.tag_id);
+            else status.textContent='이 태그는 이미 삭제됐어요.';
+          }catch{status.textContent='태그가 붙은 논문을 다시 불러오지 못했어요.';}
+        };
+      }else btn.onclick=()=>store.retry(job.id,!!job.conflict).then(async ack=>{
+        if(job.path.endsWith('/reader'))accountReaderRefreshMarks(job,ack);
+        if (job.path==='/tasks' || /^\/tasks\/[^/]+$/.test(job.path)) await reloadTasks();
+        else if (job.task===S.taskId) await refresh();
+      }).catch(()=>{});
+      retries.appendChild(btn);
+    }
+  }
+  const store=createWorkspaceStore(account,(job,phase,ack)=>{
+    if (!account.current()) return;
+    if(ack && job.path.endsWith('/active-project'))observeSelection(ack);
+    if(phase==='saved'){
+      if(/^\/tasks\/[^/]+\/papers$/.test(job.path))saves.registrationSaved(job.task,job.id,ack);
+      saves.track('product.'+job.id,job.task,job.label,'idle');
+      saves.track('receipt.'+job.task,job.task,job.label,'saved');
+    } else saves.track('product.'+job.id,job.task,job.label,phase==='queued'?'saving':phase);
+    if(job.volatile && phase!=='saved')status.textContent='이 탭에 재시도 내용을 보관하지 못했어요. 저장이 끝날 때까지 창을 열어 두세요.';
+    if(job.conflict)status.textContent='다른 기기에서 같은 항목이 바뀌었어요. 내 변경을 유지하려면 다시 저장해 주세요.';
+    if(job.reviewTag && phase==='failed')status.textContent='태그에 속한 논문이 바뀌었어요. 삭제할 논문을 다시 확인해 주세요.';
+    showRetries();
+  });
+  for(const job of store.pending())saves.track('product.'+job.id,job.task,job.label,job.phase==='failed'?'failed':'saving');
+  showRetries();
+  api.mutate=store.mutate;
+  api.removeTag=store.removeTag;
+  api.extra=(target,id)=>store.read(S.taskId,target,id).data;
+  api.extraVersion=(target,id)=>store.read(S.taskId,target,id).version;
+  api.pendingSummary=(target,id)=>store.pending().find(job=>job.task===S.taskId && job.edit?.target===target &&
+    job.edit.id===id && job.edit.patch?.memoSummary);
+  api.patchExtra=(target,id,patch,options)=>store.patch(options?.task||S.taskId,target,id,patch,options);
+  api.editPaper=(id,extras,options)=>api.patchExtra('paper',id,extras,options);
+  api.flush=()=>store.flush(S.taskId);
+  api.papers=createAccountPaperOperations(api);
 
-  function clear(id, message) {
-    ++selection;
-    S.taskId = id;
-    S.links = [];
-    S.linking = null;
-    accountTimelineActions?.reset(id);
-    S.papers = [];
-    S.sel = null;
-    S.listQuery = '';
-    S.listScroll = 0;
-    S.timelineRange = null;
-    S.zoom = 'all';
-    S.overviewZoom = 1;
-    S.overviewPan = 0;
-    LIST_STATE = 'all';
-    $('#workspaceStatus').textContent = message;
-    $('#tip').hidden = true;
-    $('#tip').textContent = '';
-    const detail = $('#accountPaperDetail');
-    detail.close();
-    detail.replaceChildren();
-    renderAll();
-    return selection;
+  const preferences=['tags','bands','why','zoom','overviewZoom','resumeOpen','judge','next','filterTag'];
+  const paperFields=['tag','resources','abs','authors','year','lastReadOrder'];
+  const snapshot=(data,keys)=>Object.fromEntries(keys.filter(k=>data[k]!==undefined).map(k=>[k,structuredClone(data[k])]));
+  const differences=(a,b)=>Object.fromEntries(Object.keys(b).filter(k=>JSON.stringify(a[k])!==JSON.stringify(b[k])).map(k=>[k,b[k]]));
+  function baseline(){
+    projectBaseline=snapshot(S,preferences);
+    paperBaseline=new Map(S.papers.map(p=>[p.id,snapshot(p,paperFields)]));
+  }
+  api.saveChanges=()=>{
+    if(loading || !S.taskId || S.example || !account.current())return false;
+    const now=snapshot(S,preferences), task=S.taskId;
+    const delta=differences(projectBaseline,now); projectBaseline=now;
+    if(Object.keys(delta).length)store.patch(task,'project',null,delta).catch(()=>{});
+    for(const paper of S.papers){
+      const before=paperBaseline.get(paper.id), current=snapshot(paper,paperFields);
+      paperBaseline.set(paper.id,current);
+      if(!before)continue;
+      const changes=differences(before,current);
+      if(Object.keys(changes).length){
+        const projected=store.projected(task,'paper',paper.id);
+        const patch=differences(projected,changes);
+        if(Object.keys(patch).length)store.patch(task,'paper',paper.id,patch).catch(()=>{});
+      }
+    }
+    return !store.pending().some(j=>j.task===task);
+  };
+  function showLoadError(message,retry){
+    status.replaceChildren(document.createTextNode(message+' '));
+    const button=document.createElement('button');
+    button.type='button';button.className='btn sm';button.textContent='다시 불러오기';
+    button.onclick=()=>retry().catch(()=>{});
+    status.appendChild(button);
+  }
+  function current(n){return account.current() && generation===n;}
+  async function fetchProject(task,fresh) {
+    const n=generation, attempt=++read, base='/tasks/'+encodeURIComponent(task);
+    const [catalog,links,resume,meta]=await Promise.all([
+      account.listWorkspacePapers?account.listWorkspacePapers(task):get(base+'/papers?view=workspace'),
+      get(base+'/paper-links'),get(base+'/resume'),get(base+'/workspace')
+    ]);
+    if(!current(n)||attempt!==read)return;
+    if(resume.task_id!==task || !Array.isArray(catalog.papers) || !Array.isArray(links.links) || !meta.project)
+      throw Error('프로젝트 응답을 확인하지 못했어요.');
+    store.load(task,meta);
+    api.resume=resume;api.recordRequests=meta.record_requests||{};api.readingPages=meta.reading_pages||{};
+    api.readerHighlights=meta.reader_highlights||{};
+    S.name=api.tasks.find(t=>t.task_id===task)?.task.goal_text || '';
+    const data=store.projected(task,'project');
+    for (const key of preferences) if(Object.hasOwn(data,key)) S[key]=structuredClone(data[key]);
+    S.tags=(Array.isArray(S.tags)?S.tags:[]).filter(t=>t && typeof t.name==='string' && /^[a-zA-Z0-9_-]+$/.test(t.id))
+      .map(t=>({id:t.id,name:t.name,color:/^#[0-9a-f]{6}$/i.test(t.color)?t.color:PAL[0]}));
+    if(S.filterTag!=null && S.filterTag!=='' && !S.tags.some(tag=>tag.id===S.filterTag))S.filterTag=null;
+    if(!['week','month','all'].includes(S.zoom))S.zoom='month';
+    if(!Number.isFinite(S.overviewZoom) || S.overviewZoom<1 || S.overviewZoom>4)S.overviewZoom=1;
+    if(fresh){
+      if(typeof accountRestoreReaderPrefs==='function')accountRestoreReaderPrefs(data);
+    }
+    S.links=links.links.map(l=>({id:l.link_id,from:l.from_document_use_id,to:l.to_document_use_id,reason:l.reason_text||''}));
+    const old=new Map(S.papers.map(p=>[p.id,p]));
+    S.papers=catalog.papers.map(row=>{
+      const p=accountPaperFromRow(row,store.projected(task,'paper',row.document_use_id));
+      const prior=old.get(p.id), selected=prior && p.artifacts.find(a=>a.artifact_id===prior.artifactId);
+      if(selected){p.artifactId=selected.artifact_id;p.pdf=!!selected.pdf?.available;p.fname=selected.label_text||'';}
+      if(!fresh && prior && S.reader===p.id){
+        // The open editor owns in-flight drafts and PDF.js handles.
+        for(const k of ['title','use','date','artifacts','memo','link','tag','resources','state'])
+          prior[k]=p[k];
+        return prior;
+      }
+      accountHydratePaperRecords(p,resume);
+      return p;
+    });
+    if(fresh && typeof restoreAccountGraphLayout==='function')restoreAccountGraphLayout(data.graphLayout);
+    if(fresh && typeof restoreAccountPaperList==='function')restoreAccountPaperList(data.listControls);
+    if(S.sel && !paperBy(S.sel)){S.sel=null;S.panel='none';S.reader=null;}
+    baseline();
+    loading=false;status.textContent='';
+    if(fresh || !$('#tName'))showMain();
+    else if(!S.reader && S.panel!=='add')renderAll();
+    saves.focus(task);
+  }
+  async function refresh(){
+    const task=S.taskId,n=generation;
+    if(!task || !account.current())return;
+    try{await fetchProject(task,false);}
+    catch(e){if(current(n))showLoadError('프로젝트를 다시 불러오지 못했어요.',refresh);throw e;}
   }
   async function selectTask(id) {
-    picker.value = id;
-    clear(id, '프로젝트 논문을 불러오는 중…');
-    return refresh(id);
+    if(!account.current() || (id && !api.tasks.some(t=>t.task_id===id)))return;
+    ++generation; const n=generation;
+    if(typeof resetPaperWorkspaceControls==='function')resetPaperWorkspaceControls();
+    if(typeof accountCloseProductReader==='function')accountCloseProductReader();
+    recordsDialog?.close();
+    loading=true;reset();
+    S.reader=null;S.taskId=id||null;S.accountId=account.accountId;S.scroll=null;S.restoreViewOnce=false;
+    S.prevSeen=0;S.bubbleDay='';S.detailScroll=null;S.name=id?api.tasks.find(t=>t.task_id===id).task.goal_text:'새 프로젝트';
+    if(typeof RBSEL!=='undefined')RBSEL=null;
+    if(typeof LIST_STATE!=='undefined')LIST_STATE='all';
+    if(typeof listSort!=='undefined')listSort='recent';
+    saves.focus(id);
+    try {if(id)sessionStorage.setItem(publicKey,JSON.stringify(id));else sessionStorage.removeItem(publicKey);}catch{}
+    if(!id){baseline();showMain();loading=false;status.textContent='프로젝트 메뉴에서 첫 프로젝트를 만들어 주세요.';return;}
+    app.replaceChildren();status.textContent='프로젝트를 불러오는 중이에요.';
+    try{await fetchProject(id,true);}
+    catch(e){if(current(n)){
+      S.taskId=null;S.name='프로젝트 선택';S.papers=[];S.links=[];
+      showMain();showLoadError('이 프로젝트를 불러오지 못했어요.',()=>selectTask(id));
+    }throw e;}
   }
-  async function refresh(id) {
-    if (!id || id !== S.taskId || !account.current()) return;
-    const version = selection, attempt = ++read;
-    const path = '/tasks/' + encodeURIComponent(id);
-    try {
-      const [{papers}, {links}] = await Promise.all([account.listWorkspacePapers ? account.listWorkspacePapers(id) : get(path + '/papers'),
-        editable ? get(path + '/paper-links') : {links:[]}]);
-      if (!current(version) || attempt !== read) return;
-      S.links = links.map(l => ({id:l.link_id, from:l.from_document_use_id, to:l.to_document_use_id, reason:l.reason_text}));
-      S.papers = papers.map(row => ({
-        ...row, id:row.document_use_id, title:row.document.title || '제목 미기록',
-        memo:row.use.purpose_text, tag:'', date:row.date ?? null,
-        state:Object.keys(STATES).find(k => STATES[k].t === row.use.reading_state_text) || null,
-      }));
-      if (editable) $('#workspaceRecords').disabled = $('#addBtn').disabled = false;
-      $('#workspaceStatus').textContent = S.papers.length ? '' : '이 프로젝트에는 등록한 논문이 없어요.';
-    } catch {
-      if (!current(version) || attempt !== read) return;
-      S.links = []; S.papers = [];
-      if (editable) $('#addBtn').disabled = true;
-      $('#workspaceStatus').textContent = '프로젝트 논문을 불러오지 못했어요. 다시 불러와 주세요.';
+  let taskLoad=0, choiceRevision=0, selection=null;
+  function observeSelection(value) {
+    if (!Number.isSafeInteger(value?.revision) || value.revision<0 ||
+        (value.task_id!==null && typeof value.task_id!=='string'))return;
+    choiceRevision=Math.max(choiceRevision,value.revision);
+    if (!selection || value.revision>selection.revision ||
+        (value.revision===selection.revision && (value.request_id||'')>=(selection.request_id||''))) selection=value;
+    store.reconcileSelection(selection,new Set(api.tasks.map(t=>t.task_id)));
+  }
+  function chooseTask(id) {
+    if (!account.current() || !id || !api.tasks.some(t=>t.task_id===id))return;
+    const opened=selectTask(id);
+    if (selection) {
+      const pending=store.pending().filter(j=>j.path.endsWith('/active-project'));
+      const revision=choiceRevision=Math.max(choiceRevision,...pending.map(j=>j.body.revision))+1;
+      api.mutate('마지막 프로젝트','/tasks/'+encodeURIComponent(id)+'/active-project',{revision},{method:'PATCH',onAck:async ack=>{
+        if (!account.current())return;
+        await opened;
+        if (account.current() && S.taskId===id && choiceRevision===selection.revision && selection.task_id!==id)
+          status.textContent='다른 기기에서 마지막 프로젝트를 변경했어요. 이 프로젝트를 다시 선택하면 계정에 저장해요.';
+      }}).catch(()=>{});
     }
-    renderAll();
+    return opened;
   }
-  async function loadTasks() {
-    picker.disabled = true;
-    if (editable) $('#workspaceNew').disabled = true;
-    picker.replaceChildren();
-    const version = clear(null, '계정 프로젝트를 불러오는 중…');
+  async function reloadTasks(preferred){
+    const version=++taskLoad, started=generation;
     try {
-      const data = await get('/tasks');
-      if (!current(version)) return;
-      tasks = data.tasks;
-      accountTimelineActions?.projects(tasks);
-      if (editable) $('#workspaceNew').disabled = false;
-      if (!tasks.length) {
-        $('#workspaceStatus').textContent = editable
-          ? '아직 계정 프로젝트가 없어요. 새 프로젝트를 눌러 첫 프로젝트를 만들어 주세요.'
-          : '아직 계정 프로젝트가 없어요.';
-        return;
+      const {tasks,selection:remote}=await get('/tasks?view=workspace');
+      if(!account.current()||version!==taskLoad||started!==generation)return;
+      api.tasks=tasks;saves.projects(tasks);
+      observeSelection(remote);
+      let tab;
+      try{tab=JSON.parse(sessionStorage.getItem(publicKey));}catch{}
+      if (preferred && preferred!==S.taskId && tasks.some(t=>t.task_id===preferred)) {
+        // Creating a project from the picker explicitly selects the new project.
+        await chooseTask(preferred);
+      } else {
+        const id=[S.taskId,tab,selection?.task_id,tasks[0]?.task_id].find(id=>id && tasks.some(t=>t.task_id===id));
+        await selectTask(id);
       }
-      picker.replaceChildren(...tasks.map(t => new Option(t.task.goal_text, t.task_id)));
-      picker.disabled = false;
-      let last;
-      try { last = JSON.parse(sessionStorage.getItem(key)); } catch { /* Optional tab preference. */ }
-      const selected = tasks.find(t => t.task_id === last)?.task_id || tasks[0].task_id;
-      return editable && selected !== last ? choose(selected) : selectTask(selected);
-    } catch {
-      if (current(version)) $('#workspaceStatus').textContent = '프로젝트 목록을 불러오지 못했어요. 다시 불러와 주세요.';
-    }
+    }catch(e){if(account.current() && version===taskLoad && !S.taskId)showLoadError('프로젝트 목록을 불러오지 못했어요.',reloadTasks);throw e;}
   }
-  function choose(id) {
-    if (!account.current() || !tasks.some(task => task.task_id === id)) return;
-    try { sessionStorage.setItem(key, JSON.stringify(id)); } catch { /* Optional tab preference. */ }
-    return selectTask(id);
-  }
-  picker.addEventListener('change', () => choose(picker.value));
-  if (editable) accountTimelineActions = createAccountGraphWorkspace(get, account, refresh, task => {
-    if (!tasks.some(t => t.task_id === task.task_id)) tasks.unshift(task);
-    picker.replaceChildren(...tasks.map(t => new Option(t.task.goal_text, t.task_id)));
-    picker.disabled = false;
-    accountTimelineActions.projects(tasks);
-    return choose(task.task_id);
-  });
-  $('#workspaceRetry').addEventListener('click', () => S.taskId ? selectTask(S.taskId) : loadTasks());
-  await loadTasks();
+  Object.assign(api,{select:selectTask,refresh,reloadTasks});
+  projAccountMenu=createAccountProjectMenu({catalog:()=>({active:S.taskId,list:api.tasks.map(t=>({id:t.task_id,name:t.task.goal_text,count:t.paper_count}))}),
+    select:chooseTask,refresh:reloadTasks,request:(path,body,opts)=>api.mutate('프로젝트',path,body,opts)});
+  api.openRecords=async(scope)=>{
+    if (!S.taskId || !account.current())return;
+    const version=generation, task=S.taskId;
+    try{
+      if(!recordsDialog)recordsDialog=await createProjectRecordsDialog(api,saves);
+      if(current(version))await recordsDialog.open(task,scope);
+    }catch{if(current(version))showLoadError('프로젝트 기록을 불러오지 못했어요.',api.openRecords);}
+  };
+  await reloadTasks().catch(()=>{});
 }
 
-function renderAccountWorkspace() {
-  const card = S.view === 'card', hasPapers = S.papers.length > 0;
-  const graph = S.view === 'dot';
-  if (accountTimelineActions) {
-    $('#vDot').setAttribute('aria-pressed',String(graph));
-    $('#fdot').hidden = $('#dotwrap').hidden = !graph || !hasPapers;
-    if (graph && hasPapers) renderDots();
-    else $('#dotsvg').replaceChildren();
+// Project-level records remain accessible from the project menu, including notes
+// written before papers or PDFs were attached. Mount only this optional form.
+async function createProjectRecordsDialog(api,saves) {
+  const response=await fetch('views/project-records.html');
+  if(!response.ok || !api.current())throw Error('프로젝트 기록을 열지 못했어요.');
+  const dialog=document.createElement('dialog');
+  dialog.className='product-records-dialog';
+  dialog.setAttribute('aria-label','프로젝트 기록');
+  const template=document.createElement('template');
+  template.innerHTML=await response.text();
+  // The reader and the project record editor use some of the same control IDs.
+  // Keep their labels, focus targets and event handlers scoped to their own form.
+  const host=document.createElement('div');
+  dialog.appendChild(host);
+  const form=host.attachShadow({mode:'open'});
+  for(const css of ['style.css','styles/paper-panel.css','styles/reading-records.css','styles/account.css']){
+    const link=document.createElement('link');link.rel='stylesheet';link.href=css;form.appendChild(link);
   }
-  const dated = card && S.papers.some(p => p.date);
-  const undated = card ? S.papers.filter(p => !p.date) : [];
-  $('#vCard').setAttribute('aria-pressed', String(card));
-  $('#vList').setAttribute('aria-pressed', String(S.view === 'list'));
-  $('#emptyBox').hidden = hasPapers;
-  $('#scroller').hidden = $('#timelineMonth').hidden = $('#fcard').hidden = !dated;
-  $('#overviewControls').hidden = S.zoom !== 'all';
-  $$('#zoomSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.z === S.zoom)));
-  $('#paperList').hidden = S.view !== 'list' || !hasPapers;
-  if (S.view === 'list' && hasPapers) renderPaperList();
-  else $('#paperList').replaceChildren();
-  if (dated && !(typeof mtlOn === 'function' && mtlOn())) { renderCards(); renderMinimap(); }
-  else { $('#canvas').replaceChildren(); $('#mm').replaceChildren(); L.pos = {}; }
-  const group = $('#undatedPapers');
-  group.hidden = !undated.length;
-  group.classList.toggle('only-undated', !dated);
-  group.innerHTML = undated.length ? '<h2>날짜 미기록</h2><div class="undated-cards">' + undated.map(p =>
-    '<button class="card st-'+readingStateKey(p.state)+'" type="button" data-paper="'+esc(p.id)+'">'+
-      '<span class="ct1"><span class="tx">'+esc(p.title)+'</span></span><span class="cmemo">'+esc(p.memo)+'</span>'+
-      '<span class="cfoot">'+sg(p.state)+esc(p.use.reading_state_text || '읽기 상태 미기록')+'</span></button>'
-  ).join('') + '</div>' : '';
-}
-
-function showAccountPaper(id) {
-  const p = paperBy(id);
-  if (!p) return;
-  if (accountTimelineActions?.pickTarget(p)) return;
-  const dialog = $('#accountPaperDetail');
-  dialog.innerHTML = '<h2>'+esc(accountTimelineActions ? accountTimelineActions.caption(p) : p.title)+'</h2><p>'+esc(p.date || '날짜 미기록')+' · '+
-    esc(p.use.reading_state_text || '읽기 상태 미기록')+'</p><h3>저장 이유</h3><p>'+
-    esc(p.memo || '미기록/확인 필요')+'</p>' + (p.artifacts.length ? '<h3>자료 판본</h3><ul>'+
-    p.artifacts.map(a => {
-      if (accountTimelineActions && a.pdf) {
-        const sameName=p.artifacts.some(other=>other!==a && other.pdf && other.label_text===a.label_text);
-        return '<li>'+accountPdfArtifactHtml(p.id,a,sameName)+'</li>';
-      }
-      const label = esc([a.label_text, a.version_text, a.part_text].filter(Boolean).join(' · ') ||
-        a.access_locator_text || '판본 이름 미기록');
-      const url = a.access_locator_text && safeExternalUrl(a.access_locator_text);
-      return '<li>'+(url ? '<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+label+'</a>' : label)+'</li>';
-    }).join('')+'</ul>' : '')+
-    (accountTimelineActions ? '<section class="workspace-paper-actions" id="workspacePaperActions"></section>' : '')+
-    '<form method="dialog"><button class="btn" autofocus>닫기</button></form>';
-  accountTimelineActions?.paperControls(dialog,p);
-  if (!dialog.open) dialog.showModal();
+  form.appendChild(template.content.cloneNode(true));
+  const lookup=selector=>form.querySelector(selector);
+  lookup('form[method=dialog]').addEventListener('submit',event=>{event.preventDefault();dialog.close();});
+  const memos=createAccountMemos(api.write,api,saves,()=>{},lookup);
+  dialog.addEventListener('close',()=>{memos.clear();dialog.remove();});
+  return {
+    async open(task,scope){
+      if(!api.current() || S.taskId!==task)return;
+      document.body.appendChild(dialog);
+      if(!dialog.open)dialog.showModal();
+      await memos.open(task,scope);
+      if(api.current() && S.taskId===task && dialog.open)
+        renderLegacyRecovery(task,api,lookup('#editionRecovery'),item=>memos.open(task,item));
+    },
+    close(){if(dialog.open)dialog.close();}
+  };
 }

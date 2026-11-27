@@ -58,7 +58,7 @@ const containsQuote = (passage, key) => passage.text.split(GAP).some(part => quo
  * @param {boolean} [input.openPdfOnly]  Use only the open edition as evidence.
  * @param {number} [input.excludedCount]  Linked papers that were not searched.
  */
-export function buildPrompt({ papers, passages, question, currentPage, selection, history = [], excludedCount = 0, openPdfOnly = false }) {
+export function buildPrompt({ papers, passages, question, currentPage, selection, capture, history = [], excludedCount = 0, openPdfOnly = false }) {
   const open = papers[0];
   // The caller supplies the selection. For the unified reader, only quote it as source text
   // when the retrieved edition contains it on the indicated page.
@@ -94,6 +94,9 @@ export function buildPrompt({ papers, passages, question, currentPage, selection
     passages.map(p => '[문서 ' + p.label + ' · p.' + p.page + '] ' + p.text).join('\n\n'),
     '</본문>',
     selection ? '<선택한 문장 문서 ' + selection.label + ' p.' + (selection.page || '?') + '>' + selection.text + '</선택한 문장>' : '',
+    capture ? '학생이 첨부한 캡처 · 문서 '+open.label+' p.'+capture.page+
+      '. 이미지는 전송되지 않았다. 학생 메모는 질문의 맥락이며 원문 근거가 아니다. 해당 쪽의 검색 구절에서 확인해 답한다.' : '',
+    capture?.note ? '캡처에 붙인 학생 메모: '+capture.note : '',
     talk ? '이전 대화:\n' + talk : '',
     '학생 질문: ' + question,
   ].filter(line => line !== '').join('\n');

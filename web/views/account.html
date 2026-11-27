@@ -13,12 +13,11 @@
     <b class="account-brand">ResearchTrail<i>.</i></b>
     <span id="authMode" role="status">계정 확인 중…</span>
     <span id="authIdentity" aria-label="현재 계정" hidden></span>
-    <button type="button" class="btn sm" id="authBack" hidden>계정 타임라인으로</button>
-    <button type="button" class="btn sm" id="authOpenLocal" hidden>이 브라우저에 저장한 작업 열기</button>
     <button type="button" class="btn sm" id="authLogin" hidden>Google로 로그인</button>
     <button type="button" class="btn sm" id="authLogout" hidden>로그아웃</button>
   </header>
   <p id="authMessage" class="account-message" role="status"></p>
+  <button type="button" class="btn sm" id="authRetry" hidden>프로젝트 다시 불러오기</button>
   <main id="authWorkspace" class="account-workspace"></main>
   <script src="js/browser-config.js"></script>
   <script src="vendor/supabase/supabase.js"></script>

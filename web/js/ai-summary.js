@@ -12,13 +12,32 @@ var AI_TIMEOUT_MS=45000;
 var AI_RETRY_DELAY_MS=1000;
 var AI_RT={pid:null,st:'idle',err:'',token:0,timer:null,setup:false,requestHash:null,todoEdit:null,recentMemo:null};
 
+function aiAccountMode(){return typeof S!=='undefined' && S.source==='account'}
 function aiCfg(){
+  if(aiAccountMode()){
+    var saved=typeof accountWorkspace!=='undefined' && accountWorkspace?.extra('project',S.taskId);
+    var consent=saved?.memoSummaryConsent==='openai-v1';
+    return {on:saved?.memoSummaryEnabled===true,key:'account',model:consent?AI_MODEL:'규칙 기반',consent};
+  }
   try{var o=JSON.parse(localStorage.getItem(AI_KEY)||'null');if(o&&typeof o==='object')return {on:!!o.on,key:'server',model:AI_MODEL,consent:!!o.consent}}catch(e){}
   return {on:false,key:'server',model:AI_MODEL,consent:false};
 }
-function aiSaveCfg(c){try{localStorage.setItem(AI_KEY,JSON.stringify({on:!!c.on,consent:!!c.consent}));return true}catch(e){return false}}
+// Retain the exact request and timestamp if an acknowledgement is lost.
+var aiAccountWrites=new Map();
+function aiWriteKey(target,id,version){return JSON.stringify([accountWorkspace.projectUrl,accountWorkspace.accountId,S.taskId,target,id,version]);}
+function aiSaveAccountExtra(target,id,patch,version,requestId){
+  const owner=accountWorkspace, key=aiWriteKey(target,id,version);
+  let job=aiAccountWrites.get(key);
+  if(!job){job={id:requestId||crypto.randomUUID(),patch};aiAccountWrites.set(key,job);}
+  const done=()=>{if(aiAccountWrites.get(key)===job)aiAccountWrites.delete(key);};
+  return owner.patchExtra(target,id,job.patch,{request_id:job.id,label:'메모 정리',onAck:done}).then(()=>{done();return job.patch;});
+}
+function aiSaveCfg(c){
+  if(aiAccountMode())return aiSaveAccountExtra('project',S.taskId,
+    {memoSummaryEnabled:!!c.on,memoSummaryConsent:c.on&&c.consent?'openai-v1':null},'enabled:'+!!c.on+':'+!!c.consent);
+  try{localStorage.setItem(AI_KEY,JSON.stringify({on:!!c.on,consent:!!c.consent}));return true}catch(e){return false}}
 
-function aiOn(){var c=aiCfg();return c.on&&!!c.key&&c.consent}
+function aiOn(){var c=aiCfg();return c.on&&!!c.key&&(aiAccountMode()||c.consent)}
 
 /* 정리에 쓸 메모 모음. id는 화면의 기록 id와 같다. */
 function aiSources(p){
@@ -122,6 +141,7 @@ function aiParseText(text){
 }
 
 function aiFetch(url,opts,timeoutMs){
+  if(aiAccountMode())return Promise.reject(new Error('계정 작업공간의 인증된 서버 연결이 필요해요.'));
   var ctl=typeof AbortController==='function'?new AbortController():null,timer;
   if(ctl){opts.signal=ctl.signal;timer=setTimeout(function(){ctl.abort()},timeoutMs||AI_TIMEOUT_MS)}
   return fetch(url,opts).then(function(r){
@@ -189,11 +209,12 @@ function aiRun(p,force){
   if(!sources.length){AI_RT.st='idle';AI_RT.err='';aiRender(p);return}
   if(AI_RT.st==='busy'&&AI_RT.pid===p.id&&AI_RT.requestHash===hash)return;
   var memoHash=aiMemoHash(sources),last=aiLastSavedAction(p);
-  if(last&&last.kind==='ai'&&!last.source_memo_hash&&last.final_action===p.todo&&
+  if(!aiAccountMode()&&last&&last.kind==='ai'&&!last.source_memo_hash&&last.final_action===p.todo&&
     p.aiSum&&p.aiSum.hash===hash&&p.aiSum.next&&p.aiSum.next.text===last.original_candidate){
     last.source_memo_hash=memoHash;save();
   }
-  if(!force&&p.aiSum&&p.aiSum.hash===hash){aiRender(p);return}
+  if(!force&&p.aiSum&&p.aiSum.hash===hash&&(!aiAccountMode()||!cfg.consent||p.aiSum.provider==='openai')&&
+      (!aiAccountMode()||!accountWorkspace.pendingSummary?.(p.artifactId?'artifact':'paper',p.artifactId||p.id))){aiRender(p);return}
   var token=++AI_RT.token;AI_RT.pid=p.id;AI_RT.requestHash=hash;AI_RT.st='busy';AI_RT.err='';aiRender(p);
   function stillCurrent(){
     return token===AI_RT.token&&aiOn()&&S.reader===p.id&&hash===aiHash(aiSources(p),p.todo);
@@ -219,6 +240,8 @@ function aiRun(p,force){
       return sum;
     }).catch(function(){return sum});
   }
+  if(aiAccountMode())return aiAccountRun(p,{cfg,sources,hash,force,stillCurrent});
+
   aiCall(cfg,aiPrompt(p,sources),stillCurrent).then(function(raw){
     if(!stillCurrent())return;
     return improveNext(aiNormalize(raw,ids));
@@ -232,6 +255,55 @@ function aiRun(p,force){
   }).finally(function(){
     if(token===AI_RT.token&&AI_RT.st==='busy')AI_RT.st='idle';
   });
+}
+// Send only canonical record IDs. The account function reads the selected edition
+// under the user's session and returns its source record IDs for the shared UI.
+async function aiAccountRun(p,{cfg,sources,hash,force,stillCurrent}){
+  const owner=accountWorkspace,task=S.taskId,edition=p.artifactId,target=edition?'artifact':'paper',id=edition||p.id;
+  const version=hash+(cfg.consent?':openai':':rules');
+  const current=()=>owner===accountWorkspace && (!owner.current||owner.current()) && S.taskId===task && p.artifactId===edition && cfg.consent===aiCfg().consent && stillCurrent();
+  const recovered=owner.pendingSummary?.(target,id);
+  const cached=aiAccountWrites.get(aiWriteKey(target,id,version));
+  let patch=recovered?.edit.patch||cached?.patch;
+  try {
+    if (patch && !force) throw Error('이전 정리 결과의 계정 저장을 확인하지 못했어요. 다시 정리를 눌러 저장을 재시도해 주세요.');
+    if (!patch && cfg.consent) {
+      const cards=(p.hl||[]).filter(h=>h.mine?.trim()),recordCards=new Map();
+      if (!cards.length) {AI_RT.st='idle';aiRender(p);return;}
+      for (const card of cards) {
+        const record=card.latestRecordId||card.record_id;
+        if (!record || card.mine!==card.savedMemo) {
+          AI_RT.st='waiting';aiRender(p);return;
+        }
+        recordCards.set(record,card.id);
+      }
+      const result=await owner.write('/tasks/'+task+'/papers/'+p.id+'/memo-summary',
+        {consent:true,artifact_id:edition||null,record_ids:[...recordCards.keys()]});
+      if (!current()) return;
+      const remap=item=>item && {...item,sources:item.sources.map(record=>recordCards.get(record)).filter(Boolean)};
+      const verified=aiNormalize({done:result.done.map(remap),open:result.open.map(remap),next:remap(result.next)},[...recordCards.values()]);
+      patch={memoSummary:{...verified,hash,at:Date.now(),model:result.model,provider:'openai'}};
+    }
+    if (!patch) {
+      const candidates=sources.filter(x=>x.id!=='reason').map(source=>({source,action:pickAction(source.memo).action})).filter(x=>x.action);
+      const selected=candidates.length===1?candidates[0]:candidates.find(x=>x.source.recent);
+      patch={memoSummary:{hash,at:Date.now(),model:'규칙 기반',done:aiConfirmedNotes(sources),
+        open:sources.filter(x=>x.id!=='reason' && /[?？]|궁금|의문/.test(x.memo)).slice(-3).map(x=>({text:x.memo,sources:[x.id]})),
+        next:selected?{text:selected.action,sources:[selected.source.id]}:null}};
+    }
+    const saveVersion=patch.memoSummary.hash+(patch.memoSummary.provider==='openai'?':openai':':rules');
+    const confirmed=await aiSaveAccountExtra(target,id,patch,saveVersion,recovered?.id);
+    if (!current()) return;
+    p.aiSum=confirmed.memoSummary;AI_RT.st='idle';aiRender(p);
+    if (p.aiSum.hash!==hash || (cfg.consent && p.aiSum.provider!=='openai')) aiSchedule(p,300);
+  } catch(error){
+    if(!current())return;
+    AI_RT.st='error';
+    AI_RT.err=patch?'정리 결과의 계정 저장을 확인하지 못했어요. 다시 정리를 눌러 저장을 재시도해 주세요.':
+      error.status===400?'이 판본에 연결된 저장 메모와 전송 동의를 다시 확인해 주세요.':
+      '메모를 정리하지 못했어요. 계정 연결과 서버의 AI 설정을 확인하고 다시 정리를 눌러 주세요.';
+    aiRender(p);
+  }
 }
 function aiSchedule(p,delay){
   if(!p||!aiOn())return;
@@ -273,8 +345,8 @@ function aiEditTodo(p,field){
 
 function aiSetupHtml(c){
   return '<div class="ai-setup">'+
-    '<p class="reader-hint">OpenAI 키는 서버에 설정해요. 서버를 켠 뒤 전송에 동의하면 사용할 수 있어요.</p>'+
-    '<label class="ai-consent"><input type="checkbox" id="aiConsent"'+(c.consent?' checked':'')+'> 정리할 때마다 이 논문의 메모와 제목이 OpenAI로 전송되는 것에 동의해요.</label>'+
+    '<p class="reader-hint">'+(aiAccountMode()?'이 프로젝트에서 메모 정리를 켜면 읽기 화면의 저장된 메모를 정리하고 결과를 계정에 저장해요. 언제든 설정에서 끌 수 있어요.':'OpenAI 키는 서버에 설정해요. 서버를 켠 뒤 전송에 동의하면 사용할 수 있어요.')+'</p>'+
+    '<label class="ai-consent"><input type="checkbox" id="aiConsent"'+(c.consent?' checked':'')+'> '+(aiAccountMode()?'정리할 때마다 이 논문의 제목과 저장 이유, 열어 둔 판본의 메모·연결된 원문 구절과 다음 할 일을 OpenAI로 전송하는 데 동의해요.':'정리할 때마다 이 논문의 메모와 제목이 OpenAI로 전송되는 것에 동의해요.')+'</label>'+
     '<div class="ai-row"><button type="button" class="btn pri sm" id="aiSave">동의하고 켜기</button><button type="button" class="btn sm" id="aiCancel">취소</button></div>'+
     '<p class="ai-msg" id="aiMsg" role="status"></p></div>';
 }
@@ -331,9 +403,10 @@ function aiRender(p){
   summary+=section('확인했다고 적은 메모',aiConfirmedNotes(sources));
   if(s&&!stale)summary+=section('아직 궁금한 점',s.open||[]);
   box.innerHTML=body+(busy?'<p class="ai-status" role="status">정리 중…</p>':'')+
+    (AI_RT.st==='waiting'&&AI_RT.pid===p.id?'<p class="ai-status" role="status">편집을 마치고 계정에 저장한 메모부터 정리해요.</p>':'')+
     (AI_RT.st==='error'&&AI_RT.pid===p.id?'<p class="ai-err" role="alert">'+esc(AI_RT.err)+'</p>':'')+
-    '<details id="aiSummaryDetails" class="reader-extra"'+(expanded?' open':'')+'><summary>AI 정리 보기</summary><div class="ai-setup">'+summary+
-    '<div class="ai-tools"><button type="button" class="record-add" id="aiRedo"'+(busy?' disabled':'')+'>다시 정리</button><button type="button" class="record-add ai-off" id="aiSettings">설정</button></div></div></details>';
+    '<details id="aiSummaryDetails" class="reader-extra"'+(expanded?' open':'')+'><summary>AI 정리 보기'+(aiAccountMode()&&!c.consent?' · 규칙 기반':'')+'</summary><div class="ai-setup">'+summary+
+    '<div class="ai-tools"><button type="button" class="record-add" id="aiRedo"'+(busy?' disabled':'')+'>다시 정리</button>'+(aiAccountMode()&&!c.consent?'<button type="button" class="record-add" id="aiConsentSettings">OpenAI 전송 설정</button>':'')+'<button type="button" class="record-add ai-off" id="aiSettings">설정</button></div></div></details>';
   /* 저장 버튼을 할 일 칸 안 오른쪽 아래로 옮겨, 칸과 한 덩어리로 보이게 한다. */
   var fw=field&&field.parentNode;
   if(fw){$$('.ai-use-in,.ai-edit-hint',fw).forEach(function(x){x.remove()});fw.classList.remove('has-save')}
@@ -347,7 +420,18 @@ function aiWireSetup(p){
   var cancel=$('#aiCancel');if(cancel)cancel.addEventListener('click',function(){AI_RT.setup=false;aiRender(p)});
   var sv=$('#aiSave');if(!sv)return;
   sv.addEventListener('click',function(){
-    var key='server',consent=$('#aiConsent').checked,msg=$('#aiMsg');
+    var msg=$('#aiMsg');
+    if(aiAccountMode()){
+      const owner=accountWorkspace,task=S.taskId,edition=p.artifactId;
+      if(!$('#aiConsent')?.checked){msg.textContent='메모 전송에 동의해야 켤 수 있어요.';return;}
+      sv.disabled=true;msg.textContent='설정을 계정에 저장하는 중이에요.';
+      aiSaveCfg({on:true,consent:true}).then(()=>{
+        if(owner!==accountWorkspace || S.taskId!==task || S.reader!==p.id || p.artifactId!==edition)return;
+        AI_RT.setup=false;aiRender(p);aiRun(p,true);
+      }).catch(()=>{sv.disabled=false;msg.textContent='메모 정리 설정을 계정에 저장하지 못했어요. 다시 눌러 주세요.';});
+      return;
+    }
+    var key='server',consent=$('#aiConsent').checked;
     if(!key){msg.textContent='API 키를 넣어 주세요.';return}
     if(!consent){msg.textContent='메모 전송에 동의해야 켤 수 있어요.';return}
     sv.disabled=true;msg.textContent='OpenAI 연결을 확인하는 중…';
@@ -358,14 +442,35 @@ function aiWireSetup(p){
   });
 }
 function aiWireView(p,n){
+  const consent=$('#aiConsentSettings');if(consent)consent.onclick=()=>{AI_RT.setup=true;aiRender(p);};
   var redo=$('#aiRedo');if(redo)redo.addEventListener('click',function(){aiRun(p,true)});
   var st=$('#aiSettings');if(st)st.addEventListener('click',function(){
-    ask('AI 정리를 끌까요?','끄면 메모가 더 이상 전송되지 않고, 메모마다 "다음 할 일 찾기" 버튼이 다시 보여요. 전송 동의도 해제해요.','끄기',function(){
-      aiSaveCfg({on:false,key:'',model:'',consent:false});++AI_RT.token;AI_RT.st='idle';AI_RT.err='';AI_RT.todoEdit=null;aiRender(p);
+    ask('AI 정리를 끌까요?',aiAccountMode()?'이 프로젝트의 전송 동의가 해제되고 자동 정리가 멈춰요.':'끄면 메모가 더 이상 전송되지 않고, 메모마다 "다음 할 일 찾기" 버튼이 다시 보여요. 전송 동의도 해제해요.','끄기',function(){
+      const task=S.taskId;
+      Promise.resolve(aiSaveCfg({on:false,key:'',model:'',consent:false})).then(()=>{
+        if(aiAccountMode() && (S.taskId!==task || S.reader!==p.id))return;
+        ++AI_RT.token;AI_RT.st='idle';AI_RT.err='';AI_RT.todoEdit=null;aiRender(p);
+      }).catch(()=>{AI_RT.st='error';AI_RT.err='계정에 설정을 저장하지 못했어요.';aiRender(p);});
     },true);
   });
   var use=$('#aiUse');if(use)use.addEventListener('click',function(){
     var field=$('#rTodo'),value=field.value.trim();
+    if(aiAccountMode()){
+      const sourceId=n?.sources?.[0] || RR.selected || 'legacy-note';
+      const source=readingSource(p,sourceId);
+      use.disabled=true;
+      const task=S.taskId,edition=p.artifactId;
+      accountReaderConfirmAction(p,{sourceId,sourceText:source?.text||'',original:n?.text||null,
+        reviewed:value,key:'summary-'+sourceId+'-'+(p.aiSum?.hash||'manual')+'-'+value}).then(()=>{
+        if(S.taskId!==task || S.reader!==p.id || p.artifactId!==edition)return;
+        p.todo=value;p.todoSrc=n?'confirmed':'manual';AI_RT.todoEdit=null;aiRender(p);
+        renderHistory(p);renderRbar();
+      }).catch(error=>{
+        if(S.taskId!==task || S.reader!==p.id || p.artifactId!==edition)return;
+        AI_RT.st='error';AI_RT.err=error.message||'다음 할 일 저장을 확인하지 못했어요. 다시 눌러 주세요.';aiRender(p);
+      });
+      return;
+    }
     var oldTodo=p.todo,oldSrc=p.todoSrc;
     p.todo=value;p.todoSrc=n?'ai':'manual';
     var oldLen=Array.isArray(p.actionHistory)?p.actionHistory.length:0;
@@ -412,6 +517,13 @@ function aiWirePanel(p){
   el.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('[data-hd]'))aiSchedule(paperBy(S.reader),1200)});
 }
 function aiInit(p){
+  if(aiAccountMode()){
+    const key=JSON.stringify([accountWorkspace.projectUrl,accountWorkspace.accountId,S.taskId,p.id,p.artifactId||null]);
+    if(AI_RT.scope!==key){
+      AI_RT.scope=key;AI_RT.token++;AI_RT.todoEdit=null;AI_RT.recentMemo=null;AI_RT.setup=false;AI_RT.st='idle';AI_RT.err='';
+    }
+    p.aiSum=accountWorkspace.extra(p.artifactId?'artifact':'paper',p.artifactId||p.id)?.memoSummary || null;
+  }
   var box=$('#rAi'),saved=$('#rTodoSaved');
   if(box&&saved){
     var panel=saved.parentElement;

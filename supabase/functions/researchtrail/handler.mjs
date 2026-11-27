@@ -1,3 +1,6 @@
+import { boundedBytes } from './bytes.mjs';
+import { validWorkspaceJson, workspaceControl } from './workspace.mjs';
+import { memoSummary } from './memo-summary.mjs';
 import { paperPdf } from './paper-pdf.mjs';
 import { ragIndex } from '../_rag/index-route.mjs';
 import { ragAsk } from '../_rag/ask-route.mjs';
@@ -40,6 +43,7 @@ export async function handleResearchTrail(request, backend) {
       });
       if (!result.ok) {
         const { code } = await result.json();
+        if (code === 'RT409') return Response.json({error:{code:'STORAGE_FAILURE',message:'다른 기기에서 변경했어요. 최신 내용을 확인한 후 다시 저장해 주세요.'}},{status:409,headers:cors});
         if (code === 'RT001') return fail(400, 'INVALID_LINK');
         if (['P0002','23503','42501'].includes(code) || [401,403].includes(result.status)) return fail(404, 'RESOURCE_UNAVAILABLE');
         if (code?.startsWith('22') || ['23502','23514'].includes(code)) return fail(400, 'INVALID_INPUT');
@@ -47,6 +51,13 @@ export async function handleResearchTrail(request, backend) {
       }
       return result;
     }
+    const summary=/^\/tasks\/([^/]+)\/papers\/([^/]+)\/memo-summary$/.exec(path);
+    if (summary && uuid.test(summary[1]) && uuid.test(summary[2]))
+      return await memoSummary(request,{task:summary[1].toLowerCase(),use:summary[2].toLowerCase()},
+        {backend,rpc:callRpc,uuid,fail,cors});
+    const control = /^\/tasks\/([^/]+)(?:\/(workspace|tag-removal|active-project)|\/(papers)\/([^/]+))?$/.exec(path);
+    if (control) return workspaceControl(request,{task:control[1],kind:control[2] || control[3] || 'task',id:control[4]},
+      {rpc:callRpc,fail,cors,uuid});
     const link = /^\/tasks\/([^/]+)\/paper-links\/([^/]+)$/.exec(path);
     if (link && uuid.test(link[1]) && uuid.test(link[2])) {
       const edit = request.method === 'PATCH';
@@ -89,7 +100,7 @@ export async function handleResearchTrail(request, backend) {
     const post = request.method === 'POST';
     let rpc;
     const args = {};
-    if (path === '/tasks') rpc = post ? 'rt_create_task' : 'rt_tasks';
+    if (path === '/tasks') rpc = post ? 'rt_create_task' : url.searchParams.get('view') === 'workspace' ? 'rt_workspace_tasks' : 'rt_tasks';
     else if (path === '/documents' && !post) rpc = 'rt_documents';
     else if (match && uuid.test(match[1])) {
       if (match[2] === 'resume') {
@@ -106,17 +117,32 @@ export async function handleResearchTrail(request, backend) {
     if (!post && request.method !== 'GET') return fail(405, 'INVALID_INPUT');
     if (post) {
       let body;
-      try { body = await request.json(); } catch { return fail(400, 'INVALID_INPUT'); }
+      try {
+        if (rpc === 'rt_register_paper') {
+          if (!request.body) return fail(400,'INVALID_INPUT');
+          const bytes = await boundedBytes(request,10 * 1024 * 1024);
+          if (!bytes) return fail(413,'INVALID_INPUT');
+          body = JSON.parse(new TextDecoder().decode(bytes));
+        } else body = await request.json();
+      } catch { return fail(400, 'INVALID_INPUT'); }
       const fields = {
         rt_confirm_action: ['source_record_id', 'confirmed', 'reviewed_action', 'original_candidate', 'links', 'request_id'],
         rt_save_record: ['record', 'context', 'revises_record_id', 'request_id'],
-        rt_register_paper: ['document', 'document_id', 'use', 'artifacts', 'date', 'request_id'],
+        rt_register_paper: ['document', 'document_id', 'use', 'artifacts', 'date', 'workspace_data', 'request_id'],
         rt_link_papers: ['from_document_use_id', 'to_document_use_id', 'reason_text', 'request_id'],
         rt_create_task: ['goal_text', 'scope_text', 'target_output_text', 'progress_text', 'request_id'],
       }[rpc];
       if (!body || typeof body !== 'object' || Array.isArray(body) ||
           Object.keys(body).some(key => !fields.includes(key))) return fail(400, 'INVALID_INPUT');
       const { request_id: bodyKey, ...payload } = body;
+      if (rpc === 'rt_register_paper' && Object.hasOwn(payload,'workspace_data')) {
+        if (!payload.workspace_data || typeof payload.workspace_data !== 'object' || Array.isArray(payload.workspace_data) ||
+            !validWorkspaceJson(payload.workspace_data,1))
+          return fail(400,'INVALID_INPUT');
+        rpc = 'rt_register_workspace_paper';
+        args.workspace_data = payload.workspace_data;
+        delete payload.workspace_data;
+      }
       let request_id = bodyKey;
       if (rpc === 'rt_confirm_action' && payload.confirmed !== true) return fail(400, 'INVALID_INPUT');
       if (rpc === 'rt_save_record' || rpc === 'rt_confirm_action') {

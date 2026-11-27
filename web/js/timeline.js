@@ -165,6 +165,21 @@ function route(A,B){
   my=(y1+y2)/2;mx=(x1+x2)/2;
   return safeCardRoute(A,B,[[x1,y1],[x1,my],[x2,my],[x2,y2]],mx,my);
 }
+// Undated papers have no date-axis coordinate. Keep them selectable in the same scroller.
+function renderUndatedPapers(cardView){
+  const group=$('#undatedPapers');
+  if(!group)return false;
+  const papers=cardView?S.papers.filter(visible):[];
+  const undated=papers.filter(p=>!p.date);
+  group.hidden=undated.length===0;
+  group.innerHTML=undated.length?'<h2>날짜 미기록</h2><div class="undated-cards">'+undated.map(p=>{
+    const state=p.use?.reading_state_text||readingState(p.state).t;
+    return '<button type="button" class="card st-'+readingStateKey(p.state)+(S.sel===p.id?' sel':'')+'" data-id="'+esc(p.id)+'">'+
+      '<span class="ct1"><span class="tx">'+esc(p.title)+'</span></span><span class="cmemo">'+esc(p.memo)+'</span>'+
+      '<span class="cfoot">'+sg(p.state)+' '+esc(state)+'</span></button>';
+  }).join('')+'</div>':'';
+  return undated.length>0&&undated.length===papers.length;
+}
 function renderCards(){
   var fitPass=arguments[0]||0;
   var oldLeft=$('#scroller').scrollLeft,oldTop=$('#scroller').scrollTop;
@@ -368,7 +383,7 @@ function wireScroller(){
     if(S.sel||S.panel==='add')closeDetailPanel();
   });
   sc.addEventListener('dblclick',function(e){
-    if(e.target.closest('.card')||e.target.closest('.blabel')||e.target.closest('.axis'))return;
+    if(e.target.closest('.card')||e.target.closest('.blabel')||e.target.closest('.axis')||e.target.closest('#undatedPapers'))return;
     var r=$('#canvas').getBoundingClientRect();var x=(e.clientX-r.left-(L.panPadding||0))/(L.scale||1),y=(e.clientY-r.top)/(L.scale||1);
     if(x<LABELW)return;
     if(!S.papers.length){openAdd(null);return}
@@ -390,8 +405,8 @@ function wireScroller(){
   function showTip(card){
     var p=paperBy(card.dataset.id);if(!p){return}
     var inc=S.links.filter(function(l){return l.to===p.id}),out=S.links.filter(function(l){return l.from===p.id});
-    var h='<div class="tt">'+esc(p.title)+'</div><div class="ts">'+sg(p.state)+' '+esc(p.use?.reading_state_text||readingState(p.state).t)+' · '+p.date+'</div><div class="tm">'+esc(p.memo)+'</div>';
-    h+='<div class="tc">'+(S.source==='account'?'누르면 논문 상세를 볼 수 있어요':'누르면 옆에 자세히 열려요')+'</div>';
+    var h='<div class="tt">'+esc(p.title)+'</div><div class="ts">'+sg(p.state)+' '+esc(p.use?.reading_state_text||readingState(p.state).t)+' · '+esc(p.date||'날짜 미기록')+'</div><div class="tm">'+esc(p.memo)+'</div>';
+    h+='<div class="tc">누르면 옆에 자세히 열려요</div>';
     tip.innerHTML=h;tip.hidden=false;
     var r=card.getBoundingClientRect(),tw=tip.offsetWidth,th=tip.offsetHeight;
     var x=Math.min(Math.max(8,r.left),window.innerWidth-tw-8),y=r.bottom+8;
@@ -418,7 +433,7 @@ function wireScroller(){
   });
   window.addEventListener('resize',function(){
     if(S.view!=='card'||S.zoom!=='all'||!sc.isConnected||!sc.clientWidth)return;
-    if(S.source==='account'&&sc.hidden)return;
+    if(sc.hidden || (S.papers.some(visible) && !S.papers.some(p=>p.date&&visible(p))))return;
     renderCards();updateMinimapWin();
   });
   document.addEventListener('keydown',function(e){

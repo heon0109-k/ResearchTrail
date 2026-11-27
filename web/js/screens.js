@@ -4,7 +4,7 @@
 const screens = {};
 
 async function loadScreens() {
-  const names = S.source === 'account' ? ['main','reader','account-projects'] : ['landing', 'onboarding', 'main', 'reader'];
+  const names = ['landing', 'onboarding', 'main', 'reader'];
   await Promise.all(names.map(async function (name) {
     const response = await fetch('views/' + name + '.html', { cache: 'no-cache' });
     if (!response.ok) throw new Error(name + '.html (' + response.status + ')');
