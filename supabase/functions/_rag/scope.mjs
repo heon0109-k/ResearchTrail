@@ -64,3 +64,26 @@ export function selectScope({ current, papers, links, relevance = {}, maxLinked 
   else excluded.unshift({ id: current, reason: open.hasPdf ? 'not_indexed' : 'no_pdf', distance: 0 });
   return { searched, excluded };
 }
+
+// Choose one compatible edition per paper for callers using the linked-paper scope.
+export function selectLinkedEditions(open, { papers = [], links = [] }) {
+  const edition = new Map(), relevance = {}, titles = new Map();
+  const candidates = papers.map(paper => {
+    const pdfs = Array.isArray(paper.editions) ? paper.editions : [];
+    // Vectors from another embedding model cannot be compared with this question's vector.
+    let usable = pdfs.filter(e => e.status === 'ready' && e.embedding_model === open.index.embedding_model);
+    if (paper.document_use_id === open.document_use_id) usable = usable.filter(e => e.artifact_id === open.artifact_id);
+    // A paper with several usable editions is searched through the one closest to the question, not the newest.
+    usable.sort((a, b) => b.similarity - a.similarity || byText(a.artifact_id, b.artifact_id));
+    if (usable[0]) { edition.set(paper.document_use_id, usable[0].artifact_id); relevance[paper.document_use_id] = usable[0].similarity; }
+    titles.set(paper.document_use_id, paper.title ?? null);
+    return { id: paper.document_use_id, hasPdf: pdfs.length > 0, indexed: usable.length > 0 };
+  });
+  const scope = selectScope({ current: open.document_use_id, papers: candidates, relevance,
+    links: links.map(link => ({ from: link.from_document_use_id, to: link.to_document_use_id })) });
+
+  return {
+    searched: scope.searched.map(id => ({ document_use_id: id, artifact_id: edition.get(id), title: titles.get(id) })),
+    excluded: scope.excluded.map(item => ({ document_use_id: item.id, reason: item.reason, distance: item.distance })),
+  };
+}

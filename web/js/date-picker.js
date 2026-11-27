@@ -54,7 +54,7 @@ function dpOpen(input,anchor){
   var cur=dpParse(input.value),now=new Date();
   DP.input=input;DP.anchor=anchor||input;DP.y=cur?cur.y:now.getFullYear();DP.m=cur?cur.m:now.getMonth();
   var el=document.createElement('div');el.className='dp';el.setAttribute('role','dialog');el.setAttribute('aria-label','날짜 고르기');
-  DP.el=el;document.body.appendChild(el);dpRender();dpPlace();
+  DP.el=el;(input.closest?.('dialog[open]') || document.body).appendChild(el);dpRender();dpPlace();
   if(DP.anchor.setAttribute)DP.anchor.setAttribute('aria-expanded','true');
   el.addEventListener('click',function(e){
     var nav=e.target.closest('[data-dp-nav]');

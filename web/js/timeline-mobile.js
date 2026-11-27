@@ -4,11 +4,11 @@ var MTL_MQ=(typeof window!=='undefined'&&window.matchMedia)?window.matchMedia('(
 function mtlOn(){return !!(MTL_MQ&&MTL_MQ.matches)}
 function mtlDate(d){var p=String(d||'').split('-');return p.length===3?(+p[1])+'월 '+(+p[2])+'일':''}
 function mtlCard(p,cur){
-  var st=readingState(p.state),tg=tagBy(p.tag||''),go=cur&&cur.id===p.id;
-  var tagLabel='<span class="mobile-timeline-tag" style="--c:'+esc(tg.color)+'"><i></i>'+esc(tg.name)+'</span>';
+  var stateText=p.use?.reading_state_text||readingState(p.state).t,tg=tagBy(p.tag||''),go=cur&&cur.id===p.id;
+  var tagLabel=S.source==='account'?'':'<span class="mobile-timeline-tag" style="--c:'+esc(tg.color)+'"><i></i>'+esc(tg.name)+'</span>';
   var nx=S.links.filter(function(l){return l.from===p.id}).map(function(l){return paperBy(l.to)}).filter(Boolean);
   return '<button type="button" class="mobile-timeline-card st-'+readingStateKey(p.state)+(go?' go':'')+(S.sel===p.id?' sel':'')+(matches(p)?'':' dim')+'" data-mtl-paper="'+esc(p.id)+'">'+
-    '<span class="mobile-timeline-top">'+tagLabel+'<span class="mobile-timeline-date">'+mtlDate(p.date)+'</span><span class="mobile-timeline-state">'+esc(st.t)+'</span></span>'+
+    '<span class="mobile-timeline-top">'+tagLabel+'<span class="mobile-timeline-date">'+mtlDate(p.date)+'</span><span class="mobile-timeline-state">'+esc(stateText)+'</span></span>'+
     (go?'<span class="mobile-timeline-resume">이어 읽을 논문</span>':'')+
     '<span class="mobile-timeline-title">'+esc(p.title||'제목 미기록')+'</span>'+
     (p.memo?'<span class="mobile-timeline-memo">'+esc(p.memo)+'</span>':'')+
@@ -23,9 +23,9 @@ function renderMobileTimeline(){
     box.addEventListener('click',function(e){var c=e.target.closest&&e.target.closest('[data-mtl-paper]');if(c)onPick(c.dataset.mtlPaper)})}
   var show=mtlOn()&&S.view==='card'&&!S.reader&&S.papers.length>0;
   box.hidden=!show;if(!show){box.innerHTML='';return}
-  var cur=curPaper(),items=S.papers.filter(visible).slice().sort(function(a,b){return dnum(b.date)-dnum(a.date)});
+  var cur=curPaper(),items=S.papers.filter(visible).slice().sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''))});
   var h='',month='';
-  items.forEach(function(p){var m=String(p.date||'').slice(0,7).replace('-','.');if(m!==month){month=m;h+='<h3 class="mobile-timeline-month">'+esc(m)+'</h3>'}h+=mtlCard(p,cur)});
+  items.forEach(function(p){var m=p.date?p.date.slice(0,7).replace('-','.'):'날짜 미기록';if(m!==month){month=m;h+='<h3 class="mobile-timeline-month">'+esc(m)+'</h3>'}h+=mtlCard(p,cur)});
   box.innerHTML=h||'<p class="mobile-timeline-empty">이 태그에 등록된 논문이 없어요.</p>';
 }
 function syncMobileNav(){var app=$('.app');if(app){app.dataset.view=S.reader?'reader':S.view;if(S.example)app.dataset.ex='1';else delete app.dataset.ex}var nav=$('#mNav');if(!nav)return;Array.prototype.forEach.call(nav.querySelectorAll('[data-for]'),function(b){var o=$('#'+b.dataset.for);b.setAttribute('aria-current',o&&o.getAttribute('aria-pressed')==='true'?'page':'false')})}

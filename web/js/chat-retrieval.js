@@ -97,6 +97,6 @@ var ChatRetrieval=(function(){
     });
     return {pages:pages,matched:ranked.some(function(e){return e.score>0}),chunkCount:chosen.length,totalPages:index.totalPages};
   }
-  return {buildIndex:buildIndex,search:search,MAX_CHUNKS:MAX_CHUNKS,MAX_CONTEXT_CHARS:MAX_CONTEXT_CHARS};
+  return {CHUNKER:'pages-'+CHUNK_CHARS+'-'+OVERLAP,buildIndex:buildIndex,search:search,MAX_CHUNKS:MAX_CHUNKS,MAX_CONTEXT_CHARS:MAX_CONTEXT_CHARS};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=ChatRetrieval;

@@ -32,6 +32,9 @@ var uid=100;function nid(p){return p+(uid++)}
 var WD=['일','월','화','수','목','금','토'];
 
 var S={overviewPan:0,listQuery:'',listScroll:0,overviewZoom:1,filterTag:null,name:'',tags:[],papers:[],links:[],view:'card',bands:true,zoom:'month',sel:null,panel:'none',linking:null,hidden:new Set(),q:'',example:false,draft:null,why:false,judge:'',next:'',resumeOpen:true,prevSeen:0,saved:false};
+// Choose the workspace before project scripts can restore or initialize browser data.
+S.source = typeof location !== 'undefined' && /(?:^|[?&])workspace=account(?:&|$)/.test(location.search)
+  ? 'account' : 'browser-local';
 var L={a:0,b:1,px:34,bandInfo:[],pos:{}};
 
 function tagBy(id){return S.tags.filter(function(t){return t.id===id})[0]||NOTAG}

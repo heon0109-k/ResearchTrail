@@ -922,11 +922,6 @@
   height: 18px;
 }
 
-.landing-actions .landing-google.is-return {
-  padding: 0 26px;
-}
-
-/* 로그인한 적 있는 사람에게만: 검은 버튼 옆 '다른 계정으로 로그인' 보조 버튼 (흰 바탕, 회색 테두리) */
 .landing-switch {
   display: inline-flex;
   align-items: center;

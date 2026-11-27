@@ -38,22 +38,27 @@ function actionLinksForm(snapshot, selected={}) {
   return choices ? '<details><summary>관련 항목 연결 (선택)</summary>'+choices+'</details>' : '';
 }
 
-function createAccountActionReview(request, {current,refresh,read,store}) {
+function createAccountActionReview(request, {current,refresh,read,store,saves}) {
   const box=$('#naBox'), status=$('#accountActionStatus');
   const pending=new Map();
   let review=null;
 
   function clear() {
+    if (review?.operation) phase(review,'failed');
     review=null;
     box.hidden=true;
     box.innerHTML='';
     status.textContent='';
   }
   function active(r) { return review===r && current(r.view); }
-  function remember(r,op) {
-    if (op) pending.set(r.key,op); else pending.delete(r.key);
-    store(r.key,op);
-    r.operation=op;
+  function phase(r,value) {
+    saves.track(r.key,r.view.id,'다음 작업',value,r.view.scope?.label || '프로젝트 기록');
+  }
+  function remember(r,entry) {
+    if (entry) pending.set(r.key,entry); else pending.delete(r.key);
+    store(r.key,entry);
+    r.rejected=entry?.rejected;
+    r.operation=r.rejected ? null : entry;
   }
   function show(r, message='', draft=r.operation) {
     const op=r.operation;
@@ -76,15 +81,21 @@ function createAccountActionReview(request, {current,refresh,read,store}) {
     }
     for(const link of $$('input[data-link-kind]',box)) link.disabled=!!op;
     if (op) $('#naCancel').textContent='닫기';
-    wireActionConfirmation(text=>confirm(r,text),()=>{if(active(r)&&!r.sending)clear();});
+    wireActionConfirmation(text=>confirm(r,text),()=>{
+      if (!active(r) || r.sending) return;
+      if (r.rejected) { remember(r,null); phase(r,'idle'); }
+      clear();
+    });
     if(!r.sending)field.focus();
   }
   async function open(view,record,mode) {
     clear();
     const key='action.'+view.id+'.'+record.record_id;
-    const operation=pending.get(key) || read(key);
-    const r=review={view,record,key,operation,candidate:operation?.original_candidate ?? null,sending:false};
+    const entry=pending.get(key) || read(key), rejected=entry?.rejected;
+    const draft=rejected || entry, operation=rejected ? null : entry;
+    const r=review={view,record,key,operation,rejected,candidate:draft?.original_candidate ?? null,sending:false};
     box.hidden=false;
+    if (rejected) { show(r,'저장 요청을 처리하지 못했어요. 입력과 연결을 다시 확인해 주세요.',rejected); return; }
     if(operation) { show(r,'이전에 확인한 저장 요청의 결과를 다시 확인해 주세요.');return; }
     if(mode==='manual') { show(r);return; }
     box.innerHTML='<span role="status">메모에서 다음 할 일을 찾는 중…</span><button type="button" class="btn" id="naCancel">취소</button>';
@@ -111,6 +122,7 @@ function createAccountActionReview(request, {current,refresh,read,store}) {
       remember(r,op);
     }
     r.sending=true;
+    phase(r,'saving');
     show(r,'계정에 저장 중…');
     $('#naOk').disabled=$('#naCancel').disabled=true;
     try {
@@ -124,12 +136,14 @@ function createAccountActionReview(request, {current,refresh,read,store}) {
       if(error.code==='INVALID_LINK' || error.code==='INVALID_INPUT'){
         // The server rejected the entire operation. Keep the fields editable for a new review.
         const rejected=r.operation;
-        remember(r,null);
+        remember(r,{rejected});
+        phase(r,'rejected');
         show(r,error.message,rejected);
-      } else show(r,'저장 결과를 확인하지 못했어요. 같은 요청으로 다시 확인해 주세요.');
+      } else { phase(r,'failed'); show(r,'저장 결과를 확인하지 못했어요. 같은 요청으로 다시 확인해 주세요.'); }
       return;
     }
     remember(r,null);
+    phase(r,'saved');
     clear();
     status.textContent='확인한 다음 작업을 계정에 저장했어요.';
     try { await refresh(r.view); }

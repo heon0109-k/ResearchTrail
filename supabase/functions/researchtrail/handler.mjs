@@ -4,7 +4,7 @@ import { ragAsk } from '../_rag/ask-route.mjs';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info, idempotency-key, x-pdf-name, x-pdf-artifact',
   'Cache-Control': 'no-store',
 };
@@ -31,7 +31,8 @@ export async function handleResearchTrail(request, backend) {
     const owner = (await verified.json())?.id;
     if (!owner) return fail(401, 'RESOURCE_UNAVAILABLE');
 
-    const path = new URL(request.url).pathname.replace(/^\/(?:functions\/v1\/)?researchtrail(?=\/|$)/, '');
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/^\/(?:functions\/v1\/)?researchtrail(?=\/|$)/, '');
     // Every database operation uses the verified caller's bearer, including PDF reservations.
     async function callRpc(rpc,args) {
       const result = await backend.fetch(backend.url + '/rest/v1/rpc/' + rpc, {
@@ -45,6 +46,20 @@ export async function handleResearchTrail(request, backend) {
         return fail(500, 'STORAGE_FAILURE');
       }
       return result;
+    }
+    const link = /^\/tasks\/([^/]+)\/paper-links\/([^/]+)$/.exec(path);
+    if (link && uuid.test(link[1]) && uuid.test(link[2])) {
+      const edit = request.method === 'PATCH';
+      if (!edit && request.method !== 'DELETE') return fail(405,'INVALID_INPUT');
+      let body;
+      try { body = await request.json(); } catch { return fail(400,'INVALID_INPUT'); }
+      if (!body || typeof body !== 'object' || Array.isArray(body) ||
+          typeof body.request_id !== 'string' || !uuid.test(body.request_id) ||
+          Object.keys(body).some(k => k !== 'request_id' && !(edit && k === 'reason_text')) ||
+          (edit && body.reason_text !== null && typeof body.reason_text !== 'string')) return fail(400,'INVALID_INPUT');
+      const result = await callRpc('rt_change_paper_link',{task_id:link[1],link_id:link[2],
+        payload:edit ? {reason_text:body.reason_text} : {}, request_id:body.request_id});
+      return result.ok ? Response.json(await result.json(),{headers:cors}) : result;
     }
     const readerRoute = /^\/tasks\/([^/]+)\/artifacts\/([^/]+)\/reader$/.exec(path);
     if (readerRoute && uuid.test(readerRoute[1]) && uuid.test(readerRoute[2])) {
@@ -84,7 +99,8 @@ export async function handleResearchTrail(request, backend) {
         if (!post) return fail(405, 'INVALID_INPUT');
         rpc = match[2] === 'records' ? 'rt_save_record' : 'rt_confirm_action';
       } else if (match[2] === 'paper-links') rpc = post ? 'rt_link_papers' : 'rt_paper_links';
-      else rpc = post ? 'rt_register_paper' : 'rt_papers';
+      else if (post) rpc = 'rt_register_paper';
+      else rpc = url.searchParams.get('view') === 'workspace' ? 'rt_workspace_papers' : 'rt_papers';
       args.task_id = match[1];
     } else return fail(404, 'RESOURCE_UNAVAILABLE');
     if (!post && request.method !== 'GET') return fail(405, 'INVALID_INPUT');

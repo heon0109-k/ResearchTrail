@@ -9,6 +9,8 @@ function linkError(a,b){
   return '';
 }
 function curPaper(){
+  // A paper catalog alone cannot establish which paper the account last read.
+  if(S.source==='account')return null;
   function priority(p){return p.state==='reading'?0:p.state==='skim'?1:2}
   return S.papers.filter(function(p){return p.state!=='done'&&(typeof visible!=='function'||visible(p))}).sort(function(a,b){
     var ao=Number.isSafeInteger(a.lastReadOrder)&&a.lastReadOrder>0?a.lastReadOrder:0;
@@ -69,6 +71,7 @@ function renderResume(){
 var KEY='researchtrail.v5';
 var STORE_REVISION=null;
 function save(){
+  if(S.source==='account')return false;
   rememberTabView();
   if(S.example){S.saved=false;var se=$('#saved');if(se)se.hidden=true;return false}
   var conflict=false;
@@ -190,6 +193,7 @@ function renderHistory(p) {
 }
 
 function load(options){
+  if(S.source==='account')return false;
   try{
     var raw=localStorage.getItem(KEY);if(!raw)return false;
     var o=JSON.parse(raw);if(!o||!Array.isArray(o.papers))return false;
@@ -223,7 +227,7 @@ function load(options){
     showMain();return true;
   }catch(e){return false}
 }
-function clearStore(){try{localStorage.removeItem(KEY);STORE_REVISION=null}catch(e){}}
+function clearStore(){if(S.source==='account')return;try{localStorage.removeItem(KEY);STORE_REVISION=null}catch(e){}}
 function ask(title,body,okLabel,onOk,danger){
   var ov=document.createElement('div');ov.className='ov';
   ov.innerHTML='<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dgT"><h3 id="dgT">'+esc(title)+'</h3><p>'+esc(body)+'</p><div class="dact"><button type="button" class="btn" id="dgNo">취소</button><button type="button" class="btn '+(danger?'dng':'pri')+'" id="dgOk">'+esc(okLabel)+'</button></div></div>';
@@ -245,6 +249,7 @@ function ask(title,body,okLabel,onOk,danger){
 }
 
 function rememberTabView(){
+  if(S.source==='account')return;
   try{
     var embedded=typeof window!=='undefined'&&(window.name==='rt-demo'||(typeof location!=='undefined'&&/[?&]demo=1/.test(location.search)));
     if(!embedded&&typeof sessionStorage!=='undefined'){

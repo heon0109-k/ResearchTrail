@@ -1345,3 +1345,30 @@
     animation: none;
   }
 }
+
+.account-timeline [hidden] { display: none !important; }
+.account-timeline .bar { gap: 14px; }
+.account-timeline .bar label { min-width: 0; font-weight: 600; }
+.account-timeline .bar select { max-width: min(46vw, 360px); font: inherit; }
+.account-timeline .bar > span { color: var(--mute); font-size: 13px; }
+.account-timeline #workspaceRetry { margin-left: auto; }
+#undatedPapers { max-height: 30vh; overflow: auto; border-top: 1px solid var(--line); padding: 10px 20px; }
+#undatedPapers.only-undated { max-height: none; }
+#undatedPapers h2, #accountPaperDetail h3 { font-size: 14px; margin: 0 0 6px; }
+#undatedPapers .undated-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 8px; }
+#undatedPapers .card { position: relative; min-height: 84px; text-align: left; }
+#undatedPapers .cfoot { display: flex; margin-top: auto; }
+#accountPaperDetail { width: min(420px, 88vw); max-height: 76vh; overflow: auto; overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+#accountPaperDetail h2 { margin-top: 0; font-size: 18px; }
+#accountPaperDetail::backdrop { background: rgb(16 25 35 / 30%); }
+@media (max-width: 600px) {
+  .account-timeline .side:not(.m-open) { position: static; height: auto; min-height: 0; padding: 4px 12px; }
+  .account-timeline .side nav.sgp { display: flex; flex-direction: row; gap: 8px; }
+  .account-timeline #undatedPapers { display: none; } /* The mobile timeline groups these cards inline. */
+}
+
+.workspace-notices { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 4px 16px; }
+.workspace-notices:not(:has(span:not(:empty), button:not([hidden]))) { display: none; }
+#accountPaperDetail .workspace-paper-actions { margin-block: 12px; }
+#accountPaperDetail .workspace-paper-actions h3 { margin-top: 12px; }
+#accountPaperDetail .field { display: grid; gap: 6px; }

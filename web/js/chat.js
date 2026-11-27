@@ -184,13 +184,13 @@ function chatResolveEffort(choice,question){
 var CHAT_EFFORT_LABELS={auto:'자동',none:'빠르게',low:'보통',medium:'꼼꼼하게'};
 function chatEffortLabel(value){return CHAT_EFFORT_LABELS[value]||value}
 
-function chatEffortHtml(){
+function chatEffortHtml(choice=chatEffortChoice){
   var options=CHAT_EFFORT_CHOICES.map(function(value){
     return '<label><input type="radio" name="chatEffort" value="'+value+'"'+
-      (value===chatEffortChoice?' checked':'')+'><span>'+chatEffortLabel(value)+'</span></label>';
+      (value===choice?' checked':'')+'><span>'+chatEffortLabel(value)+'</span></label>';
   });
   return '<details class="chat-effort"><summary aria-labelledby="chatEffortHint chatEffortValue">'+
-    '<span class="effort-current" id="chatEffortValue">'+chatEffortLabel(chatEffortChoice)+'</span><i aria-hidden="true"></i><span class="effort-tip" id="chatEffortHint">답변 깊이</span></summary>'+
+    '<span class="effort-current" id="chatEffortValue">'+chatEffortLabel(choice)+'</span><i aria-hidden="true"></i><span class="effort-tip" id="chatEffortHint">답변 깊이</span></summary>'+
     '<div class="effort-menu" role="radiogroup" aria-label="답변 깊이"><small>답변 깊이</small>'+options.join('')+'</div></details>';
 }
 

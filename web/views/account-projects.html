@@ -18,6 +18,7 @@
       <button type="button" class="btn" id="tName" aria-haspopup="dialog" aria-expanded="false" aria-label="프로젝트 바꾸기" disabled>프로젝트 선택</button>
       <button type="button" class="btn pri" id="addBtn" disabled>+ 논문 추가</button>
     </header>
+    <p><a class="btn" href="./?workspace=timeline" target="_top">타임라인 보기</a></p>
     <p id="projectStatus" role="status"></p>
     <button type="button" class="btn sm" id="projectRetry" hidden>다시 불러오기</button>
     <section id="accountPapers" aria-label="논문 목록"></section>
@@ -49,7 +50,8 @@
     </div>
     <section id="accountMemos" aria-label="읽기 기록" hidden>
       <header><h2>읽기 기록</h2><button type="button" class="btn sm" id="rAddNote">+ 새 메모</button></header>
-      <label class="field" id="memoPaperField"><span>연결할 논문 (선택)</span><select id="memoPaper"></select></label>
+      <label class="field" id="memoPaperField"><span id="memoPaperLabel">연결할 논문 (선택)</span><select id="memoPaper"></select></label>
+      <p id="memoAssociation"></p>
       <label class="field"><span id="memoLabel">새 메모</span><textarea id="rNote" rows="3" aria-label="읽기 기록 메모" placeholder="메모를 남겨 보세요"></textarea></label>
       <div class="memo-controls">
         <button type="button" class="btn pri" id="memoFinish">편집 완료</button>

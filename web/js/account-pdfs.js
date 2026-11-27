@@ -1,5 +1,11 @@
 'use strict';
 
+function accountReaderOperation(payload) {
+  if (payload.highlight) return '하이라이트';
+  if (payload.link) return '하이라이트 메모 연결';
+  return '읽기 위치';
+}
+
 function accountPdfAttachHtml(use,expectedSha,artifactId) {
   return '<label class="account-pdf-attach">'+(expectedSha?'같은 PDF로 업로드 재시도':artifactId?'이 파일명에 PDF 첨부':'PDF 첨부')+
     ' (최대 10 MiB) <input type="file" accept="application/pdf,.pdf" data-attach-pdf="'+esc(use)+'"'+
@@ -7,13 +13,22 @@ function accountPdfAttachHtml(use,expectedSha,artifactId) {
     (artifactId?' data-artifact-id="'+esc(artifactId)+'"':'')+'></label>';
 }
 
+function accountPdfEditionLabel(artifact,sameName) {
+  const label=[artifact.label_text || 'PDF',artifact.version_text,artifact.part_text].filter(Boolean).join(' · ');
+  return sameName ? label+' · '+(artifact.pdf.sha256 || artifact.artifact_id).slice(0,8) : label;
+}
+
 function accountPdfArtifactHtml(use,artifact,sameName) {
-  const edition=sameName && artifact.pdf.sha256 ? ' · '+artifact.pdf.sha256.slice(0,8) : '';
-  const name=esc((artifact.label_text || 'PDF')+edition);
+  const name=esc(accountPdfEditionLabel(artifact,sameName));
   if (artifact.pdf.available)
     return '<p><button type="button" class="btn sm" data-open-pdf="'+esc(artifact.artifact_id)+'" data-label="'+name+'">'+name+' 열기</button></p>';
   return '<p>'+name+' · PDF 이용 불가 <button type="button" class="btn sm" data-open-pdf="'+esc(artifact.artifact_id)+'" data-label="'+name+'" data-available="false">저장된 읽기 위치 보기</button></p>'+
     (artifact.pdf.document_use_id===use ? accountPdfAttachHtml(use,artifact.pdf.sha256,artifact.artifact_id) : '');
+}
+
+async function accountPdfDigest(bytes) {
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+  return Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
 }
 
 async function validateAccountPdf(file,expectedSha) {
@@ -25,19 +40,18 @@ async function validateAccountPdf(file,expectedSha) {
   const [header,tail]=await Promise.all([file.slice(0,10).text(),file.slice(-1024).text()]);
   if (!/^%PDF-(?:1\.[0-7]|2\.0)[\r\n]/.test(header) || !/%%EOF[\x00\t\n\f\r ]*$/.test(tail))
     throw new Error('PDF 파일 내용을 확인해 주세요.');
-  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()));
-  const sha256=Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
+  const sha256=await accountPdfDigest(await file.arrayBuffer());
   if (expectedSha && sha256!==expectedSha) throw new Error('이 판본을 다시 올리려면 처음 선택한 PDF가 필요해요.');
   return sha256;
 }
 
-function createAccountPdfReader(request, connected, records = () => []) {
+function createAccountPdfReader(request, connected, records = () => [], saves, onClose) {
   const box=$('#accountPdfReader'), status=$('#pdfPageStatus'), canvas=$('#accountPdfPage');
   const sheet=$('#accountPdfSheet'), layer=$('#accountPdfText'), overlay=$('#accountPdfOverlay');
   const prev=$('#accountPdfPrev'), next=$('#accountPdfNext'), marks=$('#pdfMarks');
   const memo=$('#pdfMemoRef'), mark=$('#pdfMarkButton'), message=$('#pdfMarkStatus'), retry=$('#pdfReaderRetry');
   const locator=$('#pdfReadingLocator'), selectionText=$('#pdfSelectionText');
-  const writes=new Map();
+  const writes=new Map(), retries=new Map();
   let view=null;
   const current=v=>v && view===v && connected();
 
@@ -84,35 +98,57 @@ function createAccountPdfReader(request, connected, records = () => []) {
     overlay.innerHTML=v.page ? pdfHighlightMarkup(highlights,v.page) : '';
   }
 
-  // A reopened edition waits for its own outstanding receipt. A late receipt never paints a different view.
+  function restoreRetry(v) {
+    v.retry=retries.get(v.key) || saves?.read(v.key)?.payload;
+    if (v.retry) {
+      message.textContent=accountReaderOperation(v.retry)+' 저장을 확인하지 못했어요. 같은 내용으로 다시 시도해 주세요.';
+      retry.textContent=accountReaderOperation(v.retry)+' 다시 저장';
+    }
+    controls(v);
+  }
   async function save(v,payload) {
     if (!current(v) || !v.state || v.saving) return;
     v.saving=true;
     v.retry=null;
     controls(v);
-    message.textContent='읽기 위치를 저장하는 중…';
-    const pending=request(v.base+'/reader',payload);
-    writes.set(v.base,pending);
-    try {
-      const state=await pending;
-      if (!current(v)) return;
-      v.state=state;
-      if (payload.highlight) v.draft=null;
-      draw(v);
-      message.textContent='계정에 저장했어요.';
-    } catch {
-      if (current(v)) {
-        v.retry=payload;
-        message.textContent='저장을 확인하지 못했어요. 같은 내용으로 다시 시도해 주세요.';
+    const kind=accountReaderOperation(payload);
+    message.textContent=kind+' 저장 중이에요.';
+    retries.set(v.key,payload);
+    saves?.store(v.key,{payload,label:v.label});
+    saves?.track(v.key,v.task,kind,'saving',v.label);
+    const pending=(async()=>{
+      try {
+        const state=await request(v.base+'/reader',payload);
+        if (!connected()) return;
+        if (!state || !Array.isArray(state.highlights) ||
+            (payload.last_page && state.last_page!==payload.last_page) ||
+            (payload.highlight && !state.highlights.some(h=>h.id===payload.highlight.id &&
+              (!payload.highlight.record_id || h.record_id===payload.highlight.record_id))) ||
+            (payload.link && !state.highlights.some(h=>h.id===payload.link.id && h.record_id===payload.link.record_id)))
+          throw new Error('저장 결과 미확인');
+        retries.delete(v.key);
+        saves?.store(v.key,null);
+        saves?.track(v.key,v.task,kind,'saved',v.label);
+        if (current(v)) {
+          v.state=state;
+          if (payload.highlight) v.draft=null;
+          draw(v);
+          message.textContent=kind+' 저장을 확인했어요.';
+        }
+      } catch {
+        if (!connected()) return;
+        saves?.track(v.key,v.task,kind,'failed',v.label);
+        if (current(v)) restoreRetry(v);
       }
-    } finally {
-      if (writes.get(v.base)===pending) writes.delete(v.base);
-      v.saving=false;
-      if (current(v)) { controls(v); fitCurrentPage(); }
-    }
+    })();
+    writes.set(v.base,pending);
+    await pending;
+    if (writes.get(v.base)===pending) writes.delete(v.base);
+    v.saving=false;
+    if (current(v)) { controls(v); fitCurrentPage(); }
   }
   async function showPage(v,number,navigation=false) {
-    if (!current(v) || !v.pdf || v.busy || v.saving || v.retry || number<1 || number>v.pdf.numPages) return;
+    if (!current(v) || !v.pdf || v.busy || v.saving || (navigation && v.retry) || number<1 || number>v.pdf.numPages) return;
     v.busy=true;
     v.page=0;
     v.draft=null;
@@ -139,8 +175,11 @@ function createAccountPdfReader(request, connected, records = () => []) {
       status.textContent=number+' / '+v.pdf.numPages+'쪽';
       // A visible page is a reading position even when its text layer is slow or unavailable.
       let pageSave;
-      if (v.state && navigation && v.state.last_page!==number) pageSave=save(v,{last_page:number});
-      else if (v.state && v.state.last_page===null) pageSave=save(v,{initial_page:number});
+      if (v.state && !v.retry) {
+        if (navigation && v.state.last_page!==number) pageSave=save(v,{last_page:number});
+        // The server inserts only if the edition still has no page, even if another client just navigated.
+        else if (v.state.last_page===null) pageSave=save(v,{initial_page:number});
+      }
       try {
         const content=await page.getTextContent();
         if (!current(v)) return;
@@ -168,6 +207,7 @@ function createAccountPdfReader(request, connected, records = () => []) {
       if (!current(v)) return;
       if (!state || !Array.isArray(state.highlights)) throw new Error();
       v.state=state;
+      restoreRetry(v);
       draw(v);
     } catch {
       if (current(v)) message.textContent='저장된 읽기 위치를 불러오지 못했어요. 다시 열어 주세요.';
@@ -188,7 +228,7 @@ function createAccountPdfReader(request, connected, records = () => []) {
   }
   async function open(task,artifact,label,available=true) {
     close();
-    const v=view={base:'/tasks/'+task+'/artifacts/'+artifact,page:0,state:null};
+    const v=view={task,artifact,label,key:'reader.'+task+'.'+artifact,base:'/tasks/'+task+'/artifacts/'+artifact,page:0,state:null};
     box.hidden=false;
     $('#accountPdfTitle').textContent=label || 'PDF';
     status.textContent=available?'PDF를 불러오는 중…':'PDF 파일을 이용할 수 없어요.';
@@ -196,7 +236,10 @@ function createAccountPdfReader(request, connected, records = () => []) {
     memoOptions();
     box.scrollIntoView?.({block:'nearest'});
     await Promise.all([readState(v),available && readFile(v)]);
-    if (current(v) && v.pdf) await showPage(v,Math.min(v.state?.last_page || 1,v.pdf.numPages));
+    if (current(v) && v.pdf) {
+      const page=v.retry?.last_page || v.retry?.highlight?.page || v.state?.last_page || 1;
+      await showPage(v,Math.min(page,v.pdf.numPages));
+    }
   }
   function capture() {
     const v=view;
@@ -231,10 +274,21 @@ function createAccountPdfReader(request, connected, records = () => []) {
     return save(v,{link:{id:button.dataset.linkMark,record_id:memo.value}});
   });
   retry.addEventListener('click',()=>{ if (current(view) && view.retry) return save(view,view.retry); });
-  $('#accountPdfClose').addEventListener('click',close);
+  $('#accountPdfClose').addEventListener('click',()=>{ close(); return onClose?.(); });
   prev.addEventListener('click',()=>{if (current(view)) return showPage(view,view.page-1,true);});
   next.addEventListener('click',()=>{if (current(view)) return showPage(view,view.page+1,true);});
   if (window.ResizeObserver) new ResizeObserver(fitCurrentPage).observe(box);
   window.addEventListener?.('pagehide',close);
-  return {open,close};
+  function context(task,artifact) {
+    const v=view;
+    if (!current(v) || v.task!==task || v.artifact!==artifact) return null;
+    return {doc:v.pdf,page:v.page || null,selection:v.draft && {page:v.draft.page,text:v.draft.text.slice(0,1000)}};
+  }
+  async function goToPage(task,artifact,page) {
+    const v=view;
+    if (!context(task,artifact)?.doc || !Number.isSafeInteger(page) || page<1 || page>v.pdf.numPages) return false;
+    if (page!==v.page) await showPage(v,page,true);
+    return current(v) && page===v.page;
+  }
+  return {open,close,context,goToPage,refreshRecords(){ if (current(view)) { memoOptions(); draw(view); } }};
 }

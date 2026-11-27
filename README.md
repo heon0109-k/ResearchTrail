@@ -74,13 +74,13 @@ npm run build
 python3 -m http.server 5500 --bind 127.0.0.1 --directory dist
 ```
 
-`SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY`를 모두 비워 두면 기존 브라우저 데모를 사용할 수 있습니다. 두 변수를 설정하면 빌드가 공개 프로젝트 URL과 게시용 키만 `dist/js/browser-config.js`에 기록하고 시작 화면에 **Google로 로그인**을 표시합니다. 로그인 후에는 현재 사이트의 루트로 돌아오며 새로고침해도 계정을 유지합니다. 로그인하면 마지막으로 연 계정 프로젝트가 열립니다. 이 탭에서 처음 여는 계정은 목록의 첫 프로젝트로 시작합니다. 프로젝트 이름을 눌러 과업을 선택하거나 새로 만들고 **+ 논문 추가**로 등록합니다. **이 브라우저의 작업 열기**에서 기존 논문과 메모를 열 수 있습니다. **로그아웃**은 현재 브라우저 세션에 적용됩니다.
+`SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY`를 모두 비워 두면 기존 브라우저 데모를 사용할 수 있습니다. 두 변수를 설정하면 빌드가 공개 프로젝트 URL과 게시용 키만 `dist/js/browser-config.js`에 기록하고 시작 화면에 **Google로 로그인**을 표시합니다. 로그인 후에는 현재 사이트의 루트로 돌아오며 새로고침해도 계정을 유지합니다. 로그인하면 공유 타임라인에서 이 탭에서 마지막으로 선택한 계정 프로젝트를 엽니다. 선택한 프로젝트가 없거나 접근 권한이 바뀌었으면 계정 목록의 첫 프로젝트가 열립니다. 프로젝트가 없으면 **새 프로젝트**로 첫 과업을 만드세요. 상단 **프로젝트** 목록에서 과업을 바꾸고 **+ 논문 추가**로 등록합니다. **이 브라우저에 저장한 작업 열기**에서 기기 안의 기존 논문과 메모를 열고 **계정 타임라인으로**를 눌러 돌아옵니다. 기기 자료는 로그인해도 자동으로 업로드되지 않습니다. **로그아웃**하면 이 브라우저의 작업공간으로 돌아갑니다.
 
 Google 로그인을 사용할 때는 Supabase Auth에서 Google 제공자를 설정하고, Google에 Supabase의 OAuth 콜백 URL을 등록합니다. Supabase의 허용 리디렉션 URL에는 앱을 여는 주소의 루트(예: `http://127.0.0.1:5500/`)를 등록합니다. 로컬 Supabase를 쓰는 경우 `supabase/config.toml`의 `[auth.external.google]`에 지정된 환경변수를 서버에 설정하고 해당 제공자를 활성화합니다. 모의 세션 검사는 `node tests/web_account_auth.test.cjs`로 실행합니다.
 
 `npm run test:build`로 빌드 결과와 공개 설정을 검사합니다. 빌드 후 `npx playwright-core install chromium`으로 테스트용 브라우저를 준비한 뒤 `npm run test:pdf`를 실행하면 예시 논문이 읽기 화면에 렌더링되는지 확인할 수 있습니다.
 
-계정 프로젝트의 로컬 실행에는 Docker와 로컬 Supabase가 필요합니다. 저장소 루트에서 `npx supabase start`, `npx supabase migration up --local`을 실행한 뒤 `npx supabase functions serve researchtrail`을 실행합니다. 브라우저 빌드에는 같은 로컬 프로젝트의 공개 설정을 사용합니다.
+계정 프로젝트의 로컬 실행에는 Docker와 로컬 Supabase가 필요합니다. 저장소 루트에서 `npx supabase start`, `npx supabase migration up --local`을 실행한 뒤 `npx supabase functions serve`을 실행합니다. 브라우저 빌드에는 같은 로컬 프로젝트의 공개 설정을 사용합니다.
 
 프로젝트 이름은 과업 목표(`ResearchTask.goal_text`)로 저장합니다. 논문 제목은 `Document`에, 저장 이유와 읽은 정도는 선택한 과업의 `DocumentUse`에 저장합니다. 링크와 업로드한 PDF는 각각 `DocumentArtifact`로 등록합니다. 같은 논문을 다른 과업에서 사용할 때는 등록 양식에서 기존 논문을 선택할 수 있습니다. 브라우저 전용 작업과 예시 데이터는 해당 작업공간에 보관합니다.
 
@@ -95,7 +95,7 @@ Google 로그인을 사용할 때는 Supabase Auth에서 Google 제공자를 설
 | Install Command | `npm ci` |
 | Build Command | `npm run build` |
 | Output Directory | `dist` |
-| Production Branch / Preview 브랜치 | `main` / `feature/account-persistence` |
+| Production Branch / Preview 브랜치 | `main` / `feature/unified-workspace-qa` |
 | Preview 환경변수 `SUPABASE_URL` | 테스트용 Supabase 프로젝트의 공개 HTTPS Project URL |
 | Preview 환경변수 `SUPABASE_PUBLISHABLE_KEY` | 같은 프로젝트의 Publishable key (`sb_publishable_`로 시작) |
 
@@ -104,6 +104,8 @@ Google 로그인을 사용할 때는 Supabase Auth에서 Google 제공자를 설
 `npm run build` 후 `node scripts/check-web-output.mjs`로 현재 `dist/`의 파일 목록, 원본과의 바이트 일치 여부, 공개 설정 두 항목을 검사합니다. `node --test tests/web_vercel_preview.test.cjs`는 합성 설정과 공개 목록 밖의 파일을 넣어 이 과정을 재현합니다. 웹 파일을 추가할 때는 `scripts/build-web.mjs`의 공개 파일 목록에도 등록하세요.
 
 계정 기능에는 마이그레이션과 `researchtrail` 함수가 준비된 테스트용 Supabase 프로젝트가 필요합니다. Preview 주소가 정해지면 Supabase Auth의 **URL Configuration → Redirect URLs**에 해당 HTTPS 루트(마지막 `/` 포함)를 등록하세요. Google 로그인 후 같은 루트로 돌아오는지, 새로고침하면 같은 계정이 열리는지 확인하세요. 테스트용 PDF에 메모와 하이라이트를 남긴 뒤 두 번째 브라우저에서 같은 판본과 읽던 쪽을 다시 여세요. Preview에 접근할 수 있는 브라우저에서 `/assets/papers/bert-naacl2019.pdf`는 200, `/package.json`과 `/supabase/config.toml`은 404인지 확인하세요.
+
+계정 타임라인과 목록은 `GET /tasks/{task_id}/papers?view=workspace`를 사용합니다. 등록한 논문의 PDF에 메모를 추가해도 논문 카드는 하나로 유지됩니다. 기존 `/papers`는 기록별 문헌 사용 맥락을 포함한 전체 목록을 반환합니다. 배포 순서와 로컬 검증 명령은 [통합 작업공간 릴리스 검증](docs/unified_workspace_release.md)에 있습니다.
 
 #### 계정 논문의 비공개 PDF
 
@@ -123,13 +125,40 @@ PDF에서 구절을 선택하고 **선택한 구절에 형광펜**을 누릅니�
 
 로컬 계정 두 개로 읽기 위치와 메모 연결까지 검사하려면 마이그레이션 적용 후 `node tests/local_account_pdfs.mjs --reader`를 실행합니다.
 
+#### 계정 PDF 질문하기
+
+계정 타임라인이나 논문 목록에서 판본을 열고 **질문하기**를 누르면 해당 판본의 색인 상태를 확인합니다. 처음 준비할 때는 전송 안내를 읽고 **동의하고 색인 준비**를 누르세요. PDF에서 추출한 본문을 구절로 나누어 임베딩 서비스에 보내고 계정에 색인을 저장합니다. 같은 판본의 색인이 준비되어 있으면 질문 전송에 동의한 뒤 바로 재사용합니다. 질문에 붙은 쪽 번호를 누르면 같은 판본의 원문으로 이동합니다.
+
+대화와 전송 동의는 리더를 닫을 때까지 유지됩니다. 같은 리더에서 **색인 다시 시도**를 누르면 마지막으로 저장이 확인된 묶음 다음부터 재개합니다. 리더를 닫아 중단된 색인은 다시 열어 **색인 상태 다시 확인**으로 완료 여부를 확인할 수 있고, 필요한 경우 처음부터 다시 만들 수 있습니다.
+
+#### 계정 PDF 질문 API
+
+통합 리더용 요청은 `POST /functions/v1/researchtrail/tasks/{task_id}/artifacts/{artifact_id}/ask`에 로그인한 사용자의 Bearer 토큰과 프로젝트 게시용 키를 보냅니다. URL의 판본에 완료된 색인이 있어야 합니다. 아래 예시는 그 판본의 두 표를 비교합니다.
+
+```json
+{"question":"표 1과 표 2의 결과를 비교해 주세요.","consent":true,"scope":"open_pdf","answer_depth":"auto","current_page":3}
+```
+
+`scope: "open_pdf"`는 URL의 판본 한 건만 검색합니다. 응답의 `searched`에는 해당 판본 한 건이 담기고 `excluded`는 빈 배열입니다. 이 경로에서 논문 제목은 `null`이므로 리더는 열어 둔 논문의 제목을 표시할 수 있습니다. 기존 호출은 `scope`를 생략하거나 `"linked_papers"`를 지정하면 열린 판본과 연결 논문 최대 8편을 검색합니다.
+
+| 답변 깊이 | `answer_depth` | 답변 모델에 보내는 `reasoning.effort` |
+|---|---|---|
+| 자동 | `auto` | 한국어·영어 질문마다 수치·약어 등 단순 조회는 `none`, 일반 설명은 `low`, 비교·종합은 `medium` |
+| 빠르게 | `none` | `none` |
+| 보통 | `low` | `low` |
+| 꼼꼼하게 | `medium` | `medium` |
+
+깊이를 생략하면 이전 호출과 같이 `none`입니다. 지원하지 않는 범위나 깊이는 외부 요청 전에 `400 INVALID_INPUT`으로 처리합니다. 질문마다 `consent: true`가 필요합니다. 선택적으로 `current_page`, `selection: {"text":"…","page":3}`, `history`를 보낼 수 있습니다. 리더에서 대화를 전달할 때는 현재 탭의 같은 계정·과업·판본에 해당하는 기록만 보내세요. `open_pdf`에서는 선택한 문장이 검색 구절에서 확인될 때 모델 입력에 인용하며, 답변의 근거도 실제 전송한 구절과 쪽 번호로 검증합니다.
+
+Supabase의 **Edge Function Secrets**에는 `OPENAI_API_KEY`를 설정합니다. `OPENAI_MODEL`의 기본값은 `gpt-6-luna`이고, 새 색인용 `RAG_EMBEDDING_MODEL`의 기본값은 `text-embedding-3-small`입니다. 기존 색인에 대한 질문은 그 색인에 기록된 모델과 1,536차원을 사용합니다. 답변 모델이나 깊이만 바꾸면 기존 색인을 그대로 쓸 수 있습니다. Vercel 정적 빌드의 공개 설정은 `SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY` 두 항목입니다.
+
 #### 계정 기록 저장 API
 
 `researchtrail` 함수의 `POST /tasks/{task_id}/records`는 [SPEC §5.2](docs/SPEC.md#52-기록-저장과-선택적-맥락)의 본문을 받습니다. 최소 본문은 `{"record":{"content_text":"  합성 메모  "}}`입니다. 호출자는 저장 동작마다 새 UUID를 `Idempotency-Key` 헤더에 넣습니다. 기존 계정 API처럼 본문의 `request_id`로 보내도 됩니다. 같은 저장을 재전송할 때는 본문과 UUID를 유지합니다. 같은 문장을 새 메모로 저장할 때는 새 UUID를 사용합니다.
 
 성공 응답은 `record_id`와 `context_refs`입니다. `context_refs`의 `question_ids`, `decision_ids`, `document_ids`, `document_use_ids`, `artifact_ids`, `excerpt_ids`는 이 기록에 연결된 ID 목록이며 빈 목록은 `[]`입니다. 정정은 새 UUID와 같은 과업의 `revises_record_id`로 저장합니다. 잘못된 연결이 있으면 원문과 맥락 모두 저장되지 않습니다. 브라우저 전용 작업공간의 메모는 계속 이 브라우저에 저장됩니다.
 
-계정 프로젝트의 **읽기 기록**에서 메모를 입력한 뒤 입력칸을 벗어나거나 **편집 완료**를 누르면 해당 버전을 전송합니다. 메모 응답을 기다리는 동안에도 이어 쓸 수 있습니다. **메모 저장 다시 시도**는 미확인 메모를 같은 요청으로 다시 보내고, **PDF 업로드 다시 시도**는 열어 둔 탭에서 해당 파일만 다시 올립니다. **이제 닫아도 돼요.**는 요청한 메모와 PDF 저장을 서버가 모두 확인하고 작성 중인 변경이 없을 때 표시됩니다. 이 탭은 계정과 과업별로 초안과 미확인 저장 요청을 보관합니다. 저장된 메모의 **수정**은 원문을 보존하는 정정 기록을 만들며, **+ 새 메모**는 독립된 기록을 시작합니다.
+논문 리더의 메모는 열어 둔 PDF 판본에 연결됩니다. **프로젝트 기록**에서는 과업 전체 또는 특정 논문을 선택할 수 있습니다. 입력칸에서 논문 선택기로 이동할 때는 연결을 고르고 **편집 완료**를 누르세요. 다른 곳으로 이동해 편집을 마칠 때도 해당 버전을 전송합니다. 메모 응답을 기다리는 동안에도 이어 쓸 수 있습니다. **메모 저장 다시 시도**는 미확인 메모를 같은 요청으로 다시 보내고, **PDF 업로드 다시 시도**는 열어 둔 탭에서 해당 파일만 다시 올립니다. **이제 닫아도 돼요.**는 이 탭의 해당 계정에서 요청한 저장을 모두 확인하고 작성 중인 변경이 없을 때 표시됩니다. 다른 프로젝트에 미확인 저장이 있으면 상태 메시지에 표시된 프로젝트로 돌아가 해당 항목을 다시 저장하세요. 이 탭은 계정과 과업별로 초안과 미확인 저장 요청을 보관합니다. 저장된 메모의 **수정**은 원문을 보존하는 정정 기록을 만들며, **+ 새 메모**는 독립된 기록을 시작합니다.
 
 #### 계정 다음 작업 확인
 
@@ -252,7 +281,7 @@ PDF에서 구절을 선택하고 **선택한 구절에 형광펜**을 누릅니�
 
 AI 정리와 질문하기는 **실험 단계**입니다. 서버에 설정한 OpenAI 키를 함께 사용하며, 켜지 않으면 위 시나리오처럼 규칙 기반으로 동작합니다. 기본 모델은 `gpt-6-luna`입니다. 서버의 `OPENAI_MODEL`로 선택합니다.
 
-**켜는 법**
+**브라우저 전용 개발 서버에서 켜는 법**
 
 1. ResearchTrail 폴더에서 아래 명령으로 설정 예시를 복사합니다. 이미 `.env`가 있으면 그 파일을 사용합니다.
 
@@ -288,7 +317,7 @@ AI 정리와 질문하기는 **실험 단계**입니다. 서버에 설정한 Ope
 |---|---|
 | 응답 시간 | 응답 시간은 네트워크와 OpenAI 상태에 따라 달라집니다. OpenAI가 혼잡하면 자동으로 한 번 다시 시도하고, 그래도 실패하면 오류 문구가 뜹니다. **다시 정리**를 누르거나 직접 적어 주세요. |
 | OpenAI 제안 품질 | 메모에 적은 우선순위("먼저", "다음엔")가 충돌하면 가장 최근 메모를 따르도록 했습니다. OpenAI 제안의 품질은 아직 Evals로 평가하지 않았습니다. 규칙 기반 기능(`stub`)은 첫 Evals에서 20건 중 18건을 통과했습니다([PR #12](https://github.com/heon0109-k/ResearchTrail/pull/12)). 기존 할 일과 같은 뜻의 제안은 저장 버튼 없이 숨깁니다. |
-| 질문 범위 | 현재 열어 둔 PDF 한 편만 검색합니다. 한국어 질문은 OpenAI가 만든 영어 용어로도 검색합니다. 특히 영문 원문의 기술 용어를 한국어로 풀어 물으면 번역이나 검색어가 부정확해 근거를 놓칠 수 있습니다. 임베딩 기반 의미 검색과 이미지 PDF OCR은 지원하지 않습니다. 검색된 일부 구절에 근거가 없다는 안내는 논문 전체에 답이 없다는 뜻이 아닙니다. 인용 일치 검사도 답변 의미의 정확성을 보증하지 않습니다. |
+| 브라우저 전용 개발 서버의 질문 범위 | 현재 열어 둔 PDF 한 편만 검색합니다. 한국어 질문은 OpenAI가 만든 영어 용어로도 검색합니다. 특히 영문 원문의 기술 용어를 한국어로 풀어 물으면 번역이나 검색어가 부정확해 근거를 놓칠 수 있습니다. 임베딩 기반 의미 검색과 이미지 PDF OCR은 지원하지 않습니다. 검색된 일부 구절에 근거가 없다는 안내는 논문 전체에 답이 없다는 뜻이 아닙니다. 인용 일치 검사도 답변 의미의 정확성을 보증하지 않습니다. |
 | 키 보관 | 키는 서버 환경변수 또는 로컬 .env에 보관합니다. 브라우저에는 전송 동의와 켜짐 상태만 저장합니다. API 사용량은 서버 키 계정에 청구됩니다. |
 
 단일 PDF 검색은 사용자 요청에 따른 로컬 실험이며, SPEC 4.2절의 범위 변경과 추가 검증 기준은 [변경안](docs/spikes/single_pdf_rag.md)과 [한국어 검색어 확장](docs/spikes/rag_query_expansion.md)으로 분리했습니다. 제품 명세의 팀 승인과 실제 OpenAI 의미 평가는 별도입니다.

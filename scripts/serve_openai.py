@@ -207,7 +207,7 @@ def main():
         key = getpass.getpass("OpenAI API 키 입력 (화면에 표시되지 않음): ").strip()
     if not key:
         parser.error("OpenAI API 키가 필요합니다.")
-    model = os.environ.get("OPENAI_MODEL", MODEL).strip()
+    model = os.environ.get("OPENAI_MODEL", "").strip() or MODEL
     try:
         server = OpenAIServer(("127.0.0.1", args.port), key, model)
     except OSError:

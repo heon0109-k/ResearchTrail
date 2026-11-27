@@ -1,13 +1,23 @@
 // Asks the answer model for a reply in the fixed answer format. The request shape follows the project's
-// existing local server (scripts/serve_openai.py). The model name and the time limit are drafts.
+// existing local server (scripts/serve_openai.py). The model may be overridden on the server.
 import { ANSWER_SCHEMA } from './answer.mjs';
 
 export const DEFAULT_ANSWER_MODEL = 'gpt-6-luna';
+export const ANSWER_DEPTHS = Object.freeze(['auto', 'none', 'low', 'medium']);
+
+// Port of the classic browser script's chatResolveEffort. An omitted choice preserves the legacy effort.
+export function resolveAnswerEffort(choice = 'none', question) {
+  if (choice !== 'auto') return choice;
+  if (/비교|차이|종합|근거.{0,12}결론|왜|원인|장단점|\b(?:compar(?:e[ds]?|ing|isons?)|contrast(?:s|ing)?|differ(?:s|ences?)?|synthesi[sz]e|synthesis|why)\b/i.test(question)) return 'medium';
+  if (/몇|얼마|무엇의 약자|뜻이 뭐|무슨 뜻|어느\s*(?:쪽|페이지)|(?:어떤|어느)\s*데이터셋|\b(?:how many|how much|stands? for|(?:which|what) (?:page|dataset|year))\b/i.test(question)) return 'none';
+  return 'low';
+}
+
 const ENDPOINT = 'https://api.openai.com/v1/responses';
 const TIMEOUT_MS = 60000;
 
 // Returns the parsed reply. Any failure throws without the service's own message.
-export async function generateAnswer(prompt, { fetch, key, model = DEFAULT_ANSWER_MODEL }) {
+export async function generateAnswer(prompt, { fetch, key, model = DEFAULT_ANSWER_MODEL, effort = 'none' }) {
   if (!key) throw new Error('answer key is not configured');
   let response;
   try {
@@ -15,7 +25,7 @@ export async function generateAnswer(prompt, { fetch, key, model = DEFAULT_ANSWE
       method: 'POST',
       headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model, input: prompt, store: false, reasoning: { effort: 'none' }, max_output_tokens: 3000,
+        model, input: prompt, store: false, reasoning: { effort }, max_output_tokens: 3000,
         text: { format: { type: 'json_schema', name: 'researchtrail_answer', strict: true, schema: ANSWER_SCHEMA } },
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
