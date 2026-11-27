@@ -21,6 +21,9 @@
   let accountRequests;
   let generation = 0;
   let receivedChange = false;
+  // The landing page's "use another account" link arrives as ?switch=1: sign this browser out, then open Google's account chooser.
+  let switching = new URLSearchParams(window.location.search).get('switch') === '1';
+  if (switching) window.history?.replaceState(null, '', window.location.pathname);
 
   window.addEventListener('pageshow', event => {
     if (event.persisted) window.location.reload();
@@ -72,6 +75,10 @@
     if (id && accessToken) showProjects();
     else if (id) showAccount();
     else showLocal(first && window.performance?.getEntriesByType('navigation')[0]?.type === 'reload');
+    if (switching) {
+      if (id) auth?.signOut({ scope: 'local' }).catch(() => { switching = false; });
+      else login.click();
+    }
   }
 
   byId('authOpenLocal').addEventListener('click', () => showLocal());
@@ -130,8 +137,10 @@
     try {
       const { data, error } = await auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin + '/', skipBrowserRedirect: true },
+        options: { redirectTo: window.location.origin + '/', skipBrowserRedirect: true,
+          ...(switching ? { queryParams: { prompt: 'select_account' } } : {}) },
       });
+      switching = false;
       if (generation !== started) return;
       if (error || !data?.url) throw new Error();
       window.location.assign(data.url);

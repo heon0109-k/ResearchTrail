@@ -1,5 +1,5 @@
-/* 앱 공통 툴팁(js/tooltip.js). PDF 다운로드 버튼의 말풍선(.dlbtn::after)과 같은 모양. */
-.tt {
+/* 앱 공통 툴팁(js/tooltip.js). 타임라인 카드 미리보기(#tip .tt)와 이름이 겹치지 않게 app-tt.  PDF 다운로드 버튼의 말풍선(.dlbtn::after)과 같은 모양. */
+.app-tt {
   position: fixed;
   z-index: 2000;
   max-width: 260px;
@@ -15,7 +15,7 @@
   animation: ttin 0.12s ease-out;
 }
 
-.tt[hidden] {
+.app-tt[hidden] {
   display: none;
 }
 
@@ -24,7 +24,7 @@
   to { opacity: 1; transform: none; }
 }
 
-.tt.up {
+.app-tt.up {
   animation-name: ttinup;
 }
 

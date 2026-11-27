@@ -5,7 +5,7 @@
 (function(){
   if(typeof window==='undefined'||!window.matchMedia||window.matchMedia('(hover: none)').matches)return;
   var tip=null,cur=null,timer=0;
-  function el(){if(!tip){tip=document.createElement('div');tip.className='tt';tip.setAttribute('role','tooltip');tip.hidden=true;document.body.appendChild(tip)}return tip}
+  function el(){if(!tip){tip=document.createElement('div');tip.className='app-tt';tip.setAttribute('role','tooltip');tip.hidden=true;document.body.appendChild(tip)}return tip}
   function hide(){clearTimeout(timer);timer=0;cur=null;if(tip)tip.hidden=true}
   function show(t){
     var text=t.getAttribute('data-tt');if(!text||!t.isConnected)return;

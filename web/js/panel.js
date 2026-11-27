@@ -197,6 +197,20 @@ function wirePaperHead(p){
   input.addEventListener('blur',function(){if(input.validity&&!input.validity.valid)return;edit(false)});
 }
 /* 코드·데이터셋 칩에 보일 짧은 이름: GitHub은 저장소 이름, Hugging Face는 데이터셋 이름, arXiv는 번호(쪽), 그 밖에는 주소 끝부분 */
+/* PDF에서 찾은 링크 묶기: 같은 저장소의 blob/tree 하위 주소는 저장소 하나로 본다 (github·gitlab·huggingface) */
+function paperResRoot(u){
+  var m=String(u||'').match(/^(https?:\/\/)(?:www\.)?(github\.com|gitlab\.com)\/([^\/#?]+)\/([^\/#?]+)/i);
+  if(m)return 'https://'+m[2].toLowerCase()+'/'+m[3]+'/'+m[4].replace(/\.git$/i,'');
+  m=String(u||'').match(/^https?:\/\/(?:www\.)?huggingface\.co\/(datasets\/|spaces\/)?([^\/#?]+)\/([^\/#?]+)/i);
+  if(m)return 'https://huggingface.co/'+(m[1]||'')+m[2]+'/'+m[3];
+  return String(u||'').replace(/\/+$/,'');
+}
+function paperResLabel(u){
+  var r=paperResRoot(u),m=r.match(/^https:\/\/(github\.com|gitlab\.com|huggingface\.co)\/(?:datasets\/|spaces\/)?(.+)$/);
+  if(m)return {name:m[2],host:m[1]};
+  try{var x=new URL(u);return {name:paperResName(u),host:x.hostname.replace(/^www\./,'')}}catch(e){return {name:u,host:''}}
+}
+var PSUGOPEN=null;
 function paperResName(u){
   try{
     var x=new URL(u),host=x.hostname.replace(/^www\./,''),seg=x.pathname.split('/').filter(Boolean).map(function(v){try{return decodeURIComponent(v)}catch(e){return v}});
@@ -254,7 +268,14 @@ function renderPanel(){
         /* PDF에서 찾은 링크는 '제안' 상자로: 💡 문구 + 링크 미리보기 + [추가] [✕] */
         var st=paperResourceScan(p),hidden=st.dismissed||[];
         cands=cands.filter(function(x){return hidden.indexOf(x[0].url)<0});
-        if(cands.length)h+='<div class="pv-suggest" role="group" aria-label="PDF에서 찾은 링크 제안"><p class="pv-suggest-head"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 15h5M8 17.5h4M10 2.5a5 5 0 0 0-3 9c.6.5 1 1.2 1 2V14h4v-.5c0-.8.4-1.5 1-2a5 5 0 0 0-3-9Z"/></svg>PDF에서 '+(cands.length>1?'이 링크들을':'이 링크를')+' 찾았어요. 추가할까요?</p>'+cands.map(function(x){var u=safeExternalUrl(x[0].url);return '<div class="pv-suggest-row"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="'+(x[0].kind==='code'?'코드':'데이터셋')+' · '+esc(u)+'">'+esc(u.replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,''))+'</a><button type="button" class="pv-suggest-add" data-res-add="'+x[1]+'">추가</button></div>'}).join('')+'<button type="button" class="pv-suggest-x" data-res-skip="'+esc(cands.map(function(x){return x[0].url}).join(' '))+'" aria-label="제안 숨기기" title="숨기기">×</button></div>';
+        /* 같은 저장소는 한 줄로, 이미 저장한 저장소는 빼고 */
+        var savedRoots=saved.map(paperResRoot),seen={},groups=[];
+        cands.forEach(function(x){var r=paperResRoot(safeExternalUrl(x[0].url));if(savedRoots.indexOf(r)>-1)return;if(seen[r]){seen[r].urls.push(x[0].url);return}seen[r]={root:r,i:x[1],kind:x[0].kind,urls:[x[0].url]};groups.push(seen[r])});
+        var SHOW=3,open=PSUGOPEN===p.id;
+        if(groups.length)h+='<div class="pv-suggest'+(open?' open':'')+'" role="group" aria-label="PDF에서 찾은 링크 제안"><p class="pv-suggest-head"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 15h5M8 17.5h4M10 2.5a5 5 0 0 0-3 9c.6.5 1 1.2 1 2V14h4v-.5c0-.8.4-1.5 1-2a5 5 0 0 0-3-9Z"/></svg>PDF에서 찾은 링크'+(groups.length>1?' <em>'+groups.length+'</em>':'')+'</p>'+
+          '<div class="pv-suggest-list">'+groups.map(function(g,k){var lb=paperResLabel(g.root);return '<div class="pv-suggest-row'+(k>=SHOW?' pv-more-row':'')+'"><span class="pv-suggest-ic">'+IC[g.kind==='code'?'code':'data']+'</span><a href="'+esc(g.root)+'" target="_blank" rel="noopener noreferrer" title="'+esc(g.root)+'"><b>'+esc(lb.name)+'</b>'+(lb.host?'<small>'+esc(lb.host)+'</small>':'')+'</a><button type="button" class="pv-suggest-add" data-res-add="'+g.i+'" data-res-url="'+esc(g.root)+'">추가</button></div>'}).join('')+'</div>'+
+          (groups.length>SHOW?'<button type="button" class="pv-suggest-more" data-res-more>'+(open?'접기':(groups.length-SHOW)+'개 더 보기')+'</button>':'')+
+          '<button type="button" class="pv-suggest-x" data-res-skip="'+esc(cands.map(function(x){return x[0].url}).join(' '))+'" aria-label="제안 모두 숨기기" title="모두 숨기기">×</button></div>';
         h+='<form class="pv-addform" data-res-form hidden><span class="pv-kind" role="radiogroup" aria-label="링크 종류"><button type="button" role="radio" data-kind="code" aria-checked="true">코드</button><button type="button" role="radio" data-kind="data" aria-checked="false">데이터셋</button></span>'+
           '<input type="text" inputmode="url" placeholder="링크 붙여넣고 Enter" aria-label="코드·데이터셋 주소"></form><p class="pv-res-msg" data-res-msg hidden></p>';
         return h;
@@ -274,7 +295,8 @@ function renderPanel(){
       if(list.some(function(e){return safeExternalUrl(e.url)===item.url})){if(resMsg){resMsg.hidden=false;resMsg.textContent='이미 저장한 링크예요.'}return}
       list.push(item);p.resources=list;save();renderAll();
     };
-    $$('[data-res-add]',pin).forEach(function(b){b.addEventListener('click',function(){var c=paperResourceScan(p).candidates[+b.dataset.resAdd];if(c)resAdd(c)})});
+    $$('[data-res-add]',pin).forEach(function(b){b.addEventListener('click',function(){var c=paperResourceScan(p).candidates[+b.dataset.resAdd];if(c)resAdd(Object.assign({},c,{url:b.dataset.resUrl||c.url}))})});
+    var more=$('[data-res-more]',pin);if(more)more.addEventListener('click',function(){PSUGOPEN=PSUGOPEN===p.id?null:p.id;renderPanel()});
     $$('[data-res-skip]',pin).forEach(function(b){b.addEventListener('click',function(){var st=paperResourceScan(p);st.dismissed=(st.dismissed||[]).concat(b.dataset.resSkip.split(' '));renderPanel()})});
     var rm=$('[data-res-manual]',pin),rf=$('[data-res-form]',pin);
     if(rm&&rf){

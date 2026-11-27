@@ -8,7 +8,6 @@
       <a href="#" data-go="lpDemo">미리보기</a>
       <a href="#" data-go="lpTrail">사용 흐름</a>
     </nav>
-    <button type="button" class="btn pri sm" data-lp="start">시작하기</button>
   </header>
   <section class="landing-hero">
     <div class="landing-hero-copy">
@@ -21,10 +20,19 @@
         읽은 논문을 타임라인으로 남기고, 다시 돌아오면 멈춘 쪽과 다음 할 일을 알려 줘요.
       </p>
       <div class="landing-actions">
-        <button type="button" class="btn pri lg" data-lp="start">시작하기</button>
-        <button type="button" class="landing-link" data-lp="sample">예시 먼저 보기 →</button>
+        <button type="button" class="btn pri lg landing-google" data-lp="google">
+          <span class="landing-g" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+          </span>
+          <span class="landing-gt">Google 계정으로 시작하기</span>
+        </button>
+<button type="button" class="landing-switch" data-lp="switch" hidden>다른 계정으로 로그인</button>
       </div>
-      <p class="landing-note">가입 없이 · 기록은 이 브라우저에만 저장돼요</p>
     </div>
     <div class="landing-hero-art" aria-hidden="true">
       <svg class="landing-curve" viewBox="0 0 420 460" fill="none">
@@ -64,19 +72,19 @@
         <i></i>
         <i></i>
         <i></i>
-        <span class="landing-preview-caption">직접 눌러 보세요</span>
+        <span class="landing-preview-caption">미리보기</span>
       </div>
       <div class="landing-preview-frame" id="lpFit">
         <iframe
           name="rt-demo"
           src="?demo=1"
           data-demo="1"
-          title="ResearchTrail 미리보기"
+          aria-label="ResearchTrail 미리보기"
           loading="lazy"
         ></iframe>
       </div>
     </div>
-    <p class="landing-caption">예시 데이터예요. 카드를 눌러 읽기 화면도 열어 볼 수 있어요.</p>
+    <p class="landing-caption">예시 데이터로 만든 타임라인이에요. 좌우로 넘겨 볼 수 있어요.</p>
   </section>
   <section class="landing-trail" id="lpTrail">
     <h2>
@@ -221,12 +229,23 @@
       됐나요?
     </h2>
     <p>
-      가입 없이 쓸 수 있고, 기록은 이 브라우저에만 저장돼요.
+      Google로 로그인하면 어느 기기에서든 이어 읽을 수 있어요.
       <br />
       예시 PDF는 앱에 들어 있어요. 외부에서 논문 정보를 가져올 때는 인터넷이 필요해요.
     </p>
     <div class="landing-actions c">
-      <button type="button" class="btn pri lg" data-lp="start">시작하기</button>
+      <button type="button" class="btn pri lg landing-google" data-lp="google">
+        <span class="landing-g" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+        </span>
+        <span class="landing-gt">Google 계정으로 시작하기</span>
+      </button>
+<button type="button" class="landing-switch" data-lp="switch" hidden>다른 계정으로 로그인</button>
     </div>
   </section>
   <footer class="landing-footer">ResearchTrail · 2026 AI 캡스톤디자인</footer>

@@ -1,12 +1,20 @@
 'use strict';
 function startResearchTrail(){
   /* ?demo=1 : 시작 페이지 안에 끼워 넣는 미리보기. 저장된 기록을 읽지도 쓰지도 않고 예시만 보여 준다 */
-  if(window.name==='rt-demo'||/[?&]demo=1/.test(location.search)){document.documentElement.classList.add('demo');loadSample();S.zoom='month';S.bubble=null;renderAll()}
+  if(window.name==='rt-demo'||/[?&]demo=1/.test(location.search)){document.documentElement.classList.add('demo');loadSample();S.zoom='month';S.bubble=null;renderAll();lockDemo()}
   else if(!(isPageReload()&&restoreSessionScreen())&&!load({timeline:!isPageReload(),restoreView:isPageReload()})){
     var seenLanding=landingSeen();
     landingMark();
     if(seenLanding)startEmpty();else showLanding();
   }
+}
+
+/* 시작 페이지의 미리보기는 타임라인을 보여 주기만 한다: 누르기·더블클릭·오른쪽 클릭·키 입력으로 열거나 고치는 동작을 모두 막고, 스크롤만 남긴다. */
+function lockDemo(){
+  if(!document.addEventListener)return;
+  function stop(e){e.preventDefault();e.stopPropagation()}
+  ['click','dblclick','contextmenu','auxclick','dragstart','submit'].forEach(function(t){document.addEventListener(t,stop,true)});
+  document.addEventListener('keydown',function(e){if(/^(Enter| |Delete|Backspace)$/.test(e.key))stop(e)},true);
 }
 
 function isPageReload(){try{return window.name==='rt-local-reload'||performance.getEntriesByType('navigation')[0].type==='reload'}catch(e){return false}}

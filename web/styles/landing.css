@@ -864,10 +864,98 @@
   display: none !important;
 }
 
-.landing-nav [data-lp="start"] {
-  border-radius: 999px;
+/* 미리보기: 타임라인만 보이고 아무것도 열리거나 고쳐지지 않게 (막는 동작은 main.js lockDemo) */
+.demo #tChev,
+.demo #panel,
+.demo #pin,
+.demo #mNav,
+.demo .mhome,
+.demo .mown {
+  display: none !important;
+}
+
+.demo #tip .tc {
+  display: none;
+}
+
+.demo .app,
+.demo .app * {
+  cursor: default !important;
 }
 
 .landing-preview-caption {
   margin-left: 8px;
+}
+
+/* 첫 화면 'Google 계정으로 계속하기': 검은 버튼 + 컬러 G 로고 (Google 로그인 버튼의 어두운 버전) */
+.landing-actions .landing-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 260px;
+  height: 48px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 10px;
+  background: #18181b;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: background 0.15s;
+}
+
+.landing-actions .landing-google:hover {
+  background: #34343b;
+}
+
+.landing-g {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.landing-g svg {
+  width: 18px;
+  height: 18px;
+}
+
+.landing-actions .landing-google.is-return {
+  padding: 0 26px;
+}
+
+/* 로그인한 적 있는 사람에게만: 버튼 아래 '다른 계정으로 로그인' 글씨 링크 */
+.landing-actions {
+  flex-wrap: wrap;
+}
+
+.landing-switch {
+  flex-basis: 100%;
+  margin-top: 2px;
+  text-align: left;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--mute);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: #c9cdd4;
+  cursor: pointer;
+}
+
+.landing-switch:hover {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+
+.landing-switch[hidden] {
+  display: none;
+}
+
+.landing-actions.c .landing-switch {
+  text-align: center;
 }

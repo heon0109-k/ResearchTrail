@@ -1916,3 +1916,111 @@
 .pv-chips > .pv-add:first-child {
   margin-left: 0;
 }
+
+/* 찾은 링크가 많을 때: 저장소 단위로 한 줄씩, 3개까지 보이고 나머지는 '더 보기' */
+.pv-suggest {
+  padding: 9px 8px 6px 12px;
+}
+
+.pv-suggest-head {
+  margin: 0 26px 4px 0;
+}
+
+.pv-suggest-head em {
+  font-style: normal;
+  font-weight: 600;
+  color: #5d8fbd;
+}
+
+.pv-suggest-row {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 7px;
+  margin-right: 0;
+  padding: 5px 0;
+  border-top: 1px solid #e1ecf7;
+}
+
+.pv-suggest-list .pv-suggest-row:first-child {
+  border-top: 0;
+}
+
+.pv-suggest-row.pv-more-row {
+  display: none;
+}
+
+.pv-suggest.open .pv-suggest-row.pv-more-row {
+  display: flex;
+}
+
+.pv-suggest-ic {
+  display: inline-flex;
+  flex: none;
+  color: #6f9cc6;
+}
+
+.pv-suggest-row a {
+  display: flex;
+  flex: 1;
+  flex-basis: auto;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin-right: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12.5px;
+  text-decoration: none;
+}
+
+.pv-suggest-row a b {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.pv-suggest-row a small {
+  flex: none;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.pv-suggest-row a:hover b {
+  color: #1769b0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pv-suggest-add {
+  height: 24px;
+  margin: 0;
+  padding: 0 9px;
+  border: 1px solid #b9d6f2;
+  background: #fff;
+  color: #1769b0;
+  font-size: 11.5px;
+}
+
+.pv-suggest-add:hover {
+  border-color: var(--bl);
+  background: var(--bl);
+  color: #fff;
+}
+
+.pv-suggest-more {
+  display: block;
+  margin: 2px 0 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: #1769b0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pv-suggest-more:hover {
+  text-decoration: underline;
+}
