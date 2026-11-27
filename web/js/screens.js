@@ -4,19 +4,21 @@
 const screens = {};
 
 async function loadScreens() {
-  await Promise.all(['landing', 'onboarding', 'main', 'reader'].map(async function (name) {
+  const names = S.source === 'account' ? ['main'] : ['landing', 'onboarding', 'main', 'reader'];
+  await Promise.all(names.map(async function (name) {
     const response = await fetch('views/' + name + '.html', { cache: 'no-cache' });
     if (!response.ok) throw new Error(name + '.html (' + response.status + ')');
     screens[name] = await response.text();
   }));
 }
 
-loadScreens().then(startResearchTrail, function (error) {
+const screensReady = loadScreens();
+screensReady.then(startResearchTrail, function (error) {
   console.error('화면을 불러오지 못했습니다.', error);
   app.textContent = '화면을 불러오지 못했어요. ';
   const retry = document.createElement('button');
   retry.type = 'button';
   retry.textContent = '다시 시도';
-  retry.addEventListener('click', function () { location.reload(); });
+  retry.addEventListener('click', function () { (S.source === 'account' ? window.top : window).location.reload(); });
   app.appendChild(retry);
 });

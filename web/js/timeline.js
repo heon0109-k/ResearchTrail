@@ -2,7 +2,7 @@
 var LASTWHO=null;
 /* ---------- card view ---------- */
 function rng(){
-  var ds=S.papers.filter(visible).map(function(p){return dnum(p.date)});if(!ds.length)ds=[dnum(todayStr())];
+  var ds=S.papers.filter(p=>p.date&&visible(p)).map(function(p){return dnum(p.date)});if(!ds.length)ds=[dnum(todayStr())];
   var a=Math.min.apply(null,ds)-14,b=Math.max.apply(null,ds)+14;
   var minimumDays=S.zoom==='all'?60:30;
   if(S.zoom!=='all'){
@@ -185,7 +185,7 @@ function renderCards(){
   var y=AXISH;L.pos={};L.bandInfo=[];
   var bandsHtml='',cardsHtml='';
   bands.forEach(function(bd,bi){
-    var items=S.papers.filter(function(p){return visible(p)&&(bd.id==='*'||p.tag===bd.id)}).sort(function(m,n){return dnum(m.date)-dnum(n.date)});
+    var items=S.papers.filter(function(p){return p.date&&visible(p)&&(bd.id==='*'||p.tag===bd.id)}).sort(function(m,n){return dnum(m.date)-dnum(n.date)});
     var ends=[];
     items.forEach(function(p){
       var x=LABELW+(dnum(p.date)-a)*px;var r2=-1;
@@ -249,14 +249,14 @@ function renderCards(){
     var ps=L.pos[p.id];if(!ps)return;var t=tagBy(p.tag);
     var cls='card st-'+readingStateKey(p.state)+(compact?' cmp':'')+(S.sel===p.id?' sel':'')+(S.linking&&S.linking.from===p.id?' src':'')+(S.linking&&S.linking.to===p.id?' tgt':'')+(matches(p)?'':' dim')+(rp&&rp.id===p.id?' go':'')+(lp&&lp.id===p.id?' last':'');
     var mark=(rp&&rp.id===p.id)?'이어 읽을 논문':((lp&&lp.id===p.id)?(p.state==='skim'?'다음에 읽을 논문':'마지막으로 읽던 논문'):'');
-    var st=readingState(p.state);
+    var stateText=p.use?.reading_state_text||readingState(p.state).t;
     var inc=S.links.filter(function(l){return l.to===p.id});
     var why=(S.why&&inc.length)?'<div class="cwhy">↩ '+esc(inc[0].reason||'미기록/확인 필요')+(inc.length>1?' 외 '+(inc.length-1):'')+'</div>':'';
     var previewMemo=p.memo;
     if(p.tut&&previewMemo==='사용법을 익히는 빈 카드예요. 다 써 봤으면 지워도 돼요.'){
       previewMemo='사용법을 익히는 빈 카드예요.';
     }
-    cardsHtml+='<div class="'+cls+'" data-id="'+p.id+'" tabindex="0" role="button" aria-label="'+esc(p.title+' · '+st.t+' · '+p.date+(mark?' · '+mark:''))+'" style="left:'+ps.x+'px;top:'+ps.y+'px;width:'+ps.w+'px;height:'+ps.h+'px;--tc:'+t.color+'">'+
+    cardsHtml+='<div class="'+cls+'" data-id="'+esc(p.id)+'" tabindex="0" role="button" aria-label="'+esc(p.title+' · '+stateText+' · '+p.date+(mark?' · '+mark:''))+'" style="left:'+ps.x+'px;top:'+ps.y+'px;width:'+ps.w+'px;height:'+ps.h+'px;--tc:'+t.color+'">'+
       (mark?'<div class="cmk">'+mark+'</div>':'')+'<div class="ct1"><span class="tx">'+esc(p.title)+'</span></div><div class="cmemo">'+esc(previewMemo)+'</div>'+
       '<div class="cfoot"><span class="ctitle">'+sg(p.state)+' '+esc(p.title)+'</span><span class="cdt">'+p.date.slice(5)+'</span></div></div>';
   });
@@ -390,8 +390,8 @@ function wireScroller(){
   function showTip(card){
     var p=paperBy(card.dataset.id);if(!p){return}
     var inc=S.links.filter(function(l){return l.to===p.id}),out=S.links.filter(function(l){return l.from===p.id});
-    var h='<div class="tt">'+esc(p.title)+'</div><div class="ts">'+sg(p.state)+' '+readingState(p.state).t+' · '+p.date+'</div><div class="tm">'+esc(p.memo)+'</div>';
-    h+='<div class="tc">누르면 옆에 자세히 열려요</div>';
+    var h='<div class="tt">'+esc(p.title)+'</div><div class="ts">'+sg(p.state)+' '+esc(p.use?.reading_state_text||readingState(p.state).t)+' · '+p.date+'</div><div class="tm">'+esc(p.memo)+'</div>';
+    h+='<div class="tc">'+(S.source==='account'?'누르면 논문 상세를 볼 수 있어요':'누르면 옆에 자세히 열려요')+'</div>';
     tip.innerHTML=h;tip.hidden=false;
     var r=card.getBoundingClientRect(),tw=tip.offsetWidth,th=tip.offsetHeight;
     var x=Math.min(Math.max(8,r.left),window.innerWidth-tw-8),y=r.bottom+8;
@@ -416,21 +416,25 @@ function wireScroller(){
       previousLeft=sc.scrollLeft;
     });
   });
-  window.addEventListener('resize',function(){if(S.view==='card'&&S.zoom==='all'&&$('#scroller')){renderCards();updateMinimapWin()}});
+  window.addEventListener('resize',function(){
+    if(S.view!=='card'||S.zoom!=='all'||!sc.isConnected||!sc.clientWidth)return;
+    if(S.source==='account'&&sc.hidden)return;
+    renderCards();updateMinimapWin();
+  });
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape'&&$('#panel')){if(S.linking){S.linking=null;renderAll()}else if(S.panel!=='none'){closeDetailPanel()}}
   });
 }
 function minimapRange(){
   if(S.zoom==='all'&&L.b>L.a){var sc=$('#scroller'),half=(L.b-L.a)*(L.panPadding||0)/((sc&&sc.clientWidth)||1);return [L.a-half,L.b+half]}
-  var days=S.papers.filter(visible).map(function(p){return dnum(p.date)});days.push(dnum(todayStr()));
+  var days=S.papers.filter(p=>p.date&&visible(p)).map(function(p){return dnum(p.date)});days.push(dnum(todayStr()));
   var a=Math.min.apply(null,days)-14,b=Math.max.apply(null,days)+14;
   if(b-a<60){var mid=(a+b)/2;a=Math.floor(mid-30);b=Math.ceil(mid+30)}
   return [a,b];
 }
 function renderMinimap(){
   var mm=$('#mm'),r=minimapRange(),a=r[0],b=r[1],h='';
-  S.papers.filter(visible).forEach(function(p){
+  S.papers.filter(p=>p.date&&visible(p)).forEach(function(p){
     var i=Math.max(0,S.tags.findIndex(function(t){return t.id===p.tag}));
     h+='<i class="mmd" style="left:'+((dnum(p.date)-a)/(b-a)*100)+'%;top:'+(6+(i%3)*8)+'px"></i>';
   });

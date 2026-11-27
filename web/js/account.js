@@ -72,7 +72,7 @@
     login.disabled = logout.disabled = false;
     login.hidden = !!id;
     logout.hidden = !id;
-    if (id && accessToken) showProjects();
+    if (id && accessToken) showProjects(new URLSearchParams(window.location.search).get('workspace') === 'timeline');
     else if (id) showAccount();
     else showLocal(first && window.performance?.getEntriesByType('navigation')[0]?.type === 'reload');
     if (switching) {
@@ -82,24 +82,25 @@
   }
 
   byId('authOpenLocal').addEventListener('click', () => showLocal());
-  function showProjects() {
+  function showProjects(timeline = false) {
     if (!accountId || !accessToken) return;
     closeLocal();
     const frame = document.createElement('iframe');
     const started = generation;
-    frame.title = '계정 프로젝트';
-    frame.src = 'views/account-projects.html';
+    frame.title = timeline ? '계정 타임라인' : '계정 프로젝트';
+    frame.src = timeline ? 'browser.html?workspace=account' : 'views/account-projects.html';
     frame.addEventListener('load', () => {
       if (started !== generation || workspace.firstElementChild !== frame) return;
       accountRequests = new AbortController();
       const { signal } = accountRequests;
       const current = () => !signal.aborted && started === generation;
-      if (typeof frame.contentWindow.startAccountProjects !== 'function') {
+      const start = timeline ? frame.contentWindow.startAccountTimeline : frame.contentWindow.startAccountProjects;
+      if (typeof start !== 'function') {
         showAccount();
         message.textContent = '프로젝트 화면을 열지 못했어요. 다시 시도해 주세요.';
         return;
       }
-      frame.contentWindow.startAccountProjects(async (path, body, {pdf = false, artifactId} = {}) => {
+      const request = async (path, body, {pdf = false, artifactId} = {}) => {
         if (!current()) throw new Error('계정이 변경되었어요.');
         const config = window.RESEARCHTRAIL_CONFIG;
         const result = await fetch(config.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/researchtrail' + path, {
@@ -118,14 +119,16 @@
           throw error;
         }
         return data;
-      }, {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current});
+      };
+      start.call(frame.contentWindow, timeline ? path => request(path) : request,
+        {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current});
     }, { once: true });
     workspace.appendChild(frame);
     byId('authHome').hidden = true;
-    byId('authMode').textContent = '계정 프로젝트';
+    byId('authMode').textContent = timeline ? '계정 타임라인' : '계정 프로젝트';
     back.hidden = false;
   }
-  byId('authProjects').addEventListener('click',showProjects);
+  byId('authProjects').addEventListener('click',() => showProjects());
   back.addEventListener('click', showAccount);
 
   login.addEventListener('click', async () => {
