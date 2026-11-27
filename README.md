@@ -62,7 +62,86 @@ python3 -m http.server 5500 --bind 127.0.0.1 --directory web
 - 지원 환경: 데스크톱 Chrome 최신 버전 (모바일 화면은 확인하지 않았습니다)
 - 계정: 가입 없이 바로 사용합니다.
 - VS Code를 쓴다면 Live Server 확장으로 `web/index.html`을 열어도 됩니다.
-- 메모와 다음 할 일의 저장·재개는 오프라인에서도 동작합니다. OpenAI AI 정리와 질문하기, 외부 글꼴·논문 정보 조회, PDF 뷰어의 첫 로딩에는 인터넷이 필요합니다. 예시 PDF 7편은 앱에 포함되어 있습니다.
+- 메모와 다음 할 일의 저장·재개는 오프라인에서도 동작합니다. 예시 PDF 7편과 PDF.js 3.11.174 뷰어는 앱에 포함되어 있습니다. OpenAI AI 정리와 질문하기, 외부 글꼴·논문 정보 조회에는 인터넷이 필요합니다.
+
+#### 정적 빌드
+
+Node.js 22 이상과 npm으로 저장소 루트에서 실행합니다.
+
+```bash
+npm ci
+npm run build
+python3 -m http.server 5500 --bind 127.0.0.1 --directory dist
+```
+
+`SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY`를 모두 비워 두면 기존 브라우저 데모를 사용할 수 있습니다. 두 변수를 설정하면 빌드가 공개 프로젝트 URL과 게시용 키만 `dist/js/browser-config.js`에 기록하고 시작 화면에 **Google로 로그인**을 표시합니다. 로그인 후에는 현재 사이트의 루트로 돌아오며 새로고침해도 계정을 유지합니다. 로그인하면 마지막으로 연 계정 프로젝트가 열립니다. 이 탭에서 처음 여는 계정은 목록의 첫 프로젝트로 시작합니다. 프로젝트 이름을 눌러 과업을 선택하거나 새로 만들고 **+ 논문 추가**로 등록합니다. **이 브라우저의 작업 열기**에서 기존 논문과 메모를 열 수 있습니다. **로그아웃**은 현재 브라우저 세션에 적용됩니다.
+
+Google 로그인을 사용할 때는 Supabase Auth에서 Google 제공자를 설정하고, Google에 Supabase의 OAuth 콜백 URL을 등록합니다. Supabase의 허용 리디렉션 URL에는 앱을 여는 주소의 루트(예: `http://127.0.0.1:5500/`)를 등록합니다. 로컬 Supabase를 쓰는 경우 `supabase/config.toml`의 `[auth.external.google]`에 지정된 환경변수를 서버에 설정하고 해당 제공자를 활성화합니다. 모의 세션 검사는 `node tests/web_account_auth.test.cjs`로 실행합니다.
+
+`npm run test:build`로 빌드 결과와 공개 설정을 검사합니다. 빌드 후 `npx playwright-core install chromium`으로 테스트용 브라우저를 준비한 뒤 `npm run test:pdf`를 실행하면 예시 논문이 읽기 화면에 렌더링되는지 확인할 수 있습니다.
+
+계정 프로젝트의 로컬 실행에는 Docker와 로컬 Supabase가 필요합니다. 저장소 루트에서 `npx supabase start`, `npx supabase migration up --local`을 실행한 뒤 `npx supabase functions serve researchtrail`을 실행합니다. 브라우저 빌드에는 같은 로컬 프로젝트의 공개 설정을 사용합니다.
+
+프로젝트 이름은 과업 목표(`ResearchTask.goal_text`)로 저장합니다. 논문 제목은 `Document`에, 저장 이유와 읽은 정도는 선택한 과업의 `DocumentUse`에 저장합니다. 링크와 업로드한 PDF는 각각 `DocumentArtifact`로 등록합니다. 같은 논문을 다른 과업에서 사용할 때는 등록 양식에서 기존 논문을 선택할 수 있습니다. 브라우저 전용 작업과 예시 데이터는 해당 작업공간에 보관합니다.
+
+#### Vercel Preview 설정
+
+저장소 루트의 `vercel.json`에 정적 빌드 설정이 있습니다. 기존 Vercel 프로젝트에서 아래 값을 확인하세요.
+
+| 대시보드 항목 | 값 |
+|---|---|
+| Framework Preset | Other |
+| Root Directory | 저장소 루트 (기본값 `./`) |
+| Install Command | `npm ci` |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Production Branch / Preview 브랜치 | `main` / `feature/account-persistence` |
+| Preview 환경변수 `SUPABASE_URL` | 테스트용 Supabase 프로젝트의 공개 HTTPS Project URL |
+| Preview 환경변수 `SUPABASE_PUBLISHABLE_KEY` | 같은 프로젝트의 Publishable key (`sb_publishable_`로 시작) |
+
+두 변수는 **Preview** 범위에 입력하세요. 브라우저 전용 데모를 시험할 때는 둘 다 비워 둡니다. 새 Vercel 프로젝트의 최초 배포는 Production으로 처리되므로 Preview만 준비하는 단계에서는 새 프로젝트의 **Deploy**를 누르기 전에 멈춥니다. [Vercel 빌드 설정](https://vercel.com/docs/builds/configure-a-build) · [배포 환경](https://vercel.com/docs/deployments/environments)
+
+`npm run build` 후 `node scripts/check-web-output.mjs`로 현재 `dist/`의 파일 목록, 원본과의 바이트 일치 여부, 공개 설정 두 항목을 검사합니다. `node --test tests/web_vercel_preview.test.cjs`는 합성 설정과 공개 목록 밖의 파일을 넣어 이 과정을 재현합니다. 웹 파일을 추가할 때는 `scripts/build-web.mjs`의 공개 파일 목록에도 등록하세요.
+
+계정 기능에는 마이그레이션과 `researchtrail` 함수가 준비된 테스트용 Supabase 프로젝트가 필요합니다. Preview 주소가 정해지면 Supabase Auth의 **URL Configuration → Redirect URLs**에 해당 HTTPS 루트(마지막 `/` 포함)를 등록하세요. Google 로그인 후 같은 루트로 돌아오는지, 새로고침하면 같은 계정이 열리는지 확인하세요. 테스트용 PDF에 메모와 하이라이트를 남긴 뒤 두 번째 브라우저에서 같은 판본과 읽던 쪽을 다시 여세요. Preview에 접근할 수 있는 브라우저에서 `/assets/papers/bert-naacl2019.pdf`는 200, `/package.json`과 `/supabase/config.toml`은 404인지 확인하세요.
+
+#### 계정 논문의 비공개 PDF
+
+**+ 논문 추가**에서 PDF(한 개당 최대 10 MiB)를 선택하거나, 이미 등록한 논문에서 **PDF 첨부**를 누릅니다. DOI만 등록해도 원문 링크와 읽기 기록을 사용할 수 있습니다. 같은 계정으로 다른 기기에서 프로젝트를 열고 파일명 옆 **열기**를 누르면 업로드했던 판본을 읽을 수 있습니다.
+
+파일명만 등록했던 판본에는 **이 파일명에 PDF 첨부**를 사용하세요. 기존 판본 ID와 해당 판본을 가리키는 기록이 유지됩니다. 이름이 같은 여러 PDF를 올리면 **열기** 버튼에 파일별 해시 앞 8자리가 함께 표시됩니다.
+
+`POST /tasks/{task_id}/papers/{document_use_id}/pdf`는 PDF 바이트와 URL 인코딩한 파일명(`X-PDF-Name`)을 받습니다. 서버가 파일명, MIME, 파일 형식 표시와 실제 크기를 검사하고, 비공개 Storage 버킷 `researchtrail-pdfs`에 저장합니다. 판본에 보관된 고정 경로와 SHA-256을 사용해 `GET /tasks/{task_id}/artifacts/{artifact_id}/pdf`에서 본인 파일을 확인합니다. 전송이 끊기면 같은 논문에 같은 파일을 다시 첨부하세요. 재시도는 기존 판본을 사용하며 메모를 추가하지 않습니다.
+
+로컬 마이그레이션을 적용하고 함수를 실행한 뒤 `node tests/local_account_pdfs.mjs`로 실제 Storage 연결을 검사할 수 있습니다. 이 검사는 로컬 공개 설정을 사용하고 합성 계정 두 개와 테스트 과업을 만듭니다.
+
+#### 계정 PDF의 읽기 위치와 하이라이트
+
+PDF에서 구절을 선택하고 **선택한 구절에 형광펜**을 누릅니다. 저장된 메모를 연결하려면 **하이라이트에 연결할 메모**에서 고르세요. 이미 만든 하이라이트에도 목록에서 **선택한 메모 연결**을 누를 수 있습니다. 메모를 정정해도 기존 하이라이트는 처음 연결한 버전을 가리킵니다.
+
+같은 계정과 프로젝트에서 같은 PDF 판본을 다시 열면 마지막으로 읽은 쪽을 표시합니다. 형광펜은 각 쪽의 너비와 높이에 대한 비율로 저장되어 화면이 좁아져도 같은 구절에 표시됩니다. PDF를 불러오지 못했을 때도 저장된 쪽 번호, 선택한 구절, 연결한 메모를 확인할 수 있습니다. 파일이 목록에서 이용 불가로 표시되면 **저장된 읽기 위치 보기**를 누르세요.
+
+로컬 계정 두 개로 읽기 위치와 메모 연결까지 검사하려면 마이그레이션 적용 후 `node tests/local_account_pdfs.mjs --reader`를 실행합니다.
+
+#### 계정 기록 저장 API
+
+`researchtrail` 함수의 `POST /tasks/{task_id}/records`는 [SPEC §5.2](docs/SPEC.md#52-기록-저장과-선택적-맥락)의 본문을 받습니다. 최소 본문은 `{"record":{"content_text":"  합성 메모  "}}`입니다. 호출자는 저장 동작마다 새 UUID를 `Idempotency-Key` 헤더에 넣습니다. 기존 계정 API처럼 본문의 `request_id`로 보내도 됩니다. 같은 저장을 재전송할 때는 본문과 UUID를 유지합니다. 같은 문장을 새 메모로 저장할 때는 새 UUID를 사용합니다.
+
+성공 응답은 `record_id`와 `context_refs`입니다. `context_refs`의 `question_ids`, `decision_ids`, `document_ids`, `document_use_ids`, `artifact_ids`, `excerpt_ids`는 이 기록에 연결된 ID 목록이며 빈 목록은 `[]`입니다. 정정은 새 UUID와 같은 과업의 `revises_record_id`로 저장합니다. 잘못된 연결이 있으면 원문과 맥락 모두 저장되지 않습니다. 브라우저 전용 작업공간의 메모는 계속 이 브라우저에 저장됩니다.
+
+계정 프로젝트의 **읽기 기록**에서 메모를 입력한 뒤 입력칸을 벗어나거나 **편집 완료**를 누르면 해당 버전을 전송합니다. 메모 응답을 기다리는 동안에도 이어 쓸 수 있습니다. **메모 저장 다시 시도**는 미확인 메모를 같은 요청으로 다시 보내고, **PDF 업로드 다시 시도**는 열어 둔 탭에서 해당 파일만 다시 올립니다. **이제 닫아도 돼요.**는 요청한 메모와 PDF 저장을 서버가 모두 확인하고 작성 중인 변경이 없을 때 표시됩니다. 이 탭은 계정과 과업별로 초안과 미확인 저장 요청을 보관합니다. 저장된 메모의 **수정**은 원문을 보존하는 정정 기록을 만들며, **+ 새 메모**는 독립된 기록을 시작합니다.
+
+#### 계정 다음 작업 확인
+
+저장된 메모에서 **다음 할 일 찾기 →**를 누르면 브라우저가 해당 원문 한 건에서 규칙 기반 후보를 찾습니다. **다음 작업 직접 입력**으로도 시작할 수 있습니다. 과업과 원문을 확인하고 최종 행동을 편집한 뒤 **확인하고 저장**을 눌러야 계정에 저장됩니다. 취소하면 원문과 기존 확정 작업이 그대로 남습니다.
+
+`POST /tasks/{task_id}/next-actions`에 `source_record_id`, `reviewed_action`, `confirmed: true`를 전송합니다. 선택한 항목만 `links`에 넣습니다. 브라우저는 오프라인에서 받은 최초 후보를 선택적 `original_candidate`에 별도로 보냅니다. 직접 입력은 최초 후보가 `null`입니다. 저장 결과가 불확실하면 같은 탭에서 해당 기록을 열고 **같은 요청 다시 확인**을 누르세요. 같은 확인의 본문과 UUID(`request_id` 또는 `Idempotency-Key`)를 재사용합니다.
+
+#### 계정 과업 재개 조회
+
+프로젝트를 열거나 페이지를 새로고침하면 해당 과업을 다시 조회합니다. 다른 브라우저에서 저장한 내용도 이때 확인할 수 있습니다. `GET /tasks/{task_id}/resume`은 로그인한 계정에서 선택한 과업의 `task_id`, `task`, `records`, `context`, `next_actions`를 반환합니다. 각 기록의 원문은 `record.content_text`에 있고 정정 대상은 `revises_record_id`로 구분합니다. `context`에는 `questions`, `decisions`, `document_contexts` 목록이 있습니다. 각 문헌 사용 맥락의 `artifacts`와 그 안의 `excerpts`에서 저장된 판본·위치·구절을 확인할 수 있습니다. 재개 조회는 원문 사이트나 AI를 호출하지 않습니다.
+
+`next_actions`에는 사용자가 명시적으로 확인한 작업의 `source_record_id`, `saved_action`, 선택한 `links`가 들어갑니다. 확정 작업을 펼치면 원문과 최초 후보, 사용자가 확인한 값을 볼 수 있습니다. 최초 후보가 보존되기 전의 작업은 미기록으로 표시합니다. 저장 시각이 최신인 항목부터 반환하고, 시각이 같으면 ID 오름차순입니다. 미기록 속성은 `null`, 등록된 항목이 없는 목록은 `[]`로 반환합니다. 접근 권한이 없는 과업과 존재하지 않는 과업은 모두 `404 RESOURCE_UNAVAILABLE`로 응답합니다.
 
 ---
 
@@ -160,10 +239,10 @@ python3 -m http.server 5500 --bind 127.0.0.1 --directory web
 | 미기록 맥락 | 읽던 쪽이나 저장·연결 이유가 없으면 ‘미기록/확인 필요’로 표시합니다. 전체 타임라인 메모는 특정 논문의 판단으로 간주하지 않고 ‘논문 연결 미확인’으로 구분합니다. |
 | 읽기 상태 | 읽을 것·읽는 중·다 읽음을 선택할 수 있습니다. 상태가 없거나 이전 상태를 해석할 수 없으면 ‘미기록/확인 필요’로 표시하며, 기존 값을 임의로 읽을 것으로 바꾸지 않습니다. |
 | 이전 기록 | 열람 순서가 없는 이전 기록은 읽은 날짜가 최근인 ‘읽는 중’ 논문을 우선 표시합니다. 논문 읽기 화면을 열면 이후에는 실제 열람 순서를 기억합니다. |
-| 저장 위치 | 기록은 **이 브라우저의 이 주소**에만 저장됩니다. 다른 브라우저, 다른 포트, 시크릿 창에서는 보이지 않습니다. 서버 저장은 없습니다. |
+| 저장 위치 | 브라우저 전용 작업은 **이 브라우저의 이 주소**에 저장됩니다. 계정 프로젝트에 등록한 논문과 서버가 저장을 확인한 메모는 같은 계정으로 다시 열 수 있습니다. |
 | 메모 이력 | 현재 메모 입력칸과 별도로 버전을 누적합니다. 편집을 마치거나 후보를 요청하면 버전을 보관하며, 키 입력 하나하나를 별도 버전으로 쌓지는 않습니다. |
 | 이전 데이터 | 이력 기능 적용 전 이미 덮어쓴 내용은 복구할 수 없습니다. 현재 남아 있는 메모·다음 할 일부터 보관하며, 알 수 없는 최초 후보는 미기록으로 표시합니다. |
-| 미구현 | 연구 기록의 서버 저장·조회 API, 계정, 팀 공유, 외부 논문 검색·추천, 외부 노트 동기화 |
+| 미구현 | 팀 공유, 외부 논문 검색·추천, 외부 노트 동기화 |
 | 하이라이트 메모·질문 복사 | 문장·영역 캡처 아래 메모 한 칸을 사용합니다. 카드 오른쪽 위 작은 복사 아이콘(**AI에게 물어볼 질문 복사**)은 논문 제목·쪽수·선택한 내용·현재 메모를 질문 텍스트로 복사합니다. AI에 직접 전송하지 않으며, 캡처 이미지는 챗봇에 함께 첨부해야 합니다. 기존 분류·막힌 이유·질문 데이터는 삭제하지 않습니다. |
 | 시연용 부가 기능 | PDF 읽기·캡처·연결 그래프·내용 찾기는 화면에서 쓸 수 있지만 이번 MVP의 검증 대상은 아닙니다. |
 | 데이터 | 개인 정보나 비공개 연구 내용은 입력하지 마세요. |

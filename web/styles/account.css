@@ -1,0 +1,69 @@
+.account-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.account-brand { margin-right: auto; }
+.account-brand i { color: var(--bl); }
+#authIdentity { overflow-wrap: anywhere; }
+.account-message { margin: 0; padding: 8px 16px; color: var(--mute); }
+.account-message:empty { display: none; }
+.account-home { margin: auto; padding: 24px; }
+.account-home h1 { margin: 0; font-size: 24px; }
+.account-home p { margin: 8px 0 20px; }
+.account-workspace { flex: 1; min-height: 0; }
+.account-workspace:empty { flex: 0; }
+.account-workspace iframe { display: block; width: 100%; height: 100%; border: 0; }
+.account-page [hidden] { display: none; }
+
+.account-projects { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
+.account-projects header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.account-projects #tName { max-width: 72%; overflow-wrap: anywhere; }
+.account-projects #tName::after { content: ' ▾'; }
+.account-projects #projectStatus { color: var(--mute); font-size: 14px; }
+.account-projects #pin { border: 1px solid var(--line); border-radius: 12px; }
+.account-projects ul { padding: 0; list-style: none; }
+.account-projects li { border-bottom: 1px solid var(--line); padding: 12px 0; overflow-wrap: anywhere; }
+.account-projects li p { margin: 4px 0; white-space: pre-wrap; }
+.account-projects li small { color: var(--mute); }
+.account-project-page { overflow-y: auto; }
+.account-projects:has(#pin:not([hidden])) #accountMemos { display: none; }
+#accountMemos { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 12px; }
+#accountMemos h2 { font-size: 18px; }
+#accountMemos h3 { margin: 20px 0 4px; font-size: 15px; }
+#accountMemos .field { margin: 8px 0; }
+#accountMemos .memo-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+#memoStatus, #memoReadStatus { color: var(--mute); }
+#memoReadStatus:empty { display: none; }
+#accountMemos button:disabled { opacity: .6; cursor: default; }
+#accountMemos #naBox[hidden], #accountActionStatus:empty { display: none; }
+#accountMemos .na-q, #accountActions dd { white-space: pre-wrap; overflow-wrap: anywhere; }
+#accountMemos #naBox fieldset label { display: block; }
+#accountMemos #naBox textarea { width: 100%; }
+.account-pdf-attach { display: block; margin-top: 8px; font-size: 13px; }
+.account-pdf-attach input { max-width: 100%; }
+.account-file-input { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); }
+.account-file-input:focus-visible + .btn { outline: 2px solid currentColor; }
+#accountPdfReader { margin: 12px 0; border-top: 1px solid var(--line); }
+#accountPdfTitle { font-size: 17px; overflow-wrap: anywhere; }
+.account-pdf-pages { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+#accountPdfPage { display: block; max-width: 100%; height: auto; }
+
+#accountPdfSheet { max-width: 100%; }
+#accountPdfSheet canvas { position: static; width: 100%; }
+#accountPdfSheet[hidden], #pdfReaderRetry[hidden], #pdfMarkStatus:empty, #pdfSelectionText:empty, #pdfReadingLocator:empty { display: none; }
+#pdfMarks p { white-space: pre-wrap; }
+
+.account-save-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; overflow-wrap: anywhere; }
+.account-save-feedback:not(:has(#memoStatus:empty)) { margin: 12px 0; }
+.account-save-feedback button[hidden], #memoFinish[hidden] { display: none; }

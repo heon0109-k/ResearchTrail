@@ -69,23 +69,26 @@ function startEmpty(){clearStore();reset();var a=projActive();S.name=a&&a.name||
 
 /* ---------- 제목을 눌러 여는 프로젝트 메뉴 (노트북: 제목 아래, 휴대폰: 아래 시트) ---------- */
 var PJM={more:null,rename:null,newing:false};
+// Set only by the signed-in project screen; browser projects retain their synchronous storage.
+var projAccountMenu=null;
 function projMenuOpen(){return !!document.getElementById('pjm')}
 function projMenuClose(){var m=document.getElementById('pjm'),o=document.getElementById('pjmOv');if(m)m.remove();if(o)o.remove();PJM={more:null,rename:null,newing:false};var t=$('#tName');if(t)t.setAttribute('aria-expanded','false')}
 function projMenuHtml(){
-  var r=projEnsure();
+  var r=projAccountMenu?projAccountMenu.catalog():projEnsure();
   var CHECK='<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8"/></svg>';
   var MORE='<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="4.5" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="15.5" cy="10" r="1.6"/></svg>';
   var h='<div class="project-menu-grip" aria-hidden="true"></div><div class="project-menu-heading">'+'프로젝트'+'</div><div class="project-menu-list">';
   /* 예시 타임라인: 목록 맨 위. 둘러보기용이라 이름 바꾸기·삭제(⋯)는 없다. */
-  if(typeof loadSample==='function'){var ex=!!S.example,sn=ex?S.papers.length:(typeof SAMPLE_PAPERS!=='undefined'?Object.keys(SAMPLE_PAPERS).length:0);
+  if(!projAccountMenu&&typeof loadSample==='function'){var ex=!!S.example,sn=ex?S.papers.length:(typeof SAMPLE_PAPERS!=='undefined'?Object.keys(SAMPLE_PAPERS).length:0);
     h+='<div class="project-menu-row project-menu-sample'+(ex?' on':'')+'"><button type="button" class="project-menu-select" data-pj-sample="1"'+(ex?' aria-current="true"':'')+'><span class="project-menu-name">의료 논문 검색에 RAG를 쓰는 방법</span><span class="project-menu-tag">예시</span><em>'+sn+'편</em>'+'<i class="project-menu-checkmark">'+(ex?CHECK:'')+'</i>'+'</button></div>'}
   r.list.forEach(function(x){
     var on=x.id===r.active&&!S.example;
     if(PJM.rename===x.id){h+='<div class="project-menu-row editing"><input class="project-menu-input" id="pjmRename" maxlength="60" value="'+esc(x.name)+'" aria-label="프로젝트 이름"></div>';return}
     var open=PJM.more===x.id;
-    h+='<div class="project-menu-row'+(on?' on':'')+(open?' acting':'')+'"><button type="button" class="project-menu-select" data-pj-go="'+esc(x.id)+'"'+(on?' aria-current="true"':'')+'><span class="project-menu-name">'+esc(x.name)+'</span>'+(open?'':'<em>'+projCount(x)+'편</em>'+'<i class="project-menu-checkmark">'+(on?CHECK:'')+'</i>')+'</button>'+
+    var count=projAccountMenu?'':'<em>'+projCount(x)+'편</em>';
+    h+='<div class="project-menu-row'+(on?' on':'')+(open?' acting':'')+'"><button type="button" class="project-menu-select" data-pj-go="'+esc(x.id)+'"'+(on?' aria-current="true"':'')+'><span class="project-menu-name">'+esc(x.name)+'</span>'+(open?'':count+'<i class="project-menu-checkmark">'+(on?CHECK:'')+'</i>')+'</button>'+
       (open?'<div class="project-menu-actions" role="group" aria-label="'+esc(x.name)+' 관리"><button type="button" data-pj-rename="'+esc(x.id)+'">이름 바꾸기</button><button type="button" class="dng" data-pj-del="'+esc(x.id)+'">삭제</button></div>':'')+
-      '<button type="button" class="project-menu-more" data-pj-more="'+esc(x.id)+'" aria-label="'+esc(x.name)+' 더보기" aria-expanded="'+open+'">'+MORE+'</button>'+
+      (projAccountMenu?'':'<button type="button" class="project-menu-more" data-pj-more="'+esc(x.id)+'" aria-label="'+esc(x.name)+' 더보기" aria-expanded="'+open+'">'+MORE+'</button>')+
     '</div>';
   });
   h+='</div>';
@@ -102,6 +105,13 @@ function projMenuRender(){
   if(inp){inp.focus();if(ren)inp.select();
     var done=false;
     function commit(){if(done)return;done=true;var v=projCleanName(inp.value);
+      if(nw&&projAccountMenu&&v){
+        if(!inp.isConnected)return;
+        inp.disabled=true;
+        projAccountMenu.create(v).then(function(){if(inp.isConnected)projMenuClose()},function(){
+          done=false;inp.disabled=false;inp.setCustomValidity('프로젝트를 저장하지 못했어요. 다시 시도해 주세요.');inp.reportValidity();
+        });return;
+      }
       if(ren){var rid=PJM.rename;PJM.rename=null;if(v)projRename(rid,v);if(typeof renderAll==='function')renderAll();projMenuRender()}
       else{PJM.newing=false;if(v){var id=projCreate(v);projMenuClose();if(id)projSwitch(id);return}projMenuRender()}}
     inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();commit()}else if(e.key==='Escape'){e.stopPropagation();done=true;PJM.rename=null;PJM.newing=false;projMenuRender()}});
@@ -123,11 +133,11 @@ function projMenuToggle(){
     if(nw){PJM.more=null;PJM.newing=true;projMenuRender();return}
     if(dl){var x=projById(dl.dataset.pjDel);if(!x)return;var n=projCount(x);projMenuClose();
       ask('프로젝트 삭제','"'+x.name+'"의 논문 '+n+'편과 읽기 기록이 모두 지워져요.'+(projEnsure().list.length<2?' 빈 타임라인으로 다시 시작해요.':'')+' 되돌릴 수 없어요.','삭제',function(){projDelete(x.id);if(typeof renderAll==='function')renderAll()},true);return}
-    if(g){var id=g.dataset.pjGo;projMenuClose();projSwitch(id);return}
+    if(g){var id=g.dataset.pjGo;projMenuClose();if(projAccountMenu)projAccountMenu.select(id);else projSwitch(id);return}
     if(PJM.more&&!e.target.closest('.project-menu-actions')){PJM.more=null;projMenuRender()}
   });
   m.addEventListener('keydown',function(e){if(e.key==='Escape'&&!PJM.rename&&!PJM.newing){projMenuClose();var tt=$('#tName');if(tt)tt.focus()}});
   projMenuRender();
 }
 if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('resize',function(){if(projMenuOpen())projMenuRender()});
-if(typeof localStorage!=='undefined'&&typeof document!=='undefined'&&document.getElementById)try{projBoot()}catch(e){}
+if(typeof localStorage!=='undefined'&&typeof document!=='undefined'&&document.getElementById&&!document.getElementById('accountProjects'))try{projBoot()}catch(e){}

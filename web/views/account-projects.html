@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <base href="../">
+  <title>계정 프로젝트 · ResearchTrail</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styles/projects.css">
+  <link rel="stylesheet" href="styles/paper-panel.css">
+  <link rel="stylesheet" href="styles/reading-records.css">
+  <link rel="stylesheet" href="styles/pdf-viewer.css">
+  <link rel="stylesheet" href="styles/account.css">
+</head>
+<body class="account-project-page">
+  <main id="accountProjects" class="account-projects">
+    <header>
+      <button type="button" class="btn" id="tName" aria-haspopup="dialog" aria-expanded="false" aria-label="프로젝트 바꾸기" disabled>프로젝트 선택</button>
+      <button type="button" class="btn pri" id="addBtn" disabled>+ 논문 추가</button>
+    </header>
+    <p id="projectStatus" role="status"></p>
+    <button type="button" class="btn sm" id="projectRetry" hidden>다시 불러오기</button>
+    <section id="accountPapers" aria-label="논문 목록"></section>
+    <section id="accountPdfReader" aria-labelledby="accountPdfTitle" hidden>
+      <header><h2 id="accountPdfTitle">PDF</h2><button type="button" class="btn sm" id="accountPdfClose">닫기</button></header>
+      <div class="account-pdf-pages">
+        <button type="button" class="btn sm" id="accountPdfPrev">이전 쪽</button>
+        <span id="pdfPageStatus" role="status"></span>
+        <button type="button" class="btn sm" id="accountPdfNext">다음 쪽</button>
+      </div>
+      <p id="pdfReadingLocator"></p>
+      <div class="pgbox" id="accountPdfSheet" hidden>
+        <canvas id="accountPdfPage" aria-label="PDF 페이지"></canvas>
+        <div class="hlayer" id="accountPdfOverlay" aria-hidden="true"></div>
+        <div class="textLayer" id="accountPdfText"></div>
+      </div>
+      <p id="pdfSelectionText"></p>
+      <label class="field"><span>하이라이트에 연결할 메모 (선택)</span><select id="pdfMemoRef"></select></label>
+      <button type="button" class="btn sm" id="pdfMarkButton" disabled>선택한 구절에 형광펜</button>
+      <button type="button" class="btn sm" id="pdfReaderRetry" hidden>다시 저장</button>
+      <p id="pdfMarkStatus" role="status"></p>
+      <div id="pdfMarks" aria-label="저장된 하이라이트"></div>
+    </section>
+    <aside id="pin" aria-label="논문 등록" hidden></aside>
+    <div class="account-save-feedback">
+      <span id="memoStatus" role="status" aria-atomic="true"></span>
+      <button type="button" class="btn sm" id="memoRetry" hidden>메모 저장 다시 시도</button>
+      <button type="button" class="btn sm" id="pdfUploadRetry" hidden>PDF 업로드 다시 시도</button>
+    </div>
+    <section id="accountMemos" aria-label="읽기 기록" hidden>
+      <header><h2>읽기 기록</h2><button type="button" class="btn sm" id="rAddNote">+ 새 메모</button></header>
+      <label class="field" id="memoPaperField"><span>연결할 논문 (선택)</span><select id="memoPaper"></select></label>
+      <label class="field"><span id="memoLabel">새 메모</span><textarea id="rNote" rows="3" aria-label="읽기 기록 메모" placeholder="메모를 남겨 보세요"></textarea></label>
+      <div class="memo-controls">
+        <button type="button" class="btn pri" id="memoFinish">편집 완료</button>
+      </div>
+      <div id="accountRecords"></div>
+      <section id="naBox" class="na" aria-label="다음 작업 확인" hidden></section>
+      <p id="accountActionStatus" role="status"></p>
+      <p id="memoReadStatus" role="status"></p>
+      <div id="accountContext"></div>
+      <div id="accountActions"></div>
+    </section>
+  </main>
+  <script src="js/core.js"></script>
+  <script src="js/import.js"></script>
+  <script src="js/projects.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/reader.js"></script>
+  <script src="js/ai-stub.js"></script>
+  <script src="js/next-action.js"></script>
+  <script src="js/account-actions.js"></script>
+  <script src="js/account-save-status.js"></script>
+  <script src="js/account-memos.js"></script>
+  <script src="js/pdf-viewer.js"></script>
+  <script src="js/account-pdfs.js"></script>
+  <script src="js/account-projects.js"></script>
+</body>
+</html>
