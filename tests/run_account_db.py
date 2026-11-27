@@ -69,6 +69,8 @@ create policy fixture_permissive on storage.objects for all to public using(true
     # Draft cases, not yet approved by the team.
     execute((ROOT / "tests/sql/account_paper_links.sql").read_text())
     print("PASS (draft cases): paper links within one task, retries, link rules, ordering and account isolation")
+    execute((ROOT / "tests/sql/account_graph_changes.sql").read_text())
+    print("PASS (draft cases): link reason edits, deletion, retry receipts and task isolation")
     execute((ROOT / "tests/sql/account_rag_index.sql").read_text())
     print("PASS (draft cases): passage index start, repeated batches, completion count, replacement and account isolation")
     execute((ROOT / "tests/sql/account_rag_search.sql").read_text())

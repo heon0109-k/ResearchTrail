@@ -17,7 +17,7 @@ function createAccountSaveStatus(request, connected) {
     if (!connected()) return;
     const s = tasks.get(active);
     const failed = s && firstFailed(s);
-    memoRetry.hidden = s?.memo !== 'failed';
+    if (memoRetry) memoRetry.hidden = s?.memo !== 'failed';
     pdfRetry.hidden = !failed;
     if (failed) pdfRetry.textContent = 'PDF 업로드 다시 시도 · '+failed.name;
     const parts = [];

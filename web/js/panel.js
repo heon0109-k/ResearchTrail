@@ -380,7 +380,10 @@ function renderAddPanel(pin,account){
   '<select id="aState" class="p-chip" aria-label="읽은 정도">'+stateOpts(account?'':'reading')+'</select><span class="p-dot" aria-hidden="true">·</span>'+
   '<label class="p-date" title="읽은 날짜 (눌러서 바꾸기)"><span class="p-date-text" id="aDateText">'+(date?esc(date.replace(/-/g,'.')):'읽은 날짜')+'</span><input type="date" id="aDate" aria-label="읽은 날짜" value="'+esc(date)+'"></label></div></div>'+
   /* 로그인 모드: 이미 등록한 논문을 고를 수 있다 */
-  (account&&account.documents.length?'<label class="field"><span>등록한 논문 사용</span><select id="aDocument"><option value="">새 논문</option>'+account.documents.map(function(x){return '<option value="'+esc(x.document_id)+'">'+esc(x.title||'제목 미기록')+'</option>'}).join('')+'</select></label>':'')+
+  (account&&account.documents.length?'<label class="field"><span>등록한 논문 사용</span><select id="aDocument"><option value="">새 논문</option>'+account.documents.map(function(x){
+    var sameTitle=account.documents.some(function(other){return other.document_id!==x.document_id&&other.title===x.title});
+    return '<option value="'+esc(x.document_id)+'">'+esc(x.title||'제목 미기록')+(sameTitle?' · '+esc(x.document_id):'')+'</option>';
+  }).join('')+'</select></label>':'')+
   '<div class="field a-src"><span>링크·PDF</span>'+
   '<div class="a-tabs" role="tablist" aria-label="논문 가져오기"><button type="button" role="tab" data-src-tab="pdf" aria-selected="true">PDF</button><button type="button" role="tab" data-src-tab="link" aria-selected="false">링크</button></div>'+
   '<label class="a-drop" id="aDrop" data-src-pane="pdf"><input type="file" id="aFile" accept="application/pdf,.pdf" hidden><svg class="a-drop-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5"/><path d="M12 12v8M9 15l3-3 3 3"/></svg><b class="a-drop-title">PDF를 여기로 끌어오세요</b>'+(account?'<span class="a-drop-text">또는 <u>파일 선택</u> · '+(account.uploadPdf?'계정에 비공개로 저장 · 10MiB 이하':'파일명만 계정에 기록')+'</span>':'<span class="a-drop-text">또는 <u title="PDF는 이 브라우저에만 저장돼요. 다른 기기에서는 다시 올려야 해요.">파일 선택</u> · 60MB 이하</span>')+'<em id="aFname"></em></label>'+
@@ -402,13 +405,14 @@ function renderAddPanel(pin,account){
     var t=$('#aTitle'),di=$('#aDate'),dl=di&&di.closest?di.closest('.p-date'):null,tg=$('#aTag'),dot=$('#aTagDot');
     if(t&&t.style){var fit=function(){t.style.height='auto';t.style.height=t.scrollHeight+'px'};fit();t.addEventListener('input',fit);
       t.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing&&e.keyCode!==229){e.preventDefault();var m=$('#aMemo');if(m)m.focus()}})}
-    if(dl&&dl.addEventListener)dl.addEventListener('click',function(e){e.preventDefault();if(typeof dpOpen==='function')dpOpen(di,dl)});
+    if(dl&&dl.addEventListener)dl.addEventListener('click',function(e){if(e.defaultPrevented)return;e.preventDefault();if(typeof dpOpen==='function')dpOpen(di,dl)});
     if(di&&di.addEventListener)di.addEventListener('change',function(){var tx=$('#aDateText');if(tx)tx.textContent=String(di.value||'').replace(/-/g,'.')});
     if(tg&&dot&&tg.addEventListener)tg.addEventListener('change',function(){dot.style.setProperty('--c',tagBy(tg.value).color)});
   })();
   S.draftMeta=null;S.draftFile=null;
   /* 제목을 못 불러오거나 논문 같지 않으면 제목 칸 아래에 말풍선으로 알려 준다. */
   var autoTitle='';
+  var currentForm=function(){return !account || account.current()};
   var titleTip=function(on,text){var t=$('#aTitleTip');if(!t)return;if(on){var sp=t.querySelector('span');if(sp)sp.textContent=text||'제목을 못 불러왔어요. 직접 입력해 주세요.'}t.hidden=!on;if(t.parentNode&&t.parentNode.classList)t.parentNode.classList.toggle('is-tip',on);document.removeEventListener('pointerdown',tipOff,true);if(on)setTimeout(function(){document.addEventListener('pointerdown',tipOff,true)},0)};
   /* 말풍선은 다른 곳을 누르거나(제목 칸 포함) 제목을 입력하기 시작하면 사라진다. */
   var tipOff=function(){titleTip(false)};
@@ -437,22 +441,23 @@ function renderAddPanel(pin,account){
   var msg=function(t,bad){var m=$('#aSrcMsg');m.hidden=!t;m.textContent=t||'';m.style.color=bad?'var(--c3)':'var(--mute)'};
   var lastFetched='';
   var doFetch=function(){
+    if(!currentForm())return;
     var v=$('#aSrc').value.trim();if(!v){msg('링크를 붙여넣어 주세요.',true);return}
     if(v===lastFetched)return;lastFetched=v;
     var ref=parseRef(v);
     if(ref.type==='invalid'){msg('올바른 http 또는 https 링크를 입력해 주세요.',true);return}
-    if(ref.link){$('#aSrc').value=ref.link;lastFetched=ref.link}
+    if(ref.link&&!account){$('#aSrc').value=ref.link;lastFetched=ref.link}
     msg('');titleTip(false);fetchState('loading');
     var mine=lastFetched;
     fetchMeta(ref).then(function(m){
-      if(mine!==lastFetched)return;
+      if(!currentForm()||mine!==lastFetched)return;
       S.draftMeta=m;fetchState('done');
       var t=$('#aTitle');
       if(m.title&&!t.value.trim()){t.value=m.title;t.dispatchEvent(new Event('input'));markFilled(t)}
       var sub=$('#aTitleSub'),who=m.authors?m.authors.split(', ')[0]+(m.authors.indexOf(',')>-1?' 외':''):'';
       if(sub){sub.textContent=[m.year,who].filter(Boolean).join(' · ');sub.hidden=!sub.textContent}
       $('#aMemo').focus();
-    }).catch(function(){if(mine!==lastFetched)return;fetchState('');titleTip(true);$('#aTitle').focus()});
+    }).catch(function(){if(!currentForm()||mine!==lastFetched)return;fetchState('');titleTip(true);$('#aTitle').focus()});
   };
   /* [불러오기] 버튼 없이: 붙여넣으면 바로, 직접 치면 잠깐 멈췄을 때(논문 주소로 보일 때만), Enter·칸을 벗어날 때 불러온다. */
   var src=$('#aSrc'),typeTimer=0;
@@ -494,17 +499,17 @@ function renderAddPanel(pin,account){
     if(canFill())fetchState('loading');
     if(typeof pdfPeek!=='function'){fill(fallback);fetchState('');return}
     pdfPeek(f).then(function(r){
-      if(S.draftFile!==f)return;
+      if(!currentForm()||S.draftFile!==f)return;
       warn=!r.isPaper;
       if(!r.ref){fetchState('');fill(r.title||fallback);return}
       var src=$('#aSrc');if(src&&!src.value.trim()){src.value=r.ref.link||'';lastFetched=src.value;compactSrc()}
       return fetchMeta(r.ref).then(function(m){
-        if(S.draftFile!==f)return;
+        if(!currentForm()||S.draftFile!==f)return;
         S.draftMeta=m;fetchState('done');fill(m.title||r.title||fallback);
         var sub=$('#aTitleSub'),who=m.authors?m.authors.split(', ')[0]+(m.authors.indexOf(',')>-1?' 외':''):'';
         if(sub){sub.textContent=[m.year,who].filter(Boolean).join(' · ');sub.hidden=!sub.textContent}
-      }).catch(function(){fetchState('');fill(r.title||fallback)});
-    }).catch(function(){if(S.draftFile!==f)return;fetchState('');fill(fallback)});
+      }).catch(function(){if(currentForm()&&S.draftFile===f){fetchState('');fill(r.title||fallback)}});
+    }).catch(function(){if(!currentForm()||S.draftFile!==f)return;fetchState('');fill(fallback)});
   }
   if(account)return;
   var adding=false;

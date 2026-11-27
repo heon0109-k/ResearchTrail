@@ -100,11 +100,11 @@
         message.textContent = '프로젝트 화면을 열지 못했어요. 다시 시도해 주세요.';
         return;
       }
-      const request = async (path, body, {pdf = false, artifactId} = {}) => {
+      const request = async (path, body, {pdf = false, artifactId, method = body ? 'POST' : 'GET'} = {}) => {
         if (!current()) throw new Error('계정이 변경되었어요.');
         const config = window.RESEARCHTRAIL_CONFIG;
         const result = await fetch(config.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/researchtrail' + path, {
-          method: body ? 'POST' : 'GET', signal,
+          method, signal,
           headers: { apikey: config.SUPABASE_PUBLISHABLE_KEY, Authorization: 'Bearer ' + accessToken,
             'Content-Type': pdf ? 'application/pdf' : 'application/json',
             ...(pdf && body ? {'X-PDF-Name': encodeURIComponent(body.name)} : {}),
@@ -121,7 +121,7 @@
         return data;
       };
       start.call(frame.contentWindow, timeline ? path => request(path) : request,
-        {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current});
+        {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current, write:request});
     }, { once: true });
     workspace.appendChild(frame);
     byId('authHome').hidden = true;

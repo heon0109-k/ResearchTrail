@@ -37,19 +37,31 @@ function restoreSessionScreen(){
   }catch(e){return false}
 }
 
-function mountAccountWorkspace() {
+var accountTimelineActions = null;
+
+function mountAccountWorkspace(editable) {
   app.innerHTML = screens.main;
   const layout = $('.app');
   layout.classList.add('account-timeline');
   const nav = $('nav[aria-label="보기 방식"]');
-  nav.replaceChildren($('#vCard'), $('#vList'));
-  $('.side').replaceChildren(nav);
-  $('.bar').innerHTML = '<label>프로젝트 <select id="workspaceTask"></select></label><span>읽기 전용</span>' +
+  const views = [$('#vCard'), $('#vList')];
+  if (editable) views.push($('#vDot'));
+  nav.replaceChildren(...views);
+  $('.side').replaceChildren(...(editable ? [$('#addBtn'), nav] : [nav]));
+  $('.bar').innerHTML = '<label>프로젝트 <select id="workspaceTask"></select></label>' +
+    (editable ? '<button type="button" id="workspaceNew" class="btn sm">새 프로젝트</button>' : '<span>읽기 전용</span>') +
     '<button type="button" id="workspaceRetry" class="btn sm">다시 불러오기</button>';
   $('#emptyBox').innerHTML = '<p class="eb-hint" id="workspaceStatus" role="status"></p>';
   $('#bandsw').remove();
   $('#panel').remove();
-  $('#fdot').remove();
+  if (editable) {
+    $('.bar').insertAdjacentHTML('afterend','<div class="workspace-notices"><span id="workspaceActionStatus" role="status"></span> '+
+      '<button id="workspaceLinkCancel" type="button" class="btn sm" hidden>연결 취소</button> '+
+      '<span id="memoStatus" role="status"></span> <button id="pdfUploadRetry" type="button" class="btn sm" hidden></button></div>');
+    $('#vDot').addEventListener('click', () => setView('dot'));
+    $('#relayout').addEventListener('click', relayoutDots);
+    wireDots();
+  } else $('#fdot').remove();
   $('#rbar').remove();
   $('.work').insertAdjacentHTML('beforebegin', '<section id="undatedPapers" aria-label="날짜 미기록" hidden></section>' +
     '<dialog id="accountPaperDetail" aria-label="논문 상세"></dialog>');
@@ -77,21 +89,27 @@ function mountAccountWorkspace() {
   wirePaperList();
 }
 
-// The authenticated parent supplies a GET-only transport bound to its current session.
+// Rendering uses the read transport. Only explicit account controls get the write transport.
 async function startAccountTimeline(get, account) {
   if (S.source !== 'account') return;
   try { await screensReady; } catch { return; } // The screen loader displays its retry control.
   if (!account.current()) return;
-  mountAccountWorkspace();
+  const editable = !!account.write;
+  mountAccountWorkspace(editable);
   const picker = $('#workspaceTask');
   const key = 'researchtrail.account.' + account.projectUrl + '.' + account.accountId + '.task';
-  let selection = 0;
+  let selection = 0, read = 0;
+  let tasks = [];
   const current = version => account.current() && version === selection;
   S.accountId = account.accountId;
   listSort = 'added';
 
   function clear(id, message) {
+    ++selection;
     S.taskId = id;
+    S.links = [];
+    S.linking = null;
+    accountTimelineActions?.reset(id);
     S.papers = [];
     S.sel = null;
     S.listQuery = '';
@@ -108,33 +126,47 @@ async function startAccountTimeline(get, account) {
     detail.close();
     detail.replaceChildren();
     renderAll();
-    return ++selection;
+    return selection;
   }
   async function selectTask(id) {
     picker.value = id;
-    const version = clear(id, '프로젝트 논문을 불러오는 중…');
+    clear(id, '프로젝트 논문을 불러오는 중…');
+    return refresh(id);
+  }
+  async function refresh(id) {
+    if (!id || id !== S.taskId || !account.current()) return;
+    const version = selection, attempt = ++read;
+    const path = '/tasks/' + encodeURIComponent(id);
     try {
-      const {papers} = await get('/tasks/' + encodeURIComponent(id) + '/papers');
-      if (!current(version)) return;
+      const [{papers}, {links}] = await Promise.all([get(path + '/papers'),
+        editable ? get(path + '/paper-links') : {links:[]}]);
+      if (!current(version) || attempt !== read) return;
+      S.links = links.map(l => ({id:l.link_id, from:l.from_document_use_id, to:l.to_document_use_id, reason:l.reason_text}));
       S.papers = papers.map(row => ({
         ...row, id:row.document_use_id, title:row.document.title || '제목 미기록',
         memo:row.use.purpose_text, tag:'', date:row.date ?? null,
         state:Object.keys(STATES).find(k => STATES[k].t === row.use.reading_state_text) || null,
       }));
+      if (editable) $('#addBtn').disabled = false;
       $('#workspaceStatus').textContent = S.papers.length ? '' : '이 프로젝트에는 등록한 논문이 없어요.';
     } catch {
-      if (!current(version)) return;
+      if (!current(version) || attempt !== read) return;
+      S.links = []; S.papers = [];
+      if (editable) $('#addBtn').disabled = true;
       $('#workspaceStatus').textContent = '프로젝트 논문을 불러오지 못했어요. 다시 불러와 주세요.';
     }
     renderAll();
   }
   async function loadTasks() {
     picker.disabled = true;
+    if (editable) $('#workspaceNew').disabled = true;
     picker.replaceChildren();
     const version = clear(null, '계정 프로젝트를 불러오는 중…');
     try {
-      const {tasks} = await get('/tasks');
+      const data = await get('/tasks');
       if (!current(version)) return;
+      tasks = data.tasks;
+      if (editable) $('#workspaceNew').disabled = false;
       if (!tasks.length) {
         $('#workspaceStatus').textContent = '아직 계정 프로젝트가 없어요.';
         return;
@@ -148,9 +180,16 @@ async function startAccountTimeline(get, account) {
       if (current(version)) $('#workspaceStatus').textContent = '프로젝트 목록을 불러오지 못했어요. 다시 불러와 주세요.';
     }
   }
-  picker.addEventListener('change', () => {
-    try { sessionStorage.setItem(key, JSON.stringify(picker.value)); } catch { /* Selection still works. */ }
-    return selectTask(picker.value);
+  function choose(id) {
+    try { sessionStorage.setItem(key, JSON.stringify(id)); } catch { /* Optional tab preference. */ }
+    return selectTask(id);
+  }
+  picker.addEventListener('change', () => choose(picker.value));
+  if (editable) accountTimelineActions = createAccountGraphWorkspace(get, account, refresh, task => {
+    if (!tasks.some(t => t.task_id === task.task_id)) tasks.unshift(task);
+    picker.replaceChildren(...tasks.map(t => new Option(t.task.goal_text, t.task_id)));
+    picker.disabled = false;
+    return choose(task.task_id);
   });
   $('#workspaceRetry').addEventListener('click', () => S.taskId ? selectTask(S.taskId) : loadTasks());
   await loadTasks();
@@ -158,6 +197,13 @@ async function startAccountTimeline(get, account) {
 
 function renderAccountWorkspace() {
   const card = S.view === 'card', hasPapers = S.papers.length > 0;
+  const graph = S.view === 'dot';
+  if (accountTimelineActions) {
+    $('#vDot').setAttribute('aria-pressed',String(graph));
+    $('#fdot').hidden = $('#dotwrap').hidden = !graph || !hasPapers;
+    if (graph && hasPapers) renderDots();
+    else $('#dotsvg').replaceChildren();
+  }
   const dated = card && S.papers.some(p => p.date);
   const undated = card ? S.papers.filter(p => !p.date) : [];
   $('#vCard').setAttribute('aria-pressed', String(card));
@@ -166,8 +212,8 @@ function renderAccountWorkspace() {
   $('#scroller').hidden = $('#timelineMonth').hidden = $('#fcard').hidden = !dated;
   $('#overviewControls').hidden = S.zoom !== 'all';
   $$('#zoomSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.z === S.zoom)));
-  $('#paperList').hidden = card || !hasPapers;
-  if (!card && hasPapers) renderPaperList();
+  $('#paperList').hidden = S.view !== 'list' || !hasPapers;
+  if (S.view === 'list' && hasPapers) renderPaperList();
   else $('#paperList').replaceChildren();
   if (dated && !(typeof mtlOn === 'function' && mtlOn())) { renderCards(); renderMinimap(); }
   else { $('#canvas').replaceChildren(); $('#mm').replaceChildren(); L.pos = {}; }
@@ -184,12 +230,15 @@ function renderAccountWorkspace() {
 function showAccountPaper(id) {
   const p = paperBy(id);
   if (!p) return;
+  if (accountTimelineActions?.pickTarget(p)) return;
   const dialog = $('#accountPaperDetail');
-  dialog.innerHTML = '<h2>'+esc(p.title)+'</h2><p>'+esc(p.date || '날짜 미기록')+' · '+
+  dialog.innerHTML = '<h2>'+esc(accountTimelineActions ? accountTimelineActions.caption(p) : p.title)+'</h2><p>'+esc(p.date || '날짜 미기록')+' · '+
     esc(p.use.reading_state_text || '읽기 상태 미기록')+'</p><h3>저장 이유</h3><p>'+
     esc(p.memo || '미기록/확인 필요')+'</p>' + (p.artifacts.length ? '<h3>자료 판본</h3><ul>'+
     p.artifacts.map(a => '<li>'+esc([a.label_text, a.version_text, a.part_text].filter(Boolean).join(' · ') ||
       a.access_locator_text || '판본 이름 미기록')+'</li>').join('')+'</ul>' : '')+
+    (accountTimelineActions ? '<section class="workspace-paper-actions" id="workspacePaperActions"></section>' : '')+
     '<form method="dialog"><button class="btn" autofocus>닫기</button></form>';
-  dialog.showModal();
+  accountTimelineActions?.paperControls(dialog,p);
+  if (!dialog.open) dialog.showModal();
 }

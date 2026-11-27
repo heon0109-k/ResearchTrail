@@ -1366,3 +1366,9 @@
   .account-timeline .side nav.sgp { display: flex; flex-direction: row; gap: 8px; }
   .account-timeline #undatedPapers { display: none; } /* The mobile timeline groups these cards inline. */
 }
+
+.workspace-notices { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 4px 16px; }
+.workspace-notices:not(:has(span:not(:empty), button:not([hidden]))) { display: none; }
+#accountPaperDetail .workspace-paper-actions { margin-block: 12px; }
+#accountPaperDetail .workspace-paper-actions h3 { margin-top: 12px; }
+#accountPaperDetail .field { display: grid; gap: 6px; }

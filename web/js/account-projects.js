@@ -190,52 +190,8 @@ async function startAccountProjects(request, account) {
       pin.hidden = false;
       list.hidden = true;
       status.textContent = '';
-      let receipt, job;
-      discardFormPreparation = () => {
-        if (job && ['selected','blocked','preparing'].includes(job.phase)) saves.discard(job);
-      };
-      const dismiss = () => {
-        closeForm();
-        if (receipt) return refreshPapers(selected);
-      };
-      function fileChanged(file) {
-        if (!saves || !current() || job?.phase === 'uploading') return;
-        discardFormPreparation();
-        job = file ? saves.prepare(selected,version,file,'selected') : null;
-      }
-      renderAddPanel(pin, {documents, uploadPdf:!!pdfReader, close:dismiss, current, fileChanged, register:async (body,file) => {
-        if (!current() || job?.phase === 'uploading') return;
-        if (file && pdfReader) job = saves.prepare(selected,version,file);
-        else if (job?.phase === 'blocked') saves.discard(job);
-        try {
-          if (file && pdfReader) job.sha256 = await validateAccountPdf(file);
-          if (current() && !receipt) {
-            const result = await request('/tasks/'+selected+'/papers',body);
-            if (file && pdfReader && !result?.document_use_id) throw new Error('논문 등록을 확인하지 못했어요.');
-            receipt = result;
-          }
-        } catch (error) {
-          if (job) saves.block(job);
-          throw error;
-        }
-        if (!current()) {
-          if (job) saves.discard(job);
-          return;
-        }
-        const submitted = job;
-        const finish = () => {
-          if (current() && submitted === job) closeForm();
-          return refreshPapers(selected);
-        };
-        if (file && pdfReader) {
-          for (const id of ['aTitle','aSrc','aDate','aMemo','aState','aDocument']) {
-            const field=$('#'+id);
-            if (field) field.disabled=true;
-          }
-          const saved = await saves.upload(job,file,receipt.document_use_id,undefined,finish);
-          if (!saved) throw new Error('논문은 등록됐어요. PDF 업로드를 다시 시도해 주세요.');
-        } else await finish();
-      }});
+      discardFormPreparation = renderAccountRegistration(pin,{request, documents, selected, version, current,
+        saves, uploadPdf:!!pdfReader, closeForm, refresh:refreshPapers});
       $('#aTitle').focus();
     } catch (error) { if (current()) report(error); }
     finally { if (current()) add.disabled = false; }
@@ -243,10 +199,64 @@ async function startAccountProjects(request, account) {
   await load();
 }
 
+// Shared by both account entry points. Keep the registration receipt while retrying a PDF.
+function renderAccountRegistration(pin,{request, documents, selected, version, current, saves, uploadPdf, closeForm, refresh, registered}) {
+  let receipt, job;
+  const discard = () => {
+    if (job && ['selected','blocked','preparing'].includes(job.phase)) saves.discard(job);
+  };
+  const dismiss = () => {
+    closeForm();
+    if (receipt) return refresh(selected);
+  };
+  function fileChanged(file) {
+    if (!saves || !current() || job?.phase === 'uploading') return;
+    discard();
+    job = file ? saves.prepare(selected,version,file,'selected') : null;
+  }
+  renderAddPanel(pin, {documents, uploadPdf, close:dismiss, current, fileChanged, register:async (body,file) => {
+    if (!current() || job?.phase === 'uploading') return;
+    if (file && uploadPdf) job = saves.prepare(selected,version,file);
+    else if (job?.phase === 'blocked') saves.discard(job);
+    try {
+      if (file && uploadPdf) job.sha256 = await validateAccountPdf(file);
+      if (current() && !receipt) {
+        const result = await request('/tasks/'+selected+'/papers',body);
+        if (!result?.document_use_id) throw new Error('논문 등록을 확인하지 못했어요.');
+        receipt = result;
+        if (current() && file && uploadPdf) registered?.(selected);
+      }
+    } catch (error) {
+      if (job) { if (current()) saves.block(job); else saves.discard(job); }
+      throw error;
+    }
+    if (!current()) {
+      if (job) saves.discard(job);
+      return;
+    }
+    const submitted = job;
+    const finish = () => {
+      if (current() && submitted === job) closeForm();
+      return refresh(selected);
+    };
+    if (file && uploadPdf) {
+      for (const id of ['aTitle','aSrc','aDate','aMemo','aState','aDocument']) {
+        const field=$('#'+id);
+        if (field) field.disabled=true;
+      }
+      const saved = await saves.upload(job,file,receipt.document_use_id,undefined,finish);
+      if (!saved) throw new Error('논문은 등록됐어요. PDF 업로드를 다시 시도해 주세요.');
+    } else await finish();
+  }});
+  return discard;
+}
+
 function wireAccountPaperForm(account) {
   const form = $('#addForm'), error = $('#aErr'), doc = $('#aDocument'), title = $('#aTitle');
   let pending = false, lastBody, requestId;
-  $('#pClose').addEventListener('click',account.close);
+  $('#pClose').addEventListener('click',() => {
+    if (!pending || !form.closest?.('dialog')) return account.close();
+  });
   $('#aCancel').addEventListener('click',account.close);
   $('#aFile').addEventListener('change',() => {
     const file = $('#aFile').files[0];

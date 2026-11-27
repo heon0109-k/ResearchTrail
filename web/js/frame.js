@@ -53,7 +53,7 @@ function showMain(){
   $('#homeBtn').addEventListener('click',function(){showLanding()});
   $('#mm').addEventListener('keydown',function(e){var step=e.key==='ArrowLeft'?-7:e.key==='ArrowRight'?7:0;if(!step)return;e.preventDefault();var sc=$('#scroller');scrollToDay(S.zoom==='all'?(L.a+L.b)/2+(S.overviewPan||0)*(L.b-L.a)+step:L.a+(sc.scrollLeft+(sc.clientWidth-LABELW)/2)/L.px+step)});
   $('#zoomSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(b)setZoom(b.dataset.z)});
-  $('#relayout').addEventListener('click',function(){D.pos.forEach(function(o){o.x=(Math.random()-.5)*400;o.y=(Math.random()-.5)*400;o.vx=o.vy=0});D.fit=true;D.alpha=1;kick()});
+  $('#relayout').addEventListener('click',function(){relayoutDots()});
   wireScroller();wireMinimap();wireDots();wirePaperList();
   var restoredScroll=S.restoreViewOnce&&S.scroll&&S.scroll.z===S.zoom?S.scroll:null;
   var restoredRange=restoredScroll&&restoredScroll.range;
@@ -75,7 +75,7 @@ function showMain(){
   var _st=0;sc.addEventListener('scroll',function(){clearTimeout(_st);_st=setTimeout(function(){if(sc.isConnected&&S.view==='card'&&!S.reader){S.scroll=timelineScrollState(sc);save()}},250)});
 }
 function setView(v){S.reader=null;if(v==='list'){S.bubble=null;S.panel='none';S.sel=null}S.view=v;renderAll();if(v==='dot'){D.alpha=Math.max(D.alpha,.6);kick()}}
-function openAdd(draft){if(S.source==='account')return;S.reader=null;S.draft=Object.assign({},S.filterTag!=null?{tag:S.filterTag}:{},draft,{date:todayStr()});S.panel='add';S.sel=null;S.linking=null;var pin0=$('#pin');if(pin0)pin0.innerHTML='';renderAll();var t=$('#aTitle');if(t)t.focus()}
+function openAdd(draft){if(S.source==='account')return accountTimelineActions?.addPaper();S.reader=null;S.draft=Object.assign({},S.filterTag!=null?{tag:S.filterTag}:{},draft,{date:todayStr()});S.panel='add';S.sel=null;S.linking=null;var pin0=$('#pin');if(pin0)pin0.innerHTML='';renderAll();var t=$('#aTitle');if(t)t.focus()}
 
 function select(id){
   if(!id){closeDetailPanel();return}

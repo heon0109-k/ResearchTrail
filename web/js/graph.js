@@ -27,7 +27,10 @@ function renderDots(){
     if(!visible(p))return;var t=tagBy(p.tag);
     var dim=(nb&&!nb.has(p.id))||!matches(p);
     var cls='dn st-'+readingStateKey(p.state)+(S.sel===p.id?' on':'')+(dim?' dim':'')+(S.linking&&S.linking.from===p.id?' on':'')+(S.linking&&S.linking.to===p.id?' on':'');
-    nh+='<g class="'+cls+'" data-id="'+p.id+'" tabindex="0" role="button" aria-label="'+esc(p.title)+'"><circle class="ring"/><circle class="dot" fill="'+t.color+'"/><text class="dt">'+esc(p.title.length>26?p.title.slice(0,26)+'…':p.title)+'</text></g>';
+    var label=S.source==='account' && accountTimelineActions ? accountTimelineActions.caption(p) : p.title;
+    var display=(p.title.length>26?p.title.slice(0,26)+'…':p.title)+label.slice(p.title.length);
+    nh+='<g class="'+cls+'" data-id="'+esc(p.id)+'" tabindex="0" role="button" aria-label="'+esc(label)+'">'+
+      (label!==p.title?'<title>'+esc(label)+'</title>':'')+'<circle class="ring"/><circle class="dot" fill="'+t.color+'"/><text class="dt">'+esc(display)+'</text></g>';
   });
   svg.innerHTML=defs+'<g id="vp">'+eh+nh+'</g>';
   D.els={};D.edges={};D.deg=deg;
@@ -95,6 +98,10 @@ function kick(){
     tick();updateDots();if(D.fit)fitDots();
     if(D.alpha>0.02||D.drag){D.raf=requestAnimationFrame(loop)}
   })();
+}
+function relayoutDots(){
+  D.pos.forEach(function(o){o.x=(Math.random()-.5)*400;o.y=(Math.random()-.5)*400;o.vx=o.vy=0});
+  D.fit=true;D.alpha=1;kick();
 }
 function wireDots(){
   var svg=$('#dotsvg');
