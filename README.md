@@ -84,6 +84,27 @@ Google 로그인을 사용할 때는 Supabase Auth에서 Google 제공자를 설
 
 프로젝트 이름은 과업 목표(`ResearchTask.goal_text`)로 저장합니다. 논문 제목은 `Document`에, 저장 이유와 읽은 정도는 선택한 과업의 `DocumentUse`에 저장합니다. 링크와 업로드한 PDF는 각각 `DocumentArtifact`로 등록합니다. 같은 논문을 다른 과업에서 사용할 때는 등록 양식에서 기존 논문을 선택할 수 있습니다. 브라우저 전용 작업과 예시 데이터는 해당 작업공간에 보관합니다.
 
+#### Vercel Preview 설정
+
+저장소 루트의 `vercel.json`에 정적 빌드 설정이 있습니다. 기존 Vercel 프로젝트에서 아래 값을 확인하세요.
+
+| 대시보드 항목 | 값 |
+|---|---|
+| Framework Preset | Other |
+| Root Directory | 저장소 루트 (기본값 `./`) |
+| Install Command | `npm ci` |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Production Branch / Preview 브랜치 | `main` / `feature/account-persistence` |
+| Preview 환경변수 `SUPABASE_URL` | 테스트용 Supabase 프로젝트의 공개 HTTPS Project URL |
+| Preview 환경변수 `SUPABASE_PUBLISHABLE_KEY` | 같은 프로젝트의 Publishable key (`sb_publishable_`로 시작) |
+
+두 변수는 **Preview** 범위에 입력하세요. 브라우저 전용 데모를 시험할 때는 둘 다 비워 둡니다. 새 Vercel 프로젝트의 최초 배포는 Production으로 처리되므로 Preview만 준비하는 단계에서는 새 프로젝트의 **Deploy**를 누르기 전에 멈춥니다. [Vercel 빌드 설정](https://vercel.com/docs/builds/configure-a-build) · [배포 환경](https://vercel.com/docs/deployments/environments)
+
+`npm run build` 후 `node scripts/check-web-output.mjs`로 현재 `dist/`의 파일 목록, 원본과의 바이트 일치 여부, 공개 설정 두 항목을 검사합니다. `node --test tests/web_vercel_preview.test.cjs`는 합성 설정과 공개 목록 밖의 파일을 넣어 이 과정을 재현합니다. 웹 파일을 추가할 때는 `scripts/build-web.mjs`의 공개 파일 목록에도 등록하세요.
+
+계정 기능에는 마이그레이션과 `researchtrail` 함수가 준비된 테스트용 Supabase 프로젝트가 필요합니다. Preview 주소가 정해지면 Supabase Auth의 **URL Configuration → Redirect URLs**에 해당 HTTPS 루트(마지막 `/` 포함)를 등록하세요. Google 로그인 후 같은 루트로 돌아오는지, 새로고침하면 같은 계정이 열리는지 확인하세요. 테스트용 PDF에 메모와 하이라이트를 남긴 뒤 두 번째 브라우저에서 같은 판본과 읽던 쪽을 다시 여세요. Preview에 접근할 수 있는 브라우저에서 `/assets/papers/bert-naacl2019.pdf`는 200, `/package.json`과 `/supabase/config.toml`은 404인지 확인하세요.
+
 #### 계정 논문의 비공개 PDF
 
 **+ 논문 추가**에서 PDF(한 개당 최대 10 MiB)를 선택하거나, 이미 등록한 논문에서 **PDF 첨부**를 누릅니다. DOI만 등록해도 원문 링크와 읽기 기록을 사용할 수 있습니다. 같은 계정으로 다른 기기에서 프로젝트를 열고 파일명 옆 **열기**를 누르면 업로드했던 판본을 읽을 수 있습니다.
