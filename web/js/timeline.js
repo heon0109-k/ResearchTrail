@@ -319,7 +319,8 @@ function renderCards(){
 var BUB_PEND=false;
 /* 사이드바·위쪽 줄에서 다른 논문을 고르는 버튼은 말풍선을 닫지 않는다 (고른 논문의 말풍선으로 바로 바뀜) */
 document.addEventListener('mousedown',function(e){if(!(S&&S.bubble&&document.querySelector('.app')&&!e.target.closest('#rbub')&&!e.target.closest('#tour')&&!e.target.closest('[data-sr],[data-rb]')))return;
-  if(e.target.closest('button,a,input,select,textarea,label,summary')){BUB_PEND=true;return}
+  /* 카드도 버튼처럼: 누르는 순간 말풍선을 닫으며 다시 그리면 카드가 바뀌어 클릭이 사라진다. 클릭이 끝난 뒤에 닫는다 */
+  if(e.target.closest('button,a,input,select,textarea,label,summary,.card')){BUB_PEND=true;return}
   dismissBubble(true);renderAll()},true);
 document.addEventListener('click',function(){if(!BUB_PEND)return;BUB_PEND=false;if(S&&S.bubble&&document.querySelector('.app')){dismissBubble(true);renderAll()}});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S&&S.bubble&&document.querySelector('.app')&&!$('#tour')){dismissBubble(true);renderAll()}});
