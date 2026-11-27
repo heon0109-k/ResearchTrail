@@ -138,7 +138,7 @@ async function startAccountTimeline(get, account) {
     const version = selection, attempt = ++read;
     const path = '/tasks/' + encodeURIComponent(id);
     try {
-      const [{papers}, {links}] = await Promise.all([get(path + '/papers'),
+      const [{papers}, {links}] = await Promise.all([account.listWorkspacePapers ? account.listWorkspacePapers(id) : get(path + '/papers'),
         editable ? get(path + '/paper-links') : {links:[]}]);
       if (!current(version) || attempt !== read) return;
       S.links = links.map(l => ({id:l.link_id, from:l.from_document_use_id, to:l.to_document_use_id, reason:l.reason_text}));

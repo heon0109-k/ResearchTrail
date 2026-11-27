@@ -31,7 +31,8 @@ export async function handleResearchTrail(request, backend) {
     const owner = (await verified.json())?.id;
     if (!owner) return fail(401, 'RESOURCE_UNAVAILABLE');
 
-    const path = new URL(request.url).pathname.replace(/^\/(?:functions\/v1\/)?researchtrail(?=\/|$)/, '');
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/^\/(?:functions\/v1\/)?researchtrail(?=\/|$)/, '');
     // Every database operation uses the verified caller's bearer, including PDF reservations.
     async function callRpc(rpc,args) {
       const result = await backend.fetch(backend.url + '/rest/v1/rpc/' + rpc, {
@@ -98,7 +99,8 @@ export async function handleResearchTrail(request, backend) {
         if (!post) return fail(405, 'INVALID_INPUT');
         rpc = match[2] === 'records' ? 'rt_save_record' : 'rt_confirm_action';
       } else if (match[2] === 'paper-links') rpc = post ? 'rt_link_papers' : 'rt_paper_links';
-      else rpc = post ? 'rt_register_paper' : 'rt_papers';
+      else if (post) rpc = 'rt_register_paper';
+      else rpc = url.searchParams.get('view') === 'workspace' ? 'rt_workspace_papers' : 'rt_papers';
       args.task_id = match[1];
     } else return fail(404, 'RESOURCE_UNAVAILABLE');
     if (!post && request.method !== 'GET') return fail(405, 'INVALID_INPUT');

@@ -148,7 +148,8 @@
         }
         return data;
       };
-      const account = {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current, write:request};
+      const account = {accountId, projectUrl:window.RESEARCHTRAIL_CONFIG.SUPABASE_URL, current, write:request,
+        listWorkspacePapers:taskId => request('/tasks/'+encodeURIComponent(taskId)+'/papers?view=workspace')};
       try {
         await frame.contentWindow.startAccountTimeline(path => request(path), account);
       } catch {

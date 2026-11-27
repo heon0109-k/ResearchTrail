@@ -266,3 +266,17 @@ test('the standalone device login intent is consumed even if the root already ha
   assert.deepEqual(p.authCalls,['logout']);
   assert.equal(p.frame().src,'browser.html');
 });
+
+test('the signed-in project picker requests the workspace catalog on login and project change',async () => {
+  const app=page();
+  app.event('SIGNED_IN','owner','fixture-session');
+  const mounted=await mountPicker(app,['first','second']);
+  await mounted.change('second');
+  const reads=app.requests.filter(({url})=>new URL(url).pathname.endsWith('/papers'));
+  assert.deepEqual(reads.map(({url})=>new URL(url).pathname.split('/').at(-2)),['first','second']);
+  for (const {url,options} of reads) {
+    assert.equal(new URL(url).search,'?view=workspace');
+    assert.equal(options.method,'GET');
+    assert.equal(options.headers.Authorization,'Bearer fixture-session');
+  }
+});
