@@ -1,0 +1,286 @@
+/* 태그 목록 */
+.tag-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 1px;
+  min-width: 0;
+}
+
+.tag-menu .tag-heading {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 4px;
+}
+
+.tag-heading > span {
+  margin-right: auto;
+}
+
+.tag-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tag-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tag-row .tag-filter {
+  flex: 1;
+  min-width: 0;
+}
+
+.tag-filter span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-filter i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c,#2f9bee);
+}
+
+.tag-filter em {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.tag-filter:hover {
+  background: #eceef2;
+}
+
+.tag-filter[aria-pressed="true"],
+.tag-filter.is-selected {
+  background: #e1e5ed;
+  border-color: #d4dbe6;
+  font-weight: 600;
+}
+
+.tag-filter:focus-visible,
+.tag-heading button:focus-visible {
+  outline: 2px solid #2f9bee;
+  outline-offset: 2px;
+}
+
+/* 태그 이름과 색 편집 */
+.tag-heading button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #8b919b;
+  cursor: pointer;
+}
+
+.tag-heading button:hover,
+.tag-heading button[aria-pressed=true],
+.tag-heading button[aria-expanded=true] {
+  background: #e4e7ec;
+  color: #515b68;
+}
+
+.tag-rename {
+  cursor: default;
+}
+
+.tag-rename input {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-overflow: ellipsis;
+}
+
+.tag-rename input:focus {
+  outline: 0;
+  box-shadow: inset 0 -1px var(--faint);
+  text-overflow: clip;
+}
+
+.tag-color-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+
+.tag-color-button::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+}
+
+.tag-color-button:focus-visible,
+.tag-color-button[aria-expanded="true"] {
+  outline: 2px solid var(--faint);
+  outline-offset: 2px;
+}
+
+.tag-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 20px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #8b919b;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.tag-delete:hover,
+.tag-delete:focus-visible {
+  background: #e6e9ed;
+  color: #b33a3a;
+}
+
+/* 태그 추가 */
+.tag-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tag-name-input {
+  margin: 3px 4px 2px 8px;
+  height: 30px;
+  border: 1.5px solid #2f9bee;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 13px;
+  outline: none;
+  width: calc(100% - 12px);
+  background: #fff;
+}
+
+/* 태그 색상 팔레트. 버튼은 28px 터치 영역, 안쪽 점은 12px로 표시한다. */
+.tag-color-palette {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 2px 5px 4px;
+}
+
+.tag-color-palette button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tag-color-palette button::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.tag-color-palette button[aria-pressed="true"]::before {
+  outline: 1px solid var(--c);
+  outline-offset: 2px;
+}
+
+.tag-color-palette button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+/* 작은 화면에서는 메뉴를 열었을 때 태그 목록을 표시한다. */
+@media (max-width: 860px) {
+  .side .tag-menu {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .side.m-open .tag-menu {
+    display: flex;
+    flex-direction: column;
+    flex-basis: 100%;
+    order: 3;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 6px 6px;
+    border: 0;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+  }
+
+  .tag-menu .tag-heading {
+    padding: 6px 10px 8px;
+    color: var(--mute);
+    font-size: 13px;
+  }
+
+  .tag-heading > span::after {
+    content: "로 모아 보기";
+  }
+
+  .tag-filter em {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #f0f2f5;
+  }
+
+  .tag-filter[aria-pressed="true"] em,
+  .tag-filter.is-selected em {
+    background: #fff;
+  }
+
+  .tag-row + .tag-row,
+  .tag-row:first-of-type {
+    border-top: 1px solid #f0f1f4;
+  }
+}

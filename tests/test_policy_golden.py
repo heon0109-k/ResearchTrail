@@ -7,7 +7,7 @@ from jsonschema import Draft7Validator
 from researchtrail.policy import validate_output
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = yaml.safe_load((ROOT / 'docs/research/policy_golden_cases.yaml').read_text())
+DATA = yaml.safe_load((ROOT / 'tests/harness/golden_cases.yaml').read_text())
 CASES = DATA['cases']
 IDS = [case['id'] for case in CASES]
 # Fail collection rather than silently accepting removed or duplicate cases.

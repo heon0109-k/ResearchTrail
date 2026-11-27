@@ -4,12 +4,14 @@ var D={pos:new Map(),alpha:0,raf:0,tx:0,ty:0,k:1,inited:false,els:{},edges:{},dr
 function anchorOf(tagId){
   var n=Math.max(S.tags.length,1);var i=Math.max(0,S.tags.findIndex(function(t){return t.id===tagId}));
   if(n===1)return {x:0,y:0};
+  /* 좁은 화면(휴대폰)에서는 태그 묶음을 위아래로 쌓아 세로 공간을 쓴다. */
+  var svg=typeof document!=='undefined'&&$('#dotsvg');if(svg&&svg.clientWidth&&svg.clientWidth<520)return {x:0,y:(i-(n-1)/2)*260};
   var ang=-Math.PI/2+i*2*Math.PI/n;return {x:Math.cos(ang)*170,y:Math.sin(ang)*170};
 }
 function nodeR(id,deg){return 5+Math.min(6,(deg[id]||0)*1.1)}
 function renderDots(){
   var svg=$('#dotsvg');var w=svg.clientWidth||800,h=svg.clientHeight||500;
-  if(!D.inited){D.tx=w/2;D.ty=h/2;D.k=1;D.inited=true}
+  if(!D.inited){D.tx=w/2;D.ty=h/2;D.k=1;D.inited=true;D.fit=true}
   S.papers.forEach(function(p){if(!D.pos.has(p.id)){var an=anchorOf(p.tag);D.pos.set(p.id,{x:an.x+(Math.random()-.5)*90,y:an.y+(Math.random()-.5)*90,vx:0,vy:0,fx:null,fy:null})}});
   var deg={};S.links.forEach(function(l){var a=paperBy(l.from),b=paperBy(l.to);if(!a||!b||!visible(a)||!visible(b))return;deg[l.from]=(deg[l.from]||0)+1;deg[l.to]=(deg[l.to]||0)+1});
   var nb=null;
@@ -31,8 +33,23 @@ function renderDots(){
   D.els={};D.edges={};D.deg=deg;
   $$('.dn',svg).forEach(function(g){D.els[g.dataset.id]={g:g,dot:g.querySelector('.dot'),ring:g.querySelector('.ring'),txt:g.querySelector('.dt')}});
   $$('.de',svg).forEach(function(g){D.edges[g.dataset.id]={g:g,line:g.querySelector('.dl'),lab:g.querySelector('.dlab')}});
-  applyTransform();updateDots();
+  applyTransform();updateDots();if(D.fit)fitDots();
   D.alpha=Math.max(D.alpha,.35);kick();
+}
+/* 처음에는 모든 점과 제목이 화면 안에 들어오도록 자동으로 맞춘다. 사용자가 직접 옮기거나 확대하면 멈춘다. */
+function fitDots(){
+  var svg=$('#dotsvg');if(!svg)return;var w=svg.clientWidth,h=svg.clientHeight;if(!w||!h)return;
+  var ns=[],FS=11.5,pad=20,k0=D.k||1;
+  Object.keys(D.els).forEach(function(id){var o=D.pos.get(id),e=D.els[id];if(!o)return;var tw=150;try{tw=e.txt.getComputedTextLength()*k0}catch(_){}ns.push({o:o,r:nodeR(id,D.deg),tw:tw,e:e})});
+  if(!ns.length)return;
+  /* 제목 글자는 화면에서 항상 같은 크기(11.5px)로 보이게 하고, 점 사이 거리만 줄여서 맞춘다. */
+  function box(k){var x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;ns.forEach(function(n){x0=Math.min(x0,n.o.x*k-n.r-4);x1=Math.max(x1,n.o.x*k+n.r+5+n.tw);y0=Math.min(y0,n.o.y*k-n.r-10);y1=Math.max(y1,n.o.y*k+n.r+10)});return [x0,y0,x1,y1]}
+  function ok(k){var b=box(k);return b[2]-b[0]<=w-pad*2&&b[3]-b[1]<=h-pad*2}
+  var lo=.15,hi=1;if(ok(hi))lo=hi;else{for(var t=0;t<18;t++){var m=(lo+hi)/2;if(ok(m))lo=m;else hi=m}}
+  var k=lo,b=box(k);
+  ns.forEach(function(n){var r=n.r/k;n.e.txt.style.fontSize=(FS/k)+'px';n.e.txt.style.strokeWidth=(4/k)+'px';n.e.dot.setAttribute('r',r);n.e.ring.setAttribute('r',r+4/k);n.e.txt.setAttribute('x',n.o.x+r+5/k)});
+  svg.style.setProperty('--dk',k);
+  D.k=k;D.tx=w/2-(b[0]+b[2])/2;D.ty=h/2-(b[1]+b[3])/2;applyTransform();
 }
 function applyTransform(){var vp=$('#vp');if(vp)vp.setAttribute('transform','translate('+D.tx+','+D.ty+') scale('+D.k+')')}
 function updateDots(){
@@ -75,7 +92,7 @@ function kick(){
   if(D.raf||S.view!=='dot')return;
   (function loop(){
     D.raf=0;if(S.view!=='dot')return;
-    tick();updateDots();
+    tick();updateDots();if(D.fit)fitDots();
     if(D.alpha>0.02||D.drag){D.raf=requestAnimationFrame(loop)}
   })();
 }
@@ -93,7 +110,7 @@ function wireDots(){
     if(!d.moved&&Math.sqrt(dx*dx+dy*dy)>3)d.moved=true;
     if(!d.moved)return;
     if(d.id){var o=D.pos.get(d.id);var r=svg.getBoundingClientRect();o.fx=(e.clientX-r.left-D.tx)/D.k;o.fy=(e.clientY-r.top-D.ty)/D.k;D.alpha=Math.max(D.alpha,.3);kick()}
-    else{D.tx=d.tx+dx;D.ty=d.ty+dy;applyTransform()}
+    else{D.fit=false;D.tx=d.tx+dx;D.ty=d.ty+dy;applyTransform()}
   });
   svg.addEventListener('pointerup',function(){
     var d=D.drag;D.drag=null;svg.style.cursor='';if(!d)return;
@@ -105,9 +122,10 @@ function wireDots(){
     if(n&&(e.key==='Enter'||e.key===' ')){e.preventDefault();var id=n.dataset.id;onPick(id);var el=svg.querySelector('.dn[data-id="'+id+'"]');if(el)el.focus()}
   });
   svg.addEventListener('wheel',function(e){
-    e.preventDefault();
+    e.preventDefault();D.fit=false;
     var r=svg.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
     var k2=Math.min(3,Math.max(.3,D.k*Math.exp(-e.deltaY*0.0012)));
     D.tx=mx-(mx-D.tx)*(k2/D.k);D.ty=my-(my-D.ty)*(k2/D.k);D.k=k2;applyTransform();
   },{passive:false});
 }
+if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('resize',function(){if(S.view==='dot'&&D.fit&&!S.reader)fitDots()});

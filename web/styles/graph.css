@@ -1,0 +1,257 @@
+/* 논문 연결 그래프 */
+
+#dotwrap {
+  position: absolute;
+}
+
+#dotsvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.dn {
+  cursor: pointer;
+}
+
+.dn .ring {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  display: none;
+}
+
+.dn.on .ring {
+  display: block;
+}
+
+.dn .dt {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 4;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.dn.dim,
+.de.dim {
+  opacity: 0.2;
+}
+
+.dn:hover .dt,
+.dn.on .dt {
+  fill: var(--ink);
+}
+
+.dl {
+  fill: none;
+  stroke-width: 1.2;
+  marker-end: url(#dArrG);
+}
+
+.de.on .dl {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  marker-end: url(#dArrI);
+}
+
+.dlab {
+  display: none;
+  font-size: 12px;
+  font-weight: 500;
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 5;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.de.on .dlab {
+  display: block;
+}
+
+.legend {
+  font-size: 11.5px;
+}
+
+.dn .dot {
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.dlane {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+
+.dtick {
+  font-family: var(--sans);
+  font-size: 11px;
+  fill: var(--faint);
+}
+
+.dn:focus-visible {
+  outline: none;
+}
+
+.dn:focus-visible .ring {
+  display: block;
+}
+
+.dn .dt {
+  fill: var(--ink);
+}
+
+.dl {
+  stroke: #d5d5dc;
+}
+
+#dotwrap {
+  inset: 0;
+  background: var(--bg);
+  background-size: 24px 24px;
+  background-image: none;
+}
+
+.legend {
+  position: absolute;
+  left: 20px;
+  bottom: 12px;
+  line-height: 1.7;
+  pointer-events: none;
+  color: var(--faint);
+}
+
+#dotsvg .dn.st-done .dot {
+  fill: #b4bac4 !important;
+}
+
+#dotsvg .dn.st-reading .dot {
+  fill: #2f9bee !important;
+}
+
+#dotsvg .dn.st-skim .dot {
+  fill: #fff !important;
+  stroke: #9aa1ad;
+  stroke-width: 1.5px;
+  stroke-dasharray: 2 2;
+}
+
+.gh {
+  position: absolute;
+  right: 16px;
+  top: 14px;
+}
+
+.ghb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid #cfd4dc;
+  background: #fff;
+  color: #8a8f98;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ghb:hover,
+.ghb[aria-expanded="true"] {
+  border-color: #2f9bee;
+  color: #2f9bee;
+}
+
+.ghp {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 34px;
+  width: 168px;
+  background: #fff;
+  border: 1px solid #e3e6ea;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 24px rgba(20, 30, 50, 0.12);
+  font-size: 12px;
+  color: #33363b;
+}
+
+.gh:hover .ghp,
+.ghb[aria-expanded="true"] + .ghp {
+  display: block;
+}
+
+.ghp .r {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+}
+
+.ghp .sz {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #eceef1;
+  height: auto;
+  color: #777;
+}
+
+.ghp .c {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.ghp .rd {
+  background: #2f9bee;
+}
+
+.ghp .dn {
+  background: #b4bac4;
+}
+
+.ghp .sk {
+  background: #fff;
+  border: 1.5px dashed #9aa1ad;
+  width: 11px;
+  height: 11px;
+  box-sizing: border-box;
+}
+
+.ghp .big {
+  width: 15px;
+  height: 15px;
+  background: #b4bac4;
+  margin: -2px -2px -2px -2px;
+}
+
+.dl,
+.dn circle {
+  vector-effect: non-scaling-stroke;
+}
+@media (max-width: 600px) {
+  #fdot {
+    display: none !important;
+  }
+}
+
+.graph-footer-hint {
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.graph-footer-spacer {
+  flex: 1;
+}

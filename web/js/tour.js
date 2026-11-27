@@ -13,16 +13,21 @@ var TOUR_STEPS=[
   {core:1,st:'reader',sel:'#rdnotes',t:'읽기 화면 · 읽기 기록',d:'읽던 쪽은 자동으로 기록돼요. 하이라이트·캡처 아래에 메모를 남기거나 "+ 메모 추가"를 눌러요. 기록 한 건을 선택해 "다음 할 일 찾기 →"를 누르면 규칙 기반으로 다음 할 일을 제안하고, 확인해야 다음 할 일로 저장돼요.',need:'card'},
   {st:'reader',sel:'#rdBack',t:'타임라인으로 돌아가기',d:'돌아오면 읽던 쪽과 메모가 그대로 남아 있어요. 다음에 열면 이어 읽을 수 있어요.',need:'card'},
   {st:'timeline',sel:'nav.sgp',t:'세 가지 보기',d:'타임라인은 읽은 순서, 연결 그래프는 논문 사이의 관계, 내용 찾기는 표시해 둔 수식·그림·메모의 위치를 다시 찾는 곳이에요.'},
-  {st:'timeline',sel:'.sgt',t:'태그',d:'태그로 논문을 묶어요. + 를 누르면 새 태그를 만들 수 있고, 태그를 누르면 해당 논문만 보이고, 다시 누르거나 "전체"를 누르면 돌아와요. "태그 구분 없이 보기"를 켜면 줄을 합쳐 볼 수 있어요.'},
+  {st:'timeline',sel:'.tag-menu',t:'태그',d:'태그로 논문을 묶어요. + 를 누르면 새 태그를 만들 수 있고, 태그를 누르면 해당 논문만 보이고, 다시 누르거나 "전체"를 누르면 돌아와요. "태그 구분 없이 보기"를 켜면 줄을 합쳐 볼 수 있어요.'},
   {st:'timeline',sel:'#fcard',t:'기간 조절',d:'1주·1달·전체로 보는 기간을 바꾸고, 아래 막대로 다른 시기로 이동해요.'},
-  {core:1,st:'timeline',sel:null,t:'이제 직접 해 보세요',d:'연습용 카드는 패널 맨 아래 "이 논문 삭제"로 지울 수 있어요. 첫 논문을 추가하며 시작해 보세요. 오른쪽 위 "사용법"을 누르면 태그·보기 방식까지 포함한 전체 안내를 다시 볼 수 있어요.'}
+  {core:1,st:'timeline',sel:null,t:'이제 직접 해 보세요',d:'연습용 카드는 패널 맨 아래 "삭제"로 지울 수 있어요. 첫 논문을 추가하며 시작해 보세요. 오른쪽 위 "사용법"을 누르면 태그·보기 방식까지 포함한 전체 안내를 다시 볼 수 있어요.'}
 ];
 function tutPaper(){return S.papers.filter(function(p){return p.tut})[0]||S.papers.slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date))})[0]||null}
 /* 처음 시작할 때 오늘 날짜로 연습용 빈 카드를 하나 만든다 (안내용, 지워도 됨) */
 function addTutCard(){
   if(S.papers.length)return null;
   var p={id:nid('p'),tag:'',date:todayStr(),title:'연습용 카드 · 눌러서 열어 보세요',memo:'사용법을 익히는 빈 카드예요. 다 써 봤으면 지워도 돼요.',link:'',state:'skim',tut:true};
-  S.papers.push(p);renderAll();if(typeof save==='function')save();return p;
+  S.papers.push(p);
+  renderAll();
+  S.focusTodayOnce=true;
+  focusStart();
+  if(typeof save==='function')save();
+  return p;
 }
 function tourEnsure(st){
   var p=tutPaper();
@@ -80,8 +85,9 @@ function tourDraw2(){
     '<div class="tt-b"><button type="button" class="btn ghost sm" id="tSkip">건너뛰기</button><span class="sp"></span>'+(TOUR.i>0?'<button type="button" class="btn sm" id="tPrev">이전</button>':'')+'<button type="button" class="btn pri sm" id="tNext">'+(last?'시작하기':'다음')+'</button></div>';
   $('#tSkip').onclick=function(){tourEnd()};$('#tNext').onclick=function(){tourGo(1)};var pv=$('#tPrev');if(pv)pv.onclick=function(){tourGo(-1)};
   var W=window.innerWidth,H=window.innerHeight,tw=tip.offsetWidth||300,th=tip.offsetHeight||150,x,y;
+  hole.classList.toggle('is-centered',!el);
   if(!el){
-    hole.style.cssText='left:50%;top:50%;width:0;height:0;border-color:transparent';
+    hole.removeAttribute('style');
     tip.style.left=Math.max(12,(W-tw)/2)+'px';tip.style.top=Math.max(12,(H-th)/2)+'px';
   }else{
     var r=el.getBoundingClientRect(),pd=6,L=r.left-pd,T=r.top-pd,Wd=r.width+pd*2,Ht=r.height+pd*2;

@@ -14,7 +14,7 @@ function visit({ seen = false, saved = false, demo = false } = {}) {
     startEmpty: () => calls.push(['timeline']), showLanding: () => calls.push(['landing']),
     loadSample: () => calls.push(['demo']), renderAll() {},
   };
-  vm.runInNewContext(source, context);
+  vm.runInNewContext(source + '\nstartResearchTrail();', context);
   return calls;
 }
 assert.equal(visit().filter(c => c[0] === 'landing').length, 1);
