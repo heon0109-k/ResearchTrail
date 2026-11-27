@@ -123,6 +123,27 @@ PDF에서 구절을 선택하고 **선택한 구절에 형광펜**을 누릅니�
 
 로컬 계정 두 개로 읽기 위치와 메모 연결까지 검사하려면 마이그레이션 적용 후 `node tests/local_account_pdfs.mjs --reader`를 실행합니다.
 
+#### 계정 PDF 질문 API
+
+통합 리더용 요청은 `POST /functions/v1/researchtrail/tasks/{task_id}/artifacts/{artifact_id}/ask`에 로그인한 사용자의 Bearer 토큰과 프로젝트 게시용 키를 보냅니다. URL의 판본에 완료된 색인이 있어야 합니다. 아래 예시는 그 판본의 두 표를 비교합니다.
+
+```json
+{"question":"표 1과 표 2의 결과를 비교해 주세요.","consent":true,"scope":"open_pdf","answer_depth":"auto","current_page":3}
+```
+
+`scope: "open_pdf"`는 URL의 판본 한 건만 검색합니다. 응답의 `searched`에는 해당 판본 한 건이 담기고 `excluded`는 빈 배열입니다. 이 경로에서 논문 제목은 `null`이므로 리더는 열어 둔 논문의 제목을 표시할 수 있습니다. 기존 호출은 `scope`를 생략하거나 `"linked_papers"`를 지정하면 열린 판본과 연결 논문 최대 8편을 검색합니다.
+
+| 답변 깊이 | `answer_depth` | 답변 모델에 보내는 `reasoning.effort` |
+|---|---|---|
+| 자동 | `auto` | 한국어·영어 질문마다 수치·약어 등 단순 조회는 `none`, 일반 설명은 `low`, 비교·종합은 `medium` |
+| 빠르게 | `none` | `none` |
+| 보통 | `low` | `low` |
+| 꼼꼼하게 | `medium` | `medium` |
+
+깊이를 생략하면 이전 호출과 같이 `none`입니다. 지원하지 않는 범위나 깊이는 외부 요청 전에 `400 INVALID_INPUT`으로 처리합니다. 질문마다 `consent: true`가 필요합니다. 선택적으로 `current_page`, `selection: {"text":"…","page":3}`, `history`를 보낼 수 있습니다. 리더에서 대화를 전달할 때는 현재 탭의 같은 계정·과업·판본에 해당하는 기록만 보내세요. `open_pdf`에서는 선택한 문장이 검색 구절에서 확인될 때 모델 입력에 인용하며, 답변의 근거도 실제 전송한 구절과 쪽 번호로 검증합니다.
+
+Supabase의 **Edge Function Secrets**에는 `OPENAI_API_KEY`를 설정합니다. `OPENAI_MODEL`의 기본값은 `gpt-6-luna`이고, 새 색인용 `RAG_EMBEDDING_MODEL`의 기본값은 `text-embedding-3-small`입니다. 기존 색인에 대한 질문은 그 색인에 기록된 모델과 1,536차원을 사용합니다. 답변 모델이나 깊이만 바꾸면 기존 색인을 그대로 쓸 수 있습니다. Vercel 정적 빌드의 공개 설정은 `SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY` 두 항목입니다.
+
 #### 계정 기록 저장 API
 
 `researchtrail` 함수의 `POST /tasks/{task_id}/records`는 [SPEC §5.2](docs/SPEC.md#52-기록-저장과-선택적-맥락)의 본문을 받습니다. 최소 본문은 `{"record":{"content_text":"  합성 메모  "}}`입니다. 호출자는 저장 동작마다 새 UUID를 `Idempotency-Key` 헤더에 넣습니다. 기존 계정 API처럼 본문의 `request_id`로 보내도 됩니다. 같은 저장을 재전송할 때는 본문과 UUID를 유지합니다. 같은 문장을 새 메모로 저장할 때는 새 UUID를 사용합니다.
