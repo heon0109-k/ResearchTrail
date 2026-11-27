@@ -8,4 +8,5 @@ const url = Deno.env.get("SUPABASE_URL");
 // Server-only settings for the question feature. The key never reaches the browser.
 const openaiKey = Deno.env.get("OPENAI_API_KEY");
 const embeddingModel = Deno.env.get("RAG_EMBEDDING_MODEL");
-Deno.serve(request => handleResearchTrail(request, { url, key, storageKey, openaiKey, embeddingModel, fetch }));
+const answerModel = Deno.env.get("OPENAI_MODEL");
+Deno.serve(request => handleResearchTrail(request, { url, key, storageKey, openaiKey, embeddingModel, answerModel, fetch }));
