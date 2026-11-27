@@ -71,6 +71,8 @@ create policy fixture_permissive on storage.objects for all to public using(true
     print("PASS (draft cases): paper links within one task, retries, link rules, ordering and account isolation")
     execute((ROOT / "tests/sql/account_rag_index.sql").read_text())
     print("PASS (draft cases): passage index start, repeated batches, completion count, replacement and account isolation")
+    execute((ROOT / "tests/sql/account_rag_search.sql").read_text())
+    print("PASS (draft cases): question scope, closest passages in a fixed order, unfinished indexes left out, task and account isolation")
 
     if options.concurrent:
         pkglib = subprocess.check_output(["pg_config", "--pkglibdir"], text=True).strip()

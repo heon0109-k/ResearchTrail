@@ -1,5 +1,6 @@
 import { paperPdf } from './paper-pdf.mjs';
 import { ragIndex } from '../_rag/index-route.mjs';
+import { ragAsk } from '../_rag/ask-route.mjs';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -64,6 +65,10 @@ export async function handleResearchTrail(request, backend) {
     if (ragRoute && uuid.test(ragRoute[1]) && (!ragRoute[2] || uuid.test(ragRoute[2]))) {
       return await ragIndex(request,{task:ragRoute[1].toLowerCase(),artifact:ragRoute[2]?.toLowerCase(),step:ragRoute[3]},
         {backend,rpc:callRpc,cors,fail});
+    }
+    const askRoute = /^\/tasks\/([^/]+)\/artifacts\/([^/]+)\/ask$/.exec(path);
+    if (askRoute && uuid.test(askRoute[1]) && uuid.test(askRoute[2])) {
+      return await ragAsk(request,{task:askRoute[1].toLowerCase(),artifact:askRoute[2].toLowerCase()},{backend,rpc:callRpc,cors,fail});
     }
     const match = /^\/tasks\/([^/]+)\/(papers|paper-links|records|resume|next-actions)$/.exec(path);
     const post = request.method === 'POST';
