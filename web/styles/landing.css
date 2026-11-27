@@ -955,3 +955,18 @@
     justify-content: center;
   }
 }
+
+/* 첫 화면 '예시 먼저 보기 →': 로그인 없이 예시 타임라인으로 바로 (softcon 등 처음 보는 사람용) */
+.landing-actions .landing-link[data-lp="sample"] {
+  height: 48px;
+  padding: 0 6px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .landing-actions .landing-link[data-lp="sample"] {
+    width: 100%;
+    justify-content: center;
+  }
+}

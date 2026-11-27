@@ -445,3 +445,11 @@
     font-size: 14px;
   }
 }
+
+/* 기록 칸 아래쪽 칸들 사이에 옅은 구분선: 코드·데이터셋 / 이어진 논문 / 초록 */
+.rdnotes .rlinks,
+.rdnotes > details.reader-extra:not(.sample-source),
+.rdnotes > details.rabs {
+  padding-top: 16px;
+  border-top: 1px solid #ececf0;
+}

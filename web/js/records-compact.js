@@ -136,7 +136,7 @@ function rcComposeSync(box,p){
   var ta=box.querySelector('textarea'),btn=box.querySelector('.rq-save'),pg=box.querySelector('.rq-page');
   var v=String(ta.value||'').trim();btn.disabled=!v;
   var n=rcComposePage(p);pg.textContent=n?'p.'+n:'쪽 없음';
-  ta.style.height='auto';ta.style.height=Math.max(44,ta.scrollHeight)+'px';
+  ta.style.height='auto';ta.style.height=Math.max(24,ta.scrollHeight)+'px';
 }
 /* PDF 쪽을 넘기면 입력칸의 쪽 번호도 바로 바꾼다 */
 function rcComposePageSync(){
