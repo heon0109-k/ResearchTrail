@@ -2024,3 +2024,38 @@
 .pv-suggest-more:hover {
   text-decoration: underline;
 }
+
+/* 코드·데이터셋 줄: 칩과 '+ 추가'를 같은 높이·같은 줄 가운데로 */
+.pv-chips {
+  align-items: center;
+}
+
+.pv-chips > .pv-chip,
+.pv-chips > .pv-add {
+  box-sizing: border-box;
+  height: 30px;
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 1;
+}
+
+.pv-chips > .pv-add {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+}
+
+/* '+ 추가' → 점선 동그라미 '+' 하나 */
+.pv-chips > .pv-add.pv-plus,
+.pv-more.pv-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+}

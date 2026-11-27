@@ -29,6 +29,16 @@ function showMain(){
   $('#vList').addEventListener('click',function(){setView('list')});
   $('#vDot').addEventListener('click',function(){setView('dot')});
   $('#vFind').addEventListener('click',openFind);
+  /* 내용 찾기는 오른쪽 위 검색칸에서 연다 (⌘K / Ctrl+K). 사이드바의 '내용 찾기'는 숨겨 두고 휴대폰 탭바가 계속 쓴다. */
+  var tf=$('#topFind');
+  if(tf){
+    tf.addEventListener('click',openFind);
+    if(!window.__rtFindKey){window.__rtFindKey=true;
+      document.addEventListener('keydown',function(e){
+        if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&(e.key==='k'||e.key==='K')&&$('#topFind')&&!S.reader&&!document.documentElement.classList.contains('demo')){e.preventDefault();openFind()}
+      });
+    }
+  }
   $('#tourBtn').addEventListener('click',function(){tourStart()});
   /* 제목을 누르면 프로젝트 메뉴(고르기·새로 만들기·이름 바꾸기·삭제). 예시를 볼 때는 열리지 않는다. */
   var tn=$('#tName'),tch=$('#tChev');
@@ -73,6 +83,8 @@ function select(id){
     S.detailScroll=timelineScrollState($('#scroller'));
     if(S.zoom==='all')S.detailScroll.fitViewport=L.fitViewport;
   }
+  /* 읽는 중인 논문 카드를 누르면 캐릭터도 그 카드로 따라간다 */
+  if(typeof rbarPapers==='function'&&rbarPapers().some(function(p){return p.id===id}))RBSEL=id;
   S.reader=null;S.sel=id;S.panel='detail';S.linking=null;
   renderAll();ensureVisible(id);
 }

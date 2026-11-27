@@ -241,7 +241,7 @@ function renderPanel(){
     if(!to){linkArea='<div class="linkbox"><div class="pair"><span>FROM</span> '+esc(p.title.slice(0,40))+'</div><div>이 논문에서 이동한 논문을 '+(S.view==='card'?'타임라인':'그래프')+'에서 클릭하세요. 태그가 달라도 돼요.</div>'+(S.linking.err?'<div class="lkerr" role="alert">⚠ '+esc(S.linking.err)+'</div>':'')+'<div><button type="button" class="btn sm" id="lkCancel">취소</button></div></div>'}
     else{linkArea='<div class="linkbox"><div class="pair">'+esc(p.title.slice(0,34))+(p.title.length>34?'…':'')+' <span>→</span> '+esc(to.title.slice(0,34))+(to.title.length>34?'…':'')+'</div><label class="field"><span>왜 이 논문으로 넘어갔나요?</span><input type="text" id="lkWhy" placeholder="예: 의료 도메인 적용 사례를 찾으려고" autocomplete="off"></label><div class="paper-form-actions"><button type="button" class="btn pri sm" id="lkOk">연결 저장</button><button type="button" class="btn sm" id="lkCancel">취소</button></div></div>'}
   }else{
-    linkArea='<button type="button" class="pv-more" id="lkStart" title="이 논문 다음에 읽은 논문 연결">+ 추가</button>';
+    linkArea='<button type="button" class="pv-more pv-plus" id="lkStart" title="이 논문 다음에 읽은 논문 연결" aria-label="이동 경로 추가">+</button>';
   }
   var editing=PEDIT===p.id,dateTxt=esc(String(p.date||'').replace(/-/g,'.'));
   var routes=(outs.length||ins.length)?outs.map(function(l){return [l,'out']}).concat(ins.map(function(l){return [l,'in']})):[];
@@ -264,7 +264,7 @@ function renderPanel(){
         var IC={code:'<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 6l-4 4 4 4M13 6l4 4-4 4"/></svg>',data:'<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="10" cy="5" rx="6" ry="2.5"/><path d="M4 5v10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V5M4 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5"/></svg>'};
         var h='';
         /* 저장한 칩 줄 끝에 '+ 추가', 그 아래 한 줄로 'PDF에서 찾음: 이름 +' */
-        h+='<button type="button" class="pv-add" data-res-manual>+ 추가</button></div>';
+        h+='<button type="button" class="pv-add pv-plus" data-res-manual title="코드·데이터셋 링크 추가" aria-label="코드·데이터셋 추가">+</button></div>';
         /* PDF에서 찾은 링크는 '제안' 상자로: 💡 문구 + 링크 미리보기 + [추가] [✕] */
         var st=paperResourceScan(p),hidden=st.dismissed||[];
         cands=cands.filter(function(x){return hidden.indexOf(x[0].url)<0});

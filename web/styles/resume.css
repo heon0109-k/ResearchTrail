@@ -532,3 +532,161 @@
     display: none;
   }
 }
+
+/* 이어 읽기 줄: 글씨를 검게, '읽는 중 n편 ⌄' 고르기 (목록은 타임라인 위에 떠 있음) */
+.rbar {
+  position: relative;
+  z-index: 15;
+}
+
+.rb-n {
+  color: var(--ink);
+}
+
+.rb-n em {
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.rb-more {
+  position: relative;
+  flex: none;
+  margin-left: auto;
+}
+
+.rb-more + #rbGo2 {
+  margin-left: 0;
+}
+
+.rb-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid #c9d2dc;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rb-pick:hover,
+.rb-pick[aria-expanded="true"] {
+  border-color: #aab5c2;
+}
+
+.rb-pick i {
+  width: 5px;
+  height: 5px;
+  border: solid var(--mute);
+  border-width: 0 1.2px 1.2px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+
+.rb-pick[aria-expanded="true"] i {
+  transform: translateY(1px) rotate(225deg);
+}
+
+.rb-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 320px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(20, 20, 30, 0.12);
+}
+
+.rb-menu[hidden] {
+  display: none;
+}
+
+.rb-menu [role="option"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rb-menu [role="option"] b {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.rb-menu [role="option"] small {
+  flex: none;
+  color: var(--mute);
+  font-size: 11.5px;
+}
+
+.rb-menu [role="option"]:hover,
+.rb-menu [role="option"]:focus-visible {
+  background: var(--soft);
+  outline: 0;
+}
+
+.rb-menu [aria-selected="true"]::after {
+  content: "✓";
+  flex: none;
+  color: var(--bl);
+}
+
+@media (max-width: 600px) {
+  .rb-more {
+    grid-area: c;
+    justify-self: end;
+  }
+
+  .rbar .rb-c {
+    display: none;
+  }
+
+  .rb-more {
+    position: static;
+  }
+
+  .rb-menu {
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+
+/* 왼쪽 '이어 읽기' 꼬리표는 오른쪽 버튼과 겹쳐서 뺌. 휴대폰 두 줄 배치도 그에 맞춤 */
+@media (max-width: 600px) {
+  .rbar {
+    grid-template-areas: "c c go" "t t go";
+  }
+
+  .rb-more {
+    justify-self: start;
+    margin-left: 0;
+  }
+
+  .rbar .rb-k {
+    display: none;
+  }
+}

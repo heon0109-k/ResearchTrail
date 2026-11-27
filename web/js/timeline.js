@@ -1,4 +1,5 @@
 'use strict';
+var LASTWHO=null;
 /* ---------- card view ---------- */
 function rng(){
   var ds=S.papers.filter(visible).map(function(p){return dnum(p.date)});if(!ds.length)ds=[dnum(todayStr())];
@@ -239,7 +240,9 @@ function renderCards(){
     lks+='<g class="lk'+(on?' on':'')+'" data-id="'+l.id+'" data-mx="'+rt.mx+'" data-my="'+rt.my+'" data-t="'+esc(txt)+'"><path class="h" d="'+rt.d+'"/><path class="v" d="'+rt.d+'"/><rect class="mid" x="'+(rt.mx-3)+'" y="'+(rt.my-3)+'" width="6" height="6"/></g>';
   });
   // cards
-  var resumePaper=curPaper();
+  /* 사이드바나 위쪽 줄에서 고른 논문(RBSEL)이 있으면 캐릭터·굵은 테두리·'이어 읽을 논문' 표시가 그 논문을 따라간다 */
+  var picked=typeof RBSEL!=='undefined'&&RBSEL?paperBy(RBSEL):null;
+  var resumePaper=picked&&picked.state!=='done'&&!picked.tut&&(typeof visible!=='function'||visible(picked))?picked:curPaper();
   var rp=resumePaper&&resumePaper.state==='reading'?resumePaper:null;
   var lp=rp?null:resumePaper;
   S.papers.forEach(function(p){
@@ -258,7 +261,9 @@ function renderCards(){
       '<div class="cfoot"><span class="ctitle">'+sg(p.state)+' '+esc(p.title)+'</span><span class="cdt">'+p.date.slice(5)+'</span></div></div>';
   });
   var who=resumePaper;
-  if(who&&L.pos[who.id]){var wp=L.pos[who.id];cardsHtml+='<div class="who" data-paper-id="'+esc(who.id)+'" style="left:'+(wp.x+wp.w-34)+'px;top:'+(wp.y-(curChar().rows.length*2-1))+'px">'+spr(curChar().rows,2,'bob')+'</div>'}
+  /* 캐릭터가 다른 카드로 옮겨 갔을 때만 깡충 뛰어 나타난다 */
+  var whoMoved=who&&typeof LASTWHO!=='undefined'&&LASTWHO&&LASTWHO!==who.id;if(who)LASTWHO=who.id;
+  if(who&&L.pos[who.id]){var wp=L.pos[who.id];cardsHtml+='<div class="who" data-paper-id="'+esc(who.id)+'"'+(whoMoved?' data-hop="1"':'')+' style="left:'+(wp.x+wp.w-34)+'px;top:'+(wp.y-(curChar().rows.length*2-1))+'px">'+spr(curChar().rows,2,'bob')+'</div>'}
   if(S.bubble&&(!paperBy(S.bubble)||paperBy(S.bubble).state==='done'))S.bubble=resumePaper?resumePaper.id:null;
   if(S.bubble){
     var bp=paperBy(S.bubble),bs=bp&&L.pos[bp.id];
@@ -269,6 +274,7 @@ function renderCards(){
       var legacyNext=resumePaper&&bp.id===resumePaper.id&&S.next&&S.next!==bp.todo?S.next:'';
       var BW=310,BH=172+(readingMemo?52+Math.ceil(readingMemo.length/22)*19:0)+(legacyNext?52+Math.ceil(legacyNext.length/22)*19:0)+(todoTxt?52+Math.ceil(todoTxt.length/22)*19:0)+(whyTxt?34+Math.ceil(whyTxt.length/24)*19:0),bx=Math.max(LABELW+4,Math.min(W-BW-12,bs.x-20)),below=true,by=bs.y+bs.h+16;
       if(by+BH>H&&bs.y-BH-16>AXISH){below=false;by=bs.y-BH-16-((curChar().rows.length*2)-1)}
+      if(below)L.bubbleBottom=by+BH;
       var tail=Math.max(24,Math.min(BW-40,bs.x+bs.w/2-bx-7));
       var gap=S.bubbleGap,msg=gap>=864e5?(Math.floor(gap/864e5)+'일 만이에요'):(gap>=36e5?(Math.floor(gap/36e5)+'시간 만이에요'):'');
       var head=bp.state==='skim'?'다음에 읽을 논문':'다시 오셨네요'+(msg?' · '+msg:'');
@@ -286,6 +292,9 @@ function renderCards(){
   }
   var canvas=$('#canvas'),scroller=$('#scroller'),overview=S.zoom==='all';
   var fullHeight=Math.max(H,fitViewport.height);
+  /* 말풍선이 카드 아래로 길게 뜨면 타임라인 아래에 여백을 더해, 카드와 말풍선을 화면 가운데까지 올릴 수 있게 한다 */
+  if(!overview&&S.bubble&&L.bubbleBottom)fullHeight=Math.max(fullHeight,L.bubbleBottom+160);
+  L.bubbleBottom=0;
   var magnify=overview?Math.max(1,Math.min(4,S.overviewZoom||1)):1;
   L.fitScale=overview?Math.min(1,fitViewport.width/W,fitViewport.height/fullHeight):1;
   L.scale=overview?L.fitScale*magnify:1;
@@ -302,13 +311,14 @@ function renderCards(){
     '<svg id="lbls" width="'+W+'" height="'+H+'">'+lbls+'<g id="hov"></g></svg>';
   canvas.innerHTML=overview?'<div class="overview-sheet" style="left:'+L.panPadding+'px;width:'+W+'px;height:'+fullHeight+'px;--overview-gutter:'+gutter+'px;--overview-right:'+rightFill+'px;--overview-bottom:'+(fullHeight-y)+'px;transform:scale('+L.scale+')">'+content+'</div>':content;
   if(overview){scroller.scrollLeft=magnify===1&&!lockedViewport?L.panPadding+Math.max(-L.panPadding/scroller.clientWidth,Math.min(L.panPadding/scroller.clientWidth,S.overviewPan||0))*scroller.clientWidth:oldLeft;scroller.scrollTop=oldTop;var minus=$('#overviewMinus'),plus=$('#overviewPlus');if(minus)minus.disabled=magnify<=1;if(plus)plus.disabled=magnify>=4;var bubble=$('#rbub');if(bubble){bubble.style.maxHeight=Math.max(100,H-AXISH-24)+'px';bubble.style.overflowY='auto';bubble.style.top=Math.max(AXISH+12,Math.min(parseFloat(bubble.style.top),H-bubble.offsetHeight-12))+'px'}}
-  var wh=$('.who',canvas);if(wh){var showB=function(){if(S.bubble)return;var cp=curPaper();if(!cp)return;S.bubble=cp.id;S.bubbleGap=S.prevSeen?Date.now()-S.prevSeen:0;renderAll()};wh.addEventListener('mouseenter',showB);wh.addEventListener('click',showB);}
+  var wh=$('.who',canvas);if(wh){var showB=function(){if(S.bubble)return;var cp=paperBy(wh.dataset.paperId)||curPaper();if(!cp)return;S.bubble=cp.id;S.bubbleGap=S.prevSeen?Date.now()-S.prevSeen:0;renderAll()};wh.addEventListener('mouseenter',showB);wh.addEventListener('click',showB);}
   var bg=$('#rbGo');if(bg){bg.addEventListener('click',function(){var id=S.bubble;dismissBubble(true);openReader(id)});$('#rbX').addEventListener('click',function(){dismissBubble(true);renderAll()})}
 }
 /* 말풍선 밖을 누르면 닫는다. 단, 버튼·입력칸을 누른 경우에는 누르는 도중에 화면을 다시 그리면 그 클릭이 사라지므로
    버튼이 먼저 동작하게 두고, 클릭이 끝난 뒤에 닫는다 */
 var BUB_PEND=false;
-document.addEventListener('mousedown',function(e){if(!(S&&S.bubble&&document.querySelector('.app')&&!e.target.closest('#rbub')&&!e.target.closest('#tour')))return;
+/* 사이드바·위쪽 줄에서 다른 논문을 고르는 버튼은 말풍선을 닫지 않는다 (고른 논문의 말풍선으로 바로 바뀜) */
+document.addEventListener('mousedown',function(e){if(!(S&&S.bubble&&document.querySelector('.app')&&!e.target.closest('#rbub')&&!e.target.closest('#tour')&&!e.target.closest('[data-sr],[data-rb]')))return;
   if(e.target.closest('button,a,input,select,textarea,label,summary')){BUB_PEND=true;return}
   dismissBubble(true);renderAll()},true);
 document.addEventListener('click',function(){if(!BUB_PEND)return;BUB_PEND=false;if(S&&S.bubble&&document.querySelector('.app')){dismissBubble(true);renderAll()}});

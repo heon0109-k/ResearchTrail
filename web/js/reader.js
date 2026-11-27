@@ -46,7 +46,7 @@ function applyNotes(){var r=$('#reader');if(!r)return;r.classList.toggle('notes-
   $$('[data-tog]',r).forEach(function(b){b.setAttribute('aria-pressed',NOTES_OPEN);b.setAttribute('aria-expanded',NOTES_OPEN);
     b.innerHTML='<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg>';
     b.title=NOTES_OPEN?'메모 패널 접기':'메모 패널 펴기'})}
-function openReader(id){S.bubble=null;
+function openReader(id){S.bubble=null;if(typeof RBSEL!=='undefined')RBSEL=null;
   var p=paperBy(id);if(!p)return;
   if(p.state==='skim')p.state='reading';
   p.lastReadOrder=S.papers.reduce(function(order,item){return Number.isSafeInteger(item.lastReadOrder)&&item.lastReadOrder>order?item.lastReadOrder:order},0)+1;
