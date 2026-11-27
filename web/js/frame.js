@@ -55,6 +55,7 @@ function showMain(){
   $('#zoomSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(b)setZoom(b.dataset.z)});
   $('#relayout').addEventListener('click',function(){relayoutDots()});
   wireScroller();wireMinimap();wireDots();wirePaperList();
+  mountMyPage();
   var restoredScroll=S.restoreViewOnce&&S.scroll&&S.scroll.z===S.zoom?S.scroll:null;
   var restoredRange=restoredScroll&&restoredScroll.range;
   var hasRange=Array.isArray(restoredRange)&&restoredRange.length===2&&restoredRange.every(Number.isSafeInteger)&&restoredRange[0]<restoredRange[1];
@@ -321,4 +322,37 @@ function applyTagDeletion(id,withPapers){
     removed.forEach(function(p){D.pos.delete(p.id);if(!S.example)idbDel(p.id)});
   }
   S.hidden.delete(id);D.inited=false;renderAll();return true;
+}
+
+/* ---------- 마이페이지 (사이드바 맨 아래) ----------
+   배포본은 계정 화면(account.html) 안에 이 앱을 띄운다. 계정 화면 위쪽 바는 앱이 열려 있을 때 숨기고(account.css),
+   여기서 그 바의 이메일·저장 위치를 보여 주고, 버튼은 바에 있던 버튼을 그대로 눌러 준다. 로그인 코드는 건드리지 않는다.
+   계정 화면 없이 이 앱만 열었을 때(로컬 실행, 예시 미리보기)는 만들지 않는다. */
+function accountShellDoc(){try{var d=window.parent!==window&&window.parent.document;return d&&d.getElementById('authLogout')?d:null}catch(e){return null}}
+function mountMyPage(){
+  var side=$('.side'),pd=accountShellDoc();if(!side||!pd||$('#myPage',side))return;
+  var wrap=document.createElement('div');wrap.className='mypage';wrap.id='myPage';
+  wrap.innerHTML='<div class="mp-pop" id="mpPop" role="dialog" aria-label="마이페이지" hidden></div>'+
+    '<button type="button" class="mp-btn" id="mpBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="mpPop"><i class="mp-av" aria-hidden="true"></i><span class="mp-txt"><b>마이페이지</b><small></small></span></button>';
+  side.appendChild(wrap);
+  var btn=$('#mpBtn',wrap),pop=$('#mpPop',wrap);
+  function info(){var id=pd.getElementById('authIdentity'),md=pd.getElementById('authMode');return{email:id&&!id.hidden?id.textContent.trim():'',mode:md?md.textContent.trim():''}}
+  function paint(){var i=info();$('small',btn).textContent=i.email||'로그인하지 않았어요';$('.mp-av',btn).textContent=(i.email||'?').charAt(0).toUpperCase();wrap.classList.toggle('signed',!!i.email)}
+  function setOpen(on){
+    if(on){
+      var i=info();paint();
+      var acts=['authBack','authOpenLocal','authLogin','authLogout'].map(function(k){return pd.getElementById(k)}).filter(function(b){return b&&!b.hidden&&!b.disabled});
+      pop.innerHTML='<div class="mp-head">마이페이지</div>'+
+        '<dl><dt>계정</dt><dd>'+esc(i.email||'로그인하지 않았어요')+'</dd><dt>저장 위치</dt><dd>'+esc(i.mode||'-')+'</dd></dl>'+
+        '<div class="mp-acts">'+acts.map(function(b,n){return '<button type="button" class="mp-act'+(b.id==='authLogout'?' out':b.id==='authLogin'?' in':'')+'" data-n="'+n+'">'+esc(b.textContent.trim())+'</button>'}).join('')+'</div>';
+      $$('.mp-act',pop).forEach(function(x){x.addEventListener('click',function(){setOpen(false);acts[+x.dataset.n].click()})});
+    }
+    pop.hidden=!on;btn.setAttribute('aria-expanded',on);wrap.classList.toggle('open',on);
+    /* 사이드바는 스크롤 영역이라 안에 두면 잘린다: 버튼 위에 화면 기준으로 띄운다 */
+    if(on){var r=btn.getBoundingClientRect();pop.style.left=Math.max(8,r.left)+'px';pop.style.bottom=(window.innerHeight-r.top+8)+'px'}
+  }
+  btn.addEventListener('click',function(){setOpen(pop.hidden)});
+  document.addEventListener('mousedown',function(e){if(!pop.hidden&&!wrap.contains(e.target))setOpen(false)});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!pop.hidden){setOpen(false);btn.focus()}});
+  paint();setTimeout(function(){if(wrap.isConnected)paint()},1500);
 }

@@ -48,6 +48,7 @@ function mountAccountWorkspace(editable) {
   if (editable) views.push($('#vDot'));
   nav.replaceChildren(...views);
   $('.side').replaceChildren(...(editable ? [$('#addBtn'), nav] : [nav]));
+  if (typeof mountMyPage === 'function') mountMyPage();
   $('.bar').innerHTML = '<label>프로젝트 <select id="workspaceTask"></select></label>' +
     (editable ? '<button type="button" id="workspaceNew" class="btn sm">새 프로젝트</button> <button type="button" id="workspaceRecords" class="btn sm" disabled>프로젝트 기록</button>' : '<span>읽기 전용</span>') +
     '<button type="button" id="workspaceRetry" class="btn sm">다시 불러오기</button>';

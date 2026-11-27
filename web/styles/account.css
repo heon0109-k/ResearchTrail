@@ -85,3 +85,7 @@
 #accountPdfText ::selection { background: rgba(47, 155, 238, .3); }
 .account-reading #accountPdfReader > header { display: none; }
 .account-chat-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* 앱이 열려 있으면 위쪽 계정 바는 숨긴다. 버튼은 그대로 남아 있고, 앱 사이드바의 '마이페이지'가 대신 눌러 준다.
+   앱이 없는 상태(계정 연결 실패 안내 등)에서는 바가 그대로 보인다. */
+.account-page:has(.account-workspace > iframe) .account-bar { display: none; }

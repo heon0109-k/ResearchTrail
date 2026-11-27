@@ -42,6 +42,7 @@ function showLanding(){
   var canReturn=landingAccountButton()?.id==='authBack';
   if(canReturn)$$('.landing-gt').forEach(function(label){label.textContent='계정 타임라인으로'});
   $$('[data-lp="switch"]').forEach(function(button){button.hidden=!canReturn});
+  $$('.lp-login').forEach(function(button){button.textContent=canReturn?'내 타임라인':'로그인'});
   $('.landing-mascot').innerHTML=spr(ch.rows,3,'bob');
   $('#lpWalk').innerHTML=spr(ch.rows,2,'bob');
   $$('[data-lp]').forEach(function(b){b.addEventListener('click',function(){
