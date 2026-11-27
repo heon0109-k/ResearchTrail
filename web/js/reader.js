@@ -184,16 +184,16 @@ function renderRNotes(){
    '<section class="reader-section reader-ai" id="rAi" aria-label="AI 정리"></section>'+
    '<section class="reader-section reader-records" aria-label="읽기 기록"><div class="records-heading"><h3>읽기 기록</h3><button type="button" class="record-add" id="rAddNote">+ 메모 추가</button></div><p class="reader-hint">문장이나 캡처에 짧게 메모를 남겨요. 메모 아래의 "다음 할 일 찾기"를 누르면 그 메모에서 후보를 찾아요.</p><div id="rRecords">'+legacyReadingRecordHtml(p)+'<div id="rHl"></div></div></section>'+
    '<section class="reader-section reader-next" aria-label="다음에 할 일"><h3>다음에 할 일</h3><div id="rTodoSaved"><div class="field"><textarea id="rTodo" rows="2" aria-label="다음에 할 일" placeholder="다음에 할 일을 적어 보세요.">'+esc(p.todo||'')+'</textarea></div></div><div class="na" id="naBox" hidden></div></section><section id="rHistory" aria-label="기록 이력"></section>'+
-   (typeof paperResourcesHtml==='function'&&(p.pdf||(p.resources||[]).length||(typeof samplePdfUrl==='function'&&samplePdfUrl(p)))?'<section class="reader-section r-resview" id="rResources" aria-description="PDF에서 찾은 링크에는 인용한 자료의 링크도 포함될 수 있어요.">'+(typeof paperResViewHtml==='function'?paperResViewHtml(p):paperResourcesHtml('rResourcesOld'))+'</section>':'')+
+   (typeof paperResourcesHtml==='function'&&(p.pdf||(p.resources||[]).length||(typeof samplePdfUrl==='function'&&samplePdfUrl(p)))?paperResourcesHtml('rResources'):'')+
    (p.abs?'<details class="rabs"><summary>초록 보기</summary><p>'+esc(p.abs)+'</p></details>':'')+
    '<div class="rlinks"><div class="records-heading"><h4>이어진 논문</h4>'+(others.length?'<button type="button" class="record-add" id="rLkAdd" aria-expanded="false">+ 연결</button>':'')+'</div>'+((outs.length||ins.length)?'<ul class="lklist">'+outs.map(function(l){return li(l,'out')}).join('')+ins.map(function(l){return li(l,'in')}).join('')+'</ul>':'<p class="empty">아직 없어요. 읽다가 이어서 본 논문을 연결해 두세요.</p>')+
      (others.length?'<div class="rlk" id="rLkForm" hidden><select id="rLkTo" aria-label="이어진 논문"><option value="">이 논문에서 이어서 본 논문…</option>'+others.map(function(o){return '<option value="'+o.id+'">'+esc(short(o.title,46))+'</option>'}).join('')+'</select><input type="text" id="rLkWhy" placeholder="왜 이어서 봤나요?"><button type="button" class="btn" id="rLkOk">연결</button><p class="empty" id="rLkErr" hidden></p></div>':'')+'</div>'+
    '<button type="button" class="rd-mini-link" id="rHistToggle" aria-expanded="false">변경 기록 보기</button>'+
+   '<details class="reader-extra"><summary>저장 이유</summary><label class="field"><span class="sr-only">저장 이유</span><textarea id="rMemo" rows="2">'+esc(p.memo)+'</textarea></label></details>'+
    '<div class="rfoot"><button type="button" class="btn pri" id="rDone">다 읽었어요</button></div>'+
    (typeof sampleSourceHtml==='function'?sampleSourceHtml(p):'');
   drawHlList();wireReadingRecords(p);if(typeof compactRecords==='function')compactRecords();
-  /* 저장 이유는 읽기 화면에 들어오기 전(말풍선·상세 패널)에 보여 주므로 여기서는 뺐다. 고치기는 상세 패널의 수정(✎)에서 */
-  var memoField=$('#rMemo');if(memoField)memoField.addEventListener('input',function(e){p.memo=e.target.value;save()});
+  $('#rMemo').addEventListener('input',function(e){p.memo=e.target.value;save()});
   resizeReaderTodo();
   $('#rTodo').addEventListener('input',function(e){resizeReaderTodo();if(typeof aiEditTodo==='function'&&aiEditTodo(p,e.target))return;p.todo=e.target.value;p.todoSrc='manual';save()});
   var noteField=$('#rNote');
@@ -205,10 +205,7 @@ function renderRNotes(){
   naInit(p);renderHistory(p);
   if(typeof aiInit==='function')aiInit(p);
   if(typeof chatInit==='function')chatInit(p);
-  /* 코드·데이터셋: 상세 패널과 같은 칩·'+'·제안 상자. 바뀌면 이 칸만 다시 그린다 */
-  var rv=$('#rResources');
-  if(rv&&rv.querySelector&&typeof wirePaperResView==='function'){var rrv=function(){if(!rv.isConnected)return;rv.innerHTML=paperResViewHtml(p);wirePaperResView(p,rv,rrv)};wirePaperResView(p,rv,rrv)}
-  else if(typeof wirePaperResources==='function')wirePaperResources(rv,p);
+  if(typeof wirePaperResources==='function')wirePaperResources($('#rResources'),p);
   $$('[data-go]',el).forEach(function(b){b.addEventListener('click',function(){openReader(b.dataset.go)})});
   $$('[data-del]',el).forEach(function(b){b.addEventListener('click',function(){ask('이 연결을 삭제할까요?','연결 이유도 함께 사라져요.','삭제',function(){S.links=S.links.filter(function(l){return l.id!==b.dataset.del});save();renderRNotes()},true)})});
   var lkAdd=$('#rLkAdd');if(lkAdd)lkAdd.addEventListener('click',function(){

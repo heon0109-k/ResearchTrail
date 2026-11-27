@@ -211,54 +211,6 @@ function paperResLabel(u){
   try{var x=new URL(u);return {name:paperResName(u),host:x.hostname.replace(/^www\./,'')}}catch(e){return {name:u,host:''}}
 }
 var PSUGOPEN=null;
-/* 코드·데이터셋 보기(칩 + '+' + PDF에서 찾은 링크 제안): 상세 패널과 읽기 화면이 같이 쓴다 */
-function paperResViewHtml(p){
-  var res=(Array.isArray(p.resources)?p.resources:[]).filter(function(it){return it&&(it.kind==='code'||it.kind==='data')&&safeExternalUrl(it.url)});
-  return '<section class="pv-sec pv-line"><h4>코드·데이터셋</h4>'+'<div class="pv-chips">'+(res.length?res.map(function(it){var u=safeExternalUrl(it.url),name=paperResName(u);return '<a class="pv-chip" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="'+(it.kind==='code'?'코드':'데이터셋')+' · '+esc(u)+'"><span class="pv-ic">'+(it.kind==='code'?'<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 6l-4 4 4 4M13 6l4 4-4 4"/></svg>':'<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="10" cy="5" rx="6" ry="2.5"/><path d="M4 5v10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V5M4 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5"/></svg>')+'</span>'+esc(name)+'<span class="pv-arrow" aria-hidden="true">↗</span></a>'}).join(''):'')+(function(){
-        /* PDF에서 찾았지만 아직 저장 안 한 링크는 점선 칩으로 바로 보여 주고, 누르면 그 자리에서 저장. 직접 추가도 여기서. */
-        var saved=res.map(function(it){return safeExternalUrl(it.url)}),cands=(paperResourceScan(p).candidates||[]).map(function(c,i){return [c,i]}).filter(function(x){return saved.indexOf(x[0].url)<0});
-        var IC={code:'<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 6l-4 4 4 4M13 6l4 4-4 4"/></svg>',data:'<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="10" cy="5" rx="6" ry="2.5"/><path d="M4 5v10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V5M4 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5"/></svg>'};
-        var h='';
-        /* 저장한 칩 줄 끝에 '+ 추가', 그 아래 한 줄로 'PDF에서 찾음: 이름 +' */
-        h+='<button type="button" class="pv-add pv-plus" data-res-manual title="코드·데이터셋 링크 추가" aria-label="코드·데이터셋 추가">+</button></div>';
-        /* PDF에서 찾은 링크는 '제안' 상자로: 💡 문구 + 링크 미리보기 + [추가] [✕] */
-        var st=paperResourceScan(p),hidden=st.dismissed||[];
-        cands=cands.filter(function(x){return hidden.indexOf(x[0].url)<0});
-        /* 같은 저장소는 한 줄로, 이미 저장한 저장소는 빼고 */
-        var savedRoots=saved.map(paperResRoot),seen={},groups=[];
-        cands.forEach(function(x){var r=paperResRoot(safeExternalUrl(x[0].url));if(savedRoots.indexOf(r)>-1)return;if(seen[r]){seen[r].urls.push(x[0].url);return}seen[r]={root:r,i:x[1],kind:x[0].kind,urls:[x[0].url]};groups.push(seen[r])});
-        var SHOW=3,open=PSUGOPEN===p.id;
-        if(groups.length)h+='<div class="pv-suggest'+(open?' open':'')+'" role="group" aria-label="PDF에서 찾은 링크 제안"><p class="pv-suggest-head"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 15h5M8 17.5h4M10 2.5a5 5 0 0 0-3 9c.6.5 1 1.2 1 2V14h4v-.5c0-.8.4-1.5 1-2a5 5 0 0 0-3-9Z"/></svg>PDF에서 찾은 링크'+(groups.length>1?' <em>'+groups.length+'</em>':'')+'</p>'+
-          '<div class="pv-suggest-list">'+groups.map(function(g,k){var lb=paperResLabel(g.root);return '<div class="pv-suggest-row'+(k>=SHOW?' pv-more-row':'')+'"><span class="pv-suggest-ic">'+IC[g.kind==='code'?'code':'data']+'</span><a href="'+esc(g.root)+'" target="_blank" rel="noopener noreferrer" title="'+esc(g.root)+'"><b>'+esc(lb.name)+'</b>'+(lb.host?'<small>'+esc(lb.host)+'</small>':'')+'</a><button type="button" class="pv-suggest-add" data-res-add="'+g.i+'" data-res-url="'+esc(g.root)+'">추가</button></div>'}).join('')+'</div>'+
-          (groups.length>SHOW?'<button type="button" class="pv-suggest-more" data-res-more>'+(open?'접기':(groups.length-SHOW)+'개 더 보기')+'</button>':'')+
-          '<button type="button" class="pv-suggest-x" data-res-skip="'+esc(cands.map(function(x){return x[0].url}).join(' '))+'" aria-label="제안 모두 숨기기" title="모두 숨기기">×</button></div>';
-        h+='<form class="pv-addform" data-res-form hidden><span class="pv-kind" role="radiogroup" aria-label="링크 종류"><button type="button" role="radio" data-kind="code" aria-checked="true">코드</button><button type="button" role="radio" data-kind="data" aria-checked="false">데이터셋</button></span>'+
-          '<input type="text" inputmode="url" placeholder="링크 붙여넣고 Enter" aria-label="코드·데이터셋 주소"></form><p class="pv-res-msg" data-res-msg hidden></p>';
-        return h;
-      })()+'</section>';
-}
-function wirePaperResView(p,root,rerender,visibleNow){
-  visibleNow=visibleNow||function(){return root&&root.isConnected};
-    var scanSt=paperResourceScan(p);
-    scanSt.notify=function(){if(visibleNow())rerender()};
-    if(scanSt.status==='idle'&&(p.pdf||(typeof paperResourcePdfUrl==='function'&&paperResourcePdfUrl(p))))setTimeout(function(){scanPaperResources(p)},0);
-    var resMsg=$('[data-res-msg]',root),resAdd=function(item){
-      var list=(Array.isArray(p.resources)?p.resources:[]).slice();
-      if(list.some(function(e){return safeExternalUrl(e.url)===item.url})){if(resMsg){resMsg.hidden=false;resMsg.textContent='이미 저장한 링크예요.'}return}
-      list.push(item);p.resources=list;save();if(root.id==='pin')renderAll();else rerender();
-    };
-    $$('[data-res-add]',root).forEach(function(b){b.addEventListener('click',function(){var c=paperResourceScan(p).candidates[+b.dataset.resAdd];if(c)resAdd(Object.assign({},c,{url:b.dataset.resUrl||c.url}))})});
-    var more=$('[data-res-more]',root);if(more)more.addEventListener('click',function(){PSUGOPEN=PSUGOPEN===p.id?null:p.id;rerender()});
-    $$('[data-res-skip]',root).forEach(function(b){b.addEventListener('click',function(){var st=paperResourceScan(p);st.dismissed=(st.dismissed||[]).concat(b.dataset.resSkip.split(' '));rerender()})});
-    var rm=$('[data-res-manual]',root),rf=$('[data-res-form]',root);
-    if(rm&&rf){
-      var kind='code',ri=rf.querySelector('input');
-      rm.addEventListener('click',function(){rf.hidden=false;rm.hidden=true;ri.focus()});
-      $$('[data-kind]',rf).forEach(function(k){k.addEventListener('click',function(){kind=k.dataset.kind;$$('[data-kind]',rf).forEach(function(x){x.setAttribute('aria-checked',String(x===k))});ri.focus()})});
-      rf.addEventListener('submit',function(e){e.preventDefault();var u=safeExternalUrl(ri.value);if(!u){if(resMsg){resMsg.hidden=false;resMsg.textContent='올바른 http 또는 https 링크를 붙여넣어 주세요.'}return}resAdd({url:u,kind:kind})});
-      ri.addEventListener('keydown',function(e){if(e.key==='Escape'){rf.hidden=true;rm.hidden=false;if(resMsg)resMsg.hidden=true}});
-    }
-}
 function paperResName(u){
   try{
     var x=new URL(u),host=x.hostname.replace(/^www\./,''),seg=x.pathname.split('/').filter(Boolean).map(function(v){try{return decodeURIComponent(v)}catch(e){return v}});
@@ -306,7 +258,28 @@ function renderPanel(){
       (linkHost?'<span class="p-dot" aria-hidden="true">·</span><a class="pv-link" href="'+esc(linkHref)+'" target="_blank" rel="noopener noreferrer" title="'+esc(linkHref)+'">'+esc(linkHost)+' ↗</a>':'')+'</div></div>'+
       '<button type="button" class="btn pri" id="pRead">'+(p.state==='reading'?'이어 읽기':'읽기 화면 열기')+'</button>'+
       '<section class="pv-sec"><h4>저장 이유</h4>'+(p.memo?'<p class="pv-text">'+esc(p.memo)+'</p>':'<p class="empty">아직 적지 않았어요.</p>')+'</section>'+
-      paperResViewHtml(p)+
+      '<section class="pv-sec pv-line"><h4>코드·데이터셋</h4>'+'<div class="pv-chips">'+(res.length?res.map(function(it){var u=safeExternalUrl(it.url),name=paperResName(u);return '<a class="pv-chip" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="'+(it.kind==='code'?'코드':'데이터셋')+' · '+esc(u)+'"><span class="pv-ic">'+(it.kind==='code'?'<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 6l-4 4 4 4M13 6l4 4-4 4"/></svg>':'<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="10" cy="5" rx="6" ry="2.5"/><path d="M4 5v10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V5M4 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5"/></svg>')+'</span>'+esc(name)+'<span class="pv-arrow" aria-hidden="true">↗</span></a>'}).join(''):'')+(function(){
+        /* PDF에서 찾았지만 아직 저장 안 한 링크는 점선 칩으로 바로 보여 주고, 누르면 그 자리에서 저장. 직접 추가도 여기서. */
+        var saved=res.map(function(it){return safeExternalUrl(it.url)}),cands=(paperResourceScan(p).candidates||[]).map(function(c,i){return [c,i]}).filter(function(x){return saved.indexOf(x[0].url)<0});
+        var IC={code:'<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 6l-4 4 4 4M13 6l4 4-4 4"/></svg>',data:'<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="10" cy="5" rx="6" ry="2.5"/><path d="M4 5v10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V5M4 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5"/></svg>'};
+        var h='';
+        /* 저장한 칩 줄 끝에 '+ 추가', 그 아래 한 줄로 'PDF에서 찾음: 이름 +' */
+        h+='<button type="button" class="pv-add pv-plus" data-res-manual title="코드·데이터셋 링크 추가" aria-label="코드·데이터셋 추가">+</button></div>';
+        /* PDF에서 찾은 링크는 '제안' 상자로: 💡 문구 + 링크 미리보기 + [추가] [✕] */
+        var st=paperResourceScan(p),hidden=st.dismissed||[];
+        cands=cands.filter(function(x){return hidden.indexOf(x[0].url)<0});
+        /* 같은 저장소는 한 줄로, 이미 저장한 저장소는 빼고 */
+        var savedRoots=saved.map(paperResRoot),seen={},groups=[];
+        cands.forEach(function(x){var r=paperResRoot(safeExternalUrl(x[0].url));if(savedRoots.indexOf(r)>-1)return;if(seen[r]){seen[r].urls.push(x[0].url);return}seen[r]={root:r,i:x[1],kind:x[0].kind,urls:[x[0].url]};groups.push(seen[r])});
+        var SHOW=3,open=PSUGOPEN===p.id;
+        if(groups.length)h+='<div class="pv-suggest'+(open?' open':'')+'" role="group" aria-label="PDF에서 찾은 링크 제안"><p class="pv-suggest-head"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 15h5M8 17.5h4M10 2.5a5 5 0 0 0-3 9c.6.5 1 1.2 1 2V14h4v-.5c0-.8.4-1.5 1-2a5 5 0 0 0-3-9Z"/></svg>PDF에서 찾은 링크'+(groups.length>1?' <em>'+groups.length+'</em>':'')+'</p>'+
+          '<div class="pv-suggest-list">'+groups.map(function(g,k){var lb=paperResLabel(g.root);return '<div class="pv-suggest-row'+(k>=SHOW?' pv-more-row':'')+'"><span class="pv-suggest-ic">'+IC[g.kind==='code'?'code':'data']+'</span><a href="'+esc(g.root)+'" target="_blank" rel="noopener noreferrer" title="'+esc(g.root)+'"><b>'+esc(lb.name)+'</b>'+(lb.host?'<small>'+esc(lb.host)+'</small>':'')+'</a><button type="button" class="pv-suggest-add" data-res-add="'+g.i+'" data-res-url="'+esc(g.root)+'">추가</button></div>'}).join('')+'</div>'+
+          (groups.length>SHOW?'<button type="button" class="pv-suggest-more" data-res-more>'+(open?'접기':(groups.length-SHOW)+'개 더 보기')+'</button>':'')+
+          '<button type="button" class="pv-suggest-x" data-res-skip="'+esc(cands.map(function(x){return x[0].url}).join(' '))+'" aria-label="제안 모두 숨기기" title="모두 숨기기">×</button></div>';
+        h+='<form class="pv-addform" data-res-form hidden><span class="pv-kind" role="radiogroup" aria-label="링크 종류"><button type="button" role="radio" data-kind="code" aria-checked="true">코드</button><button type="button" role="radio" data-kind="data" aria-checked="false">데이터셋</button></span>'+
+          '<input type="text" inputmode="url" placeholder="링크 붙여넣고 Enter" aria-label="코드·데이터셋 주소"></form><p class="pv-res-msg" data-res-msg hidden></p>';
+        return h;
+      })()+'</section>'+
       '<section class="pv-sec pv-line"><h4>이동 경로</h4>'+(routes.length?'<ul class="pv-cards">'+routes.map(function(x){var l=x[0],o=paperBy(x[1]==='out'?l.to:l.from);if(!o)return '';return '<li><button type="button" class="pv-card go" data-go="'+o.id+'" title="'+(x[1]==='out'?'이 논문 다음에 읽은 논문':'이 논문 전에 읽은 논문')+'"><span class="pv-ic">'+(x[1]==='out'?'<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg>':'<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10H4M9 5l-5 5 5 5"/></svg>')+'</span><span class="pv-cb"><b>'+esc(o.title)+'</b>'+(l.reason?'<small>'+esc(l.reason)+'</small>':'')+'</span></button></li>'}).join('')+'</ul>':'')+linkArea+'</section>'+
       '</div>';
     $('#pEdit').addEventListener('click',function(){
@@ -314,7 +287,25 @@ function renderPanel(){
       renderAll();var f=$('#pTitle');if(f)f.focus();
     });
     /* 보기 화면에서 바로: PDF에서 찾은 링크 저장, 직접 추가 */
-    wirePaperResView(p,pin,function(){renderPanel()},function(){return S.sel===p.id&&S.panel==='detail'&&PEDIT!==p.id&&!S.linking});
+    var scanSt=paperResourceScan(p);
+    scanSt.notify=function(){if(S.sel===p.id&&S.panel==='detail'&&PEDIT!==p.id&&!S.linking)renderPanel()};
+    if(scanSt.status==='idle'&&(p.pdf||(typeof paperResourcePdfUrl==='function'&&paperResourcePdfUrl(p))))setTimeout(function(){scanPaperResources(p)},0);
+    var resMsg=$('[data-res-msg]',pin),resAdd=function(item){
+      var list=(Array.isArray(p.resources)?p.resources:[]).slice();
+      if(list.some(function(e){return safeExternalUrl(e.url)===item.url})){if(resMsg){resMsg.hidden=false;resMsg.textContent='이미 저장한 링크예요.'}return}
+      list.push(item);p.resources=list;save();renderAll();
+    };
+    $$('[data-res-add]',pin).forEach(function(b){b.addEventListener('click',function(){var c=paperResourceScan(p).candidates[+b.dataset.resAdd];if(c)resAdd(Object.assign({},c,{url:b.dataset.resUrl||c.url}))})});
+    var more=$('[data-res-more]',pin);if(more)more.addEventListener('click',function(){PSUGOPEN=PSUGOPEN===p.id?null:p.id;renderPanel()});
+    $$('[data-res-skip]',pin).forEach(function(b){b.addEventListener('click',function(){var st=paperResourceScan(p);st.dismissed=(st.dismissed||[]).concat(b.dataset.resSkip.split(' '));renderPanel()})});
+    var rm=$('[data-res-manual]',pin),rf=$('[data-res-form]',pin);
+    if(rm&&rf){
+      var kind='code',ri=rf.querySelector('input');
+      rm.addEventListener('click',function(){rf.hidden=false;rm.hidden=true;ri.focus()});
+      $$('[data-kind]',rf).forEach(function(k){k.addEventListener('click',function(){kind=k.dataset.kind;$$('[data-kind]',rf).forEach(function(x){x.setAttribute('aria-checked',String(x===k))});ri.focus()})});
+      rf.addEventListener('submit',function(e){e.preventDefault();var u=safeExternalUrl(ri.value);if(!u){if(resMsg){resMsg.hidden=false;resMsg.textContent='올바른 http 또는 https 링크를 붙여넣어 주세요.'}return}resAdd({url:u,kind:kind})});
+      ri.addEventListener('keydown',function(e){if(e.key==='Escape'){rf.hidden=true;rm.hidden=false;if(resMsg)resMsg.hidden=true}});
+    }
   }else{
     /* ---- 수정: 논문 추가 패널과 같은 입력 양식. 바뀐 값은 바로 저장되고, [취소]를 누르면 연 때 값으로 되돌린다. ---- */
     pin.innerHTML='<div class="ph"><span>논문 수정</span><div class="ph-acts"><button type="button" class="ph-icon" id="pClose" title="수정 취소" aria-label="수정 취소"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button></div></div><div class="pb p-edit">'+
