@@ -926,36 +926,37 @@
   padding: 0 26px;
 }
 
-/* 로그인한 적 있는 사람에게만: 버튼 아래 '다른 계정으로 로그인' 글씨 링크 */
-.landing-actions {
-  flex-wrap: wrap;
-}
-
+/* 로그인한 적 있는 사람에게만: 검은 버튼 옆 '다른 계정으로 로그인' 보조 버튼 (흰 바탕, 회색 테두리) */
 .landing-switch {
-  flex-basis: 100%;
-  margin-top: 2px;
-  text-align: left;
-  padding: 4px 2px;
-  border: 0;
-  background: none;
-  color: var(--mute);
+  display: inline-flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 20px;
+  border: 1px solid #dadce0;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
   font: inherit;
-  font-size: 13px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: #c9cdd4;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .landing-switch:hover {
-  color: var(--ink);
-  text-decoration-color: currentColor;
+  border-color: #c4c7cc;
+  background: var(--soft);
 }
 
 .landing-switch[hidden] {
   display: none;
 }
 
-.landing-actions.c .landing-switch {
-  text-align: center;
+@media (max-width: 600px) {
+  .landing-actions .landing-google,
+  .landing-switch {
+    width: 100%;
+    justify-content: center;
+  }
 }
