@@ -118,6 +118,70 @@ function renderReader(){
     var t=e.target.closest&&e.target.closest('[data-tog]');if(!t)return;NOTES_OPEN=!NOTES_OPEN;try{localStorage.setItem('researchtrail.notes',NOTES_OPEN?'1':'0')}catch(x){}applyNotes();if(PV){setTimeout(function(){var cur=PV.cur;buildPages(p);pvGo(cur,true)},60)}};
   readerSrc(p,p.page);renderRNotes();
 }
+// Mount the same account controls in the familiar split reader. Keep their controllers
+// alive when the reader closes so a receipt stays bound to its original operation.
+function createAccountWorkspaceReader(account,saves) {
+  const shell=$('#reader');
+  shell.innerHTML=screens.reader;
+  const parts=new DOMParser().parseFromString(screens['account-projects'],'text/html');
+  $('#rdsrc').append(parts.getElementById('accountPdfReader'));
+  $('#rdnotes').append(parts.getElementById('accountMemos'));
+  $('#accountPdfClose').hidden=true;
+  $('[data-mtab="chat"]',shell).remove();
+  $('[data-side-tog]',shell).remove();
+  $('.rdtog1',shell).remove();
+  const back=$('#rdBack'), project=$('#workspaceRecords');
+  const alert=document.createElement('p');
+  alert.className='reader-load-status';
+  alert.setAttribute('role','status');
+  $('#rdnotes').prepend(alert);
+  const memos=createAccountMemos(account.write,account,saves,()=>pdf.refreshRecords());
+  const pdf=createAccountPdfReader(account.write,account.current,memos.records,saves);
+  let generation=0;
+  function tab(value) {
+    for (const button of $$('[data-mtab]',shell)) {
+      const selected=button.dataset.mtab===value;
+      shell.classList.toggle('m-'+button.dataset.mtab,selected);
+      button.classList.toggle('on',selected);
+      button.setAttribute('aria-selected',String(selected));
+    }
+  }
+  for (const button of $$('[data-mtab]',shell)) button.addEventListener('click',()=>tab(button.dataset.mtab));
+  wireNotesResize(null);
+  function close() {
+    ++generation;
+    pdf.close();
+    memos.clear();
+    shell.hidden=true;
+    $('.app').classList.remove('account-reading');
+    alert.textContent='';
+  }
+  async function open(task,paper,artifact,edition) {
+    close();
+    const version=generation;
+    const scope=artifact ? {documentId:paper.document_id,artifactId:artifact.artifact_id,
+      label:accountTimelineActions.caption(paper)+' · '+edition} : null;
+    shell.hidden=false;
+    $('.app').classList.add('account-reading');
+    shell.classList.toggle('project-records',!scope);
+    tab(scope?'pdf':'notes');
+    applyNotesW();
+    back.textContent=S.view==='list'?'← 논문 목록':S.view==='dot'?'← 연결 그래프':'← 타임라인';
+    $('#rdTitle').textContent=scope?.label || '프로젝트 기록';
+    back.focus();
+    alert.textContent='읽기 기록을 불러오는 중…';
+    try {
+      await Promise.all([memos.open(task,scope),scope && pdf.open(task,artifact.artifact_id,scope.label,artifact.pdf.available)]);
+      if (account.current() && version===generation) alert.textContent='';
+    } catch {
+      if (account.current() && version===generation)
+        alert.textContent='읽기 기록을 불러오지 못했어요. 뒤로 돌아가서 다시 열어 주세요.';
+    }
+  }
+  back.addEventListener('click',()=>{ close(); project.focus(); });
+  return {open,close};
+}
+
 function resizeReaderTodo(){
   var t=$('#rTodo');if(!t||!t.style)return;
   t.style.height='auto';t.style.height=Math.max(66,t.scrollHeight+2)+'px';

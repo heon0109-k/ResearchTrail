@@ -4,7 +4,15 @@
 function createAccountGraphWorkspace(get, account, refresh, chooseCreated) {
   const dialog = $('#accountPaperDetail'), notice = $('#workspaceActionStatus');
   const cancelLink = $('#workspaceLinkCancel'), add = $('#addBtn');
-  const saves = createAccountSaveStatus(account.write, account.current);
+  const saves = createAccountSaveStatus(account.write, account.current, account);
+  let reader;
+  function openReader(paper,artifact,label) {
+    close();
+    reader ||= createAccountWorkspaceReader(account,saves);
+    return reader.open(S.taskId,paper,artifact,label);
+  }
+  $('#workspaceRecords').addEventListener('click',()=>openReader());
+  for (const id of ['vDot','vCard','vList']) $('#'+id).addEventListener('click',()=>reader?.close());
   let generation = 0, formVersion = 0, opening, discard;
   function endForm() {
     ++formVersion;
@@ -33,10 +41,11 @@ function createAccountGraphWorkspace(get, account, refresh, chooseCreated) {
     notice.textContent = '';
   }
   function reset(task) {
+    reader?.close();
     ++generation;
     endForm();
     clearLink();
-    add.disabled = true;
+    $('#workspaceRecords').disabled = add.disabled = true;
     D.pos.clear();
     D.els = {}; D.edges = {}; D.drag = null; D.inited = false; D.alpha = 0;
     saves.focus(task);
@@ -145,12 +154,16 @@ function createAccountGraphWorkspace(get, account, refresh, chooseCreated) {
         '<p>'+esc(l.reason || '연결 이유 미기록')+'</p><button type="button" class="btn sm" data-edit-link="'+esc(l.id)+'">이유 수정</button> '+
         '<button type="button" class="btn sm" data-remove-link="'+esc(l.id)+'">연결 삭제</button></li>' : '';
     }).join('');
-    const attach = paper.artifacts.map(a => a.can_attach_pdf || (a.pdf && !a.pdf.available && a.pdf.document_use_id === paper.id)
+    const attach = paper.artifacts.map(a => a.can_attach_pdf
       ? '<p>'+esc(a.label_text || 'PDF')+' '+accountPdfAttachHtml(paper.id,a.pdf?.sha256,a.artifact_id)+'</p>' : '').join('');
     $('#workspacePaperActions').innerHTML = '<h3>이동 경로</h3>'+
       (related?'<ul>'+related+'</ul>':'')+
       (S.papers.length>1?'<button type="button" class="btn sm" id="lkStart">이동 경로 추가</button>':'')+
       '<h3>PDF 첨부</h3>'+attach+accountPdfAttachHtml(paper.id)+'<p id="workspacePdfError" role="alert"></p>';
+    $$('[data-open-pdf]',box).forEach(button=>button.addEventListener('click',()=>{
+      const edition=paper.artifacts.find(a=>a.artifact_id===button.dataset.openPdf);
+      if (scope.current() && edition) return openReader(paper,edition,button.dataset.label);
+    }));
     $('#lkStart')?.addEventListener('click',() => {
       close(); S.linking = {from:paper.id};
       notice.textContent = '이 논문에서 이어서 읽은 논문을 선택해 주세요.';
@@ -165,11 +178,10 @@ function createAccountGraphWorkspace(get, account, refresh, chooseCreated) {
       if (!file || input.disabled || !scope.current()) return;
       const {artifactId,expectedSha} = input.dataset;
       input.disabled = true;
+      const job=saves.prepare(scope.task,paper.id+'/'+(artifactId || ''),file);
       try {
-        const sha = await validateAccountPdf(file,expectedSha);
-        if (!scope.current()) return;
-        const job = saves.prepare(scope.task,paper.id,file);
-        job.sha256 = sha;
+        job.sha256 = await validateAccountPdf(file,expectedSha);
+        if (!scope.current()) { saves.discard(job); return; }
         const saved = await saves.upload(job,file,paper.id,artifactId,async () => {
           await refresh(scope.task);
           if (scope.current() && dialog.open && paperBy(paper.id)) showAccountPaper(paper.id);
@@ -177,9 +189,10 @@ function createAccountGraphWorkspace(get, account, refresh, chooseCreated) {
         if (!saved && scope.current()) $('#workspacePdfError').textContent =
           'PDF 업로드를 확인하지 못했어요. 창을 닫고 PDF 업로드 다시 시도를 눌러 주세요.';
       } catch (error) {
+        if (job.phase==='preparing') saves.discard(job);
         if (scope.current()) $('#workspacePdfError').textContent = error.message;
       } finally { input.value = ''; input.disabled = false; }
     }));
   }
-  return {reset,addPaper,pickTarget,paperControls,caption};
+  return {reset,addPaper,pickTarget,paperControls,caption,projects:saves.projects};
 }

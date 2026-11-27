@@ -49,7 +49,7 @@ function mountAccountWorkspace(editable) {
   nav.replaceChildren(...views);
   $('.side').replaceChildren(...(editable ? [$('#addBtn'), nav] : [nav]));
   $('.bar').innerHTML = '<label>프로젝트 <select id="workspaceTask"></select></label>' +
-    (editable ? '<button type="button" id="workspaceNew" class="btn sm">새 프로젝트</button>' : '<span>읽기 전용</span>') +
+    (editable ? '<button type="button" id="workspaceNew" class="btn sm">새 프로젝트</button> <button type="button" id="workspaceRecords" class="btn sm" disabled>프로젝트 기록</button>' : '<span>읽기 전용</span>') +
     '<button type="button" id="workspaceRetry" class="btn sm">다시 불러오기</button>';
   $('#emptyBox').innerHTML = '<p class="eb-hint" id="workspaceStatus" role="status"></p>';
   $('#bandsw').remove();
@@ -57,7 +57,7 @@ function mountAccountWorkspace(editable) {
   if (editable) {
     $('.bar').insertAdjacentHTML('afterend','<div class="workspace-notices"><span id="workspaceActionStatus" role="status"></span> '+
       '<button id="workspaceLinkCancel" type="button" class="btn sm" hidden>연결 취소</button> '+
-      '<span id="memoStatus" role="status"></span> <button id="pdfUploadRetry" type="button" class="btn sm" hidden></button></div>');
+      '<span id="memoStatus" role="status" aria-atomic="true"></span> <button id="memoRetry" class="btn sm" hidden>메모 저장 다시 시도</button> <button id="pdfUploadRetry" type="button" class="btn sm" hidden></button></div>');
     $('#vDot').addEventListener('click', () => setView('dot'));
     $('#relayout').addEventListener('click', relayoutDots);
     wireDots();
@@ -147,7 +147,7 @@ async function startAccountTimeline(get, account) {
         memo:row.use.purpose_text, tag:'', date:row.date ?? null,
         state:Object.keys(STATES).find(k => STATES[k].t === row.use.reading_state_text) || null,
       }));
-      if (editable) $('#addBtn').disabled = false;
+      if (editable) $('#workspaceRecords').disabled = $('#addBtn').disabled = false;
       $('#workspaceStatus').textContent = S.papers.length ? '' : '이 프로젝트에는 등록한 논문이 없어요.';
     } catch {
       if (!current(version) || attempt !== read) return;
@@ -166,6 +166,7 @@ async function startAccountTimeline(get, account) {
       const data = await get('/tasks');
       if (!current(version)) return;
       tasks = data.tasks;
+      accountTimelineActions?.projects(tasks);
       if (editable) $('#workspaceNew').disabled = false;
       if (!tasks.length) {
         $('#workspaceStatus').textContent = '아직 계정 프로젝트가 없어요.';
@@ -189,6 +190,7 @@ async function startAccountTimeline(get, account) {
     if (!tasks.some(t => t.task_id === task.task_id)) tasks.unshift(task);
     picker.replaceChildren(...tasks.map(t => new Option(t.task.goal_text, t.task_id)));
     picker.disabled = false;
+    accountTimelineActions.projects(tasks);
     return choose(task.task_id);
   });
   $('#workspaceRetry').addEventListener('click', () => S.taskId ? selectTask(S.taskId) : loadTasks());
@@ -235,8 +237,14 @@ function showAccountPaper(id) {
   dialog.innerHTML = '<h2>'+esc(accountTimelineActions ? accountTimelineActions.caption(p) : p.title)+'</h2><p>'+esc(p.date || '날짜 미기록')+' · '+
     esc(p.use.reading_state_text || '읽기 상태 미기록')+'</p><h3>저장 이유</h3><p>'+
     esc(p.memo || '미기록/확인 필요')+'</p>' + (p.artifacts.length ? '<h3>자료 판본</h3><ul>'+
-    p.artifacts.map(a => '<li>'+esc([a.label_text, a.version_text, a.part_text].filter(Boolean).join(' · ') ||
-      a.access_locator_text || '판본 이름 미기록')+'</li>').join('')+'</ul>' : '')+
+    p.artifacts.map(a => {
+      if (accountTimelineActions && a.pdf) {
+        const sameName=p.artifacts.some(other=>other!==a && other.pdf && other.label_text===a.label_text);
+        return '<li>'+accountPdfArtifactHtml(p.id,a,sameName)+'</li>';
+      }
+      return '<li>'+esc([a.label_text, a.version_text, a.part_text].filter(Boolean).join(' · ') ||
+        a.access_locator_text || '판본 이름 미기록')+'</li>';
+    }).join('')+'</ul>' : '')+
     (accountTimelineActions ? '<section class="workspace-paper-actions" id="workspacePaperActions"></section>' : '')+
     '<form method="dialog"><button class="btn" autofocus>닫기</button></form>';
   accountTimelineActions?.paperControls(dialog,p);

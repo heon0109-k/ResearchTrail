@@ -50,7 +50,8 @@
     </div>
     <section id="accountMemos" aria-label="읽기 기록" hidden>
       <header><h2>읽기 기록</h2><button type="button" class="btn sm" id="rAddNote">+ 새 메모</button></header>
-      <label class="field" id="memoPaperField"><span>연결할 논문 (선택)</span><select id="memoPaper"></select></label>
+      <label class="field" id="memoPaperField"><span id="memoPaperLabel">연결할 논문 (선택)</span><select id="memoPaper"></select></label>
+      <p id="memoAssociation"></p>
       <label class="field"><span id="memoLabel">새 메모</span><textarea id="rNote" rows="3" aria-label="읽기 기록 메모" placeholder="메모를 남겨 보세요"></textarea></label>
       <div class="memo-controls">
         <button type="button" class="btn pri" id="memoFinish">편집 완료</button>

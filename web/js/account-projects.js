@@ -3,9 +3,9 @@
 // A request is bound to one account frame by account.js. Selecting a task invalidates old list/form responses.
 async function startAccountProjects(request, account) {
   const connected = () => !account || account.current();
-  const saves = account ? createAccountSaveStatus(request,connected) : null;
+  const saves = account ? createAccountSaveStatus(request,connected,account) : null;
   const memos = account ? createAccountMemos(request,account,saves,draw) : null;
-  const pdfReader = account ? createAccountPdfReader(request,connected,memos.records) : null;
+  const pdfReader = account ? createAccountPdfReader(request,connected,memos.records,saves,()=>openMemos()) : null;
   let tasks = [];
   let active = memos?.lastTask() || null;
   let selection = 0;
@@ -47,7 +47,7 @@ async function startAccountProjects(request, account) {
     });
     const html = '<ul>' + visible.map(p => {
       const details = [p.date, p.use.reading_state_text].filter(Boolean);
-      return '<li><strong>'+esc(p.document.title || '제목 미기록')+'</strong>'+
+      return '<li data-document-id="'+esc(p.document_id)+'"><strong>'+esc(p.document.title || '제목 미기록')+'</strong>'+
         (p.use.purpose_text ? '<p>'+esc(p.use.purpose_text)+'</p>' : '')+
         '<small>'+details.map(esc).join(' · ')+'</small>'+
         p.artifacts.map(a=>{
@@ -66,6 +66,7 @@ async function startAccountProjects(request, account) {
       list.innerHTML = html;
       catalogHtml = html;
     }
+    pdfReader?.refreshRecords();
     retryCatalog = false;
     retry.hidden = true;
     status.textContent = papers.length ? '' : '아직 이 프로젝트에 등록한 논문이 없어요.';
@@ -86,10 +87,21 @@ async function startAccountProjects(request, account) {
       }
     }
   }
+  async function openMemos(scope=null) {
+    const version=selection;
+    try { await memos.open(active,scope); }
+    catch (error) { if (version===selection && connected()) report(error); }
+  }
   if (pdfReader) {
     list.addEventListener('click',event=>{
       const button=event.target.closest('[data-open-pdf]');
-      if (button && connected()) return pdfReader.open(active,button.dataset.openPdf,button.dataset.label,button.dataset.available!=='false');
+      if (!button || !connected()) return;
+      const {openPdf:artifactId,label,available}=button.dataset;
+      const documentId=button.closest?.('[data-document-id]')?.dataset.documentId;
+      return Promise.all([
+        documentId && openMemos({documentId,artifactId,label}),
+        pdfReader.open(active,artifactId,label,available!=='false'),
+      ]);
     });
     list.addEventListener('change',async event=>{
       const input=event.target, use=input.dataset.attachPdf, file=input.files?.[0];
@@ -152,6 +164,7 @@ async function startAccountProjects(request, account) {
       const data = await request('/tasks');
       if (current !== selection || !connected()) return;
       tasks = data.tasks;
+      saves?.projects(tasks);
       title.disabled = false;
       if (tasks.length) {
         await select(tasks.some(t => t.task_id === active) ? active : tasks[0].task_id);
