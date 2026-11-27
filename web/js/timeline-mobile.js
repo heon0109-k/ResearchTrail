@@ -5,9 +5,10 @@ function mtlOn(){return !!(MTL_MQ&&MTL_MQ.matches)}
 function mtlDate(d){var p=String(d||'').split('-');return p.length===3?(+p[1])+'월 '+(+p[2])+'일':''}
 function mtlCard(p,cur){
   var st=readingState(p.state),tg=tagBy(p.tag||''),go=cur&&cur.id===p.id;
+  var tagLabel='<span class="mobile-timeline-tag" style="--c:'+esc(tg.color)+'"><i></i>'+esc(tg.name)+'</span>';
   var nx=S.links.filter(function(l){return l.from===p.id}).map(function(l){return paperBy(l.to)}).filter(Boolean);
   return '<button type="button" class="mobile-timeline-card st-'+readingStateKey(p.state)+(go?' go':'')+(S.sel===p.id?' sel':'')+(matches(p)?'':' dim')+'" data-mtl-paper="'+esc(p.id)+'">'+
-    '<span class="mobile-timeline-top"><span class="mobile-timeline-tag" style="--c:'+esc(tg.color)+'"><i></i>'+esc(tg.name)+'</span><span class="mobile-timeline-date">'+mtlDate(p.date)+'</span><span class="mobile-timeline-state">'+esc(st.t)+'</span></span>'+
+    '<span class="mobile-timeline-top">'+tagLabel+'<span class="mobile-timeline-date">'+mtlDate(p.date)+'</span><span class="mobile-timeline-state">'+esc(st.t)+'</span></span>'+
     (go?'<span class="mobile-timeline-resume">이어 읽을 논문</span>':'')+
     '<span class="mobile-timeline-title">'+esc(p.title||'제목 미기록')+'</span>'+
     (p.memo?'<span class="mobile-timeline-memo">'+esc(p.memo)+'</span>':'')+

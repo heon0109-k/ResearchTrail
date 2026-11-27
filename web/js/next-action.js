@@ -190,18 +190,92 @@ function naRun(p){
   });
 }
 
-/* ---------- 이어 읽기 줄: 타임라인 위에 항상 보이는 한 줄 카드 ---------- */
+/* ---------- 이어 읽기 줄: 타임라인 위에 항상 보이는 한 줄 카드 ----------
+   읽는 중인 논문이 여러 편이면 오른쪽 '읽는 중 n편 ⌄'에서 골라 볼 수 있다. 목록은 타임라인 위에 떠서 화면을 밀지 않는다. */
+var RBSEL=null;
+function rbarPapers(){
+  var top=curPaper();
+  function on(p){return p&&!p.tut&&p.state!=='done'&&(p.state==='reading'||p.state==='skim'||p.page||p.todo)&&(typeof visible!=='function'||visible(p))}
+  function ord(p){return Number.isSafeInteger(p.lastReadOrder)&&p.lastReadOrder>0?p.lastReadOrder:0}
+  var list=S.papers.filter(on).sort(function(a,b){return ord(b)-ord(a)||dnum(b.date)-dnum(a.date)||String(a.id).localeCompare(String(b.id))});
+  if(on(top)){list=list.filter(function(p){return p.id!==top.id});list.unshift(top)}
+  return list;
+}
+function rbPage(p){var page=Number.isSafeInteger(+p.page)&&+p.page>0?+p.page:null;return page?page+(+p.total>0?' / '+esc(p.total):'')+'쪽':''}
+/* 넓은 화면: 위쪽 이어 읽기 줄 대신 왼쪽 사이드바 '읽는 중' 목록 (제목 + 진행 막대 + 멈춘 쪽). 3편이 넘으면 접어 둔다. 태그 칸은 남는 자리를 쓰고 넘치면 그 칸만 스크롤. */
+var SRMORE=false;
+/* 사이드바에서 논문을 누르면 바로 읽기 화면을 열지 않고, 타임라인에서 그 카드와 '다시 오셨네요' 말풍선을 먼저 보여 준다 (말풍선의 [이어 읽기]로 들어감) */
+function showResumeCard(id){
+  if(!paperBy(id))return;
+  /* 같은 논문을 한 번 더 누르면 오른쪽 상세 패널을 연다 */
+  if(RBSEL===id&&S.view==='card'&&!S.reader&&(S.bubble===id||S.sel===id)){S.bubble=null;select(id);return}
+  S.reader=null;S.view='card';if(S.zoom==='all')S.zoom='month';
+  S.panel='none';S.sel=null;S.linking=null;
+  S.bubble=id;S.bubbleGap=S.prevSeen?Date.now()-S.prevSeen:0;RBSEL=id;
+  renderAll();
+  /* 카드와 말풍선이 잘리지 않게, 둘을 합친 영역을 타임라인 화면 가운데로 스크롤한다 */
+  requestAnimationFrame(function(){
+    var sc=$('#scroller'),card=sc&&sc.querySelector('.card[data-id="'+(window.CSS&&CSS.escape?CSS.escape(id):id)+'"]'),bub=$('#rbub');
+    if(!sc||!card)return;
+    var r=card.getBoundingClientRect(),b=bub&&!bub.hidden?bub.getBoundingClientRect():null,v=sc.getBoundingClientRect();
+    var top=Math.min(r.top,b?b.top:r.top),bottom=Math.max(r.bottom,b?b.bottom:r.bottom),left=Math.min(r.left,b?b.left:r.left),right=Math.max(r.right,b?b.right:r.right);
+    var viewTop=v.top+AXISH,viewH=v.height-AXISH,viewLeft=v.left+LABELW,viewW=v.width-LABELW;
+    var dy=(bottom-top)>viewH-24?top-viewTop-12:(top+bottom)/2-(viewTop+viewH/2);
+    var dx=(right-left)>viewW-24?left-viewLeft-12:(left+right)/2-(viewLeft+viewW/2);
+    sc.scrollTo({top:Math.max(0,sc.scrollTop+dy),left:Math.max(0,sc.scrollLeft+dx),behavior:'smooth'});
+    if(typeof updateMinimapWin==='function')setTimeout(updateMinimapWin,400);
+  });
+}
+function renderSideReading(list){
+  var box=$('#sideReading');if(!box)return;
+  list=(list||[]).filter(function(p){return !p.tut});
+  box.hidden=!list.length;if(!list.length){box.innerHTML='';return}
+  var SHOW=3,shown=SRMORE?list:list.slice(0,SHOW);
+  box.innerHTML='<div class="sl">읽는 중</div>'+shown.map(function(p){
+    var page=Number.isSafeInteger(+p.page)&&+p.page>0?+p.page:0,total=+p.total>0?+p.total:0;
+    var pct=page&&total?Math.max(3,Math.min(100,Math.round(page/total*100))):0;
+    var meta=page?page+(total?' / '+total:'')+'쪽':(p.state==='skim'?'아직 안 읽음':'읽는 중');
+    var tip=p.title+(p.todo?'\n다음: '+p.todo:'');
+    return '<button type="button" class="sr-item'+(S.reader===p.id||S.sel===p.id||S.bubble===p.id?' on':'')+'" data-sr="'+esc(p.id)+'" title="'+esc(tip)+'">'+
+      '<b>'+esc(p.title||'제목 미기록')+'</b>'+
+      '<span class="sr-bar" aria-hidden="true"><i style="width:'+pct+'%"></i></span>'+
+      '<small><span>'+esc(meta)+'</span>'+(pct?'<em>'+pct+'%</em>':'')+'</small></button>';
+  }).join('')+(list.length>SHOW?'<button type="button" class="sr-more" data-sr-more>'+(SRMORE?'접기':'+ '+(list.length-SHOW)+'편 더')+'</button>':'');
+  $$('[data-sr]',box).forEach(function(b){b.addEventListener('click',function(){showResumeCard(b.dataset.sr)})});
+  var m=$('[data-sr-more]',box);if(m)m.addEventListener('click',function(){SRMORE=!SRMORE;renderSideReading(rbarPapers())});
+}
 function renderRbar(){
   var el=$('#rbar');if(!el)return;
-  var p=S.papers.length?curPaper():null;
-  var on=p&&!p.tut&&(p.state==='reading'||p.state==='skim'||p.page||p.todo)&&!S.reader&&!S.bubble;
+  var list=S.papers.length?rbarPapers():[];
+  renderSideReading(list);
+  var p=list.filter(function(x){return x.id===RBSEL})[0]||list[0];
+  var on=p&&!S.reader&&!S.bubble;
   el.hidden=!on;if(!on){el.innerHTML='';return}
-  var todo=p.todo||'';
-  var page=Number.isSafeInteger(+p.page)&&+p.page>0?+p.page:null;
-  el.innerHTML='<span class="rb-k">'+(p.state==='skim'?'다음에 읽을 논문':'이어 읽기')+'</span><button type="button" class="rb-t" id="rbSel" title="'+esc(p.title)+'">'+esc(p.title)+'</button>'+
-    (page?'<span class="rb-c" title="'+page+'쪽에서 멈췄어요">'+page+(+p.total>0?' / '+esc(p.total):'')+'쪽</span>':'')+
-    (todo?'<div class="rb-n" title="'+esc(todo)+'"><em>다음 할 일</em><span>'+esc(todo)+'</span></div>':'')+
+  var todo=p.todo||'',page=rbPage(p);
+  /* '이어 읽기' 꼬리표는 오른쪽 버튼과 겹쳐서 뺐다. 아직 안 읽은 논문은 버튼이 '읽기 시작'이라 '다음에 읽을 논문' 꼬리표를 남긴다. */
+  el.innerHTML=(p.state==='skim'?'<span class="rb-k">다음에 읽을 논문</span>':'')+'<button type="button" class="rb-t" id="rbSel" title="'+esc(p.title)+'">'+esc(p.title)+'</button>'+
+    (page?'<span class="rb-c" title="'+esc(page)+'에서 멈췄어요">'+page+'</span>':'')+
+    (todo?'<div class="rb-n" title="'+esc(todo)+'"><em>다음 할 일</em><span>'+esc(todo)+'</span></div>':'<span class="sp"></span>')+
+    (list.length>1?'<div class="rb-more"><button type="button" class="rb-pick" id="rbPick" aria-haspopup="listbox" aria-expanded="false">읽는 중 '+list.length+'편<i aria-hidden="true"></i></button>'+
+      '<div class="rb-menu" id="rbMenu" role="listbox" aria-label="이어 읽을 논문 고르기" hidden>'+list.map(function(x){var pg=rbPage(x);
+        return '<button type="button" role="option" data-rb="'+esc(x.id)+'" aria-selected="'+(x.id===p.id)+'" title="'+esc(x.title)+'"><b>'+esc(x.title)+'</b>'+(pg?'<small>'+pg+'</small>':'')+'</button>'}).join('')+'</div></div>':'')+
     '<button type="button" class="btn pri sm" id="rbGo2">'+(p.state==='skim'?'읽기 시작':'이어 읽기')+'</button>';
   $('#rbGo2').addEventListener('click',function(){openReader(p.id)});
   $('#rbSel').addEventListener('click',function(){select(p.id)});
+  var pick=$('#rbPick'),menu=$('#rbMenu');
+  if(pick&&menu){
+    var outside=function(e){if(!el.contains(e.target)||!e.target.closest('.rb-more'))open(false)};
+    var open=function(v){menu.hidden=!v;pick.setAttribute('aria-expanded',String(v));
+      if(v){document.addEventListener('pointerdown',outside,true);var cur=menu.querySelector('[aria-selected="true"]');if(cur)cur.focus()}
+      else document.removeEventListener('pointerdown',outside,true)};
+    pick.addEventListener('click',function(){open(menu.hidden)});
+    menu.addEventListener('click',function(e){var b=e.target.closest('[data-rb]');if(!b)return;document.removeEventListener('pointerdown',outside,true);RBSEL=b.dataset.rb;renderAll();var nb=$('#rbPick');if(nb)nb.focus()});
+    el.addEventListener('keydown',function(e){
+      if(menu.hidden)return;
+      if(e.key==='Escape'){e.preventDefault();open(false);pick.focus();return}
+      if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;
+      e.preventDefault();var opts=Array.prototype.slice.call(menu.querySelectorAll('[data-rb]')),i=opts.indexOf(document.activeElement);
+      i=e.key==='ArrowDown'?Math.min(opts.length-1,i+1):Math.max(0,i-1);opts[i].focus();
+    });
+  }
 }

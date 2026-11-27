@@ -1328,3 +1328,20 @@
 .mobile-timeline-tag i {
   background: var(--c, #2f9bee) !important;
 }
+
+/* 캐릭터가 다른 카드로 옮겨 가면 위에서 톡 떨어지듯 나타남 */
+.who[data-hop] {
+  animation: whoHop 0.42s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes whoHop {
+  0% { opacity: 0; transform: translateY(-14px) scale(0.85); }
+  60% { opacity: 1; transform: translateY(2px) scale(1.04); }
+  100% { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .who[data-hop] {
+    animation: none;
+  }
+}

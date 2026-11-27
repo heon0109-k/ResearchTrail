@@ -32,6 +32,7 @@
         <path d="M3.5 6h13M3.5 10h13M3.5 14h13" />
       </svg>
     </button>
+    <nav class="sgp side-reading" id="sideReading" aria-label="읽는 중인 논문" hidden></nav>
     <nav class="sgp" aria-label="보기 방식">
       <div class="sl">보기</div>
       <button class="nv" id="vCard" type="button">
@@ -94,7 +95,18 @@
         <span>태그</span>
         <button
           type="button"
-          class="tag-edit"
+          id="tagAdd"
+          aria-label="태그 추가"
+          title="태그 추가"
+          aria-expanded="false"
+          aria-controls="chips"
+        >
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true">
+            <path d="M10 3v14M3 10h14" />
+          </svg>
+        </button>
+        <button
+          type="button"
           id="tagEdit"
           aria-label="태그 편집"
           title="태그 편집"
@@ -125,6 +137,7 @@
   <div class="main">
     <header class="bar">
       <h1 id="tName"></h1>
+      <span id="exTag" class="tagex" hidden>예시</span>
       <button type="button" class="tchev" id="tChev" aria-label="프로젝트 바꾸기" tabindex="-1">
         <svg
           width="16"
@@ -140,8 +153,11 @@
           <path d="M5.5 8l4.5 4.5L14.5 8" />
         </svg>
       </button>
-      <span id="exTag" class="tagex" hidden>예시</span>
       <span class="sp"></span>
+      <button type="button" class="topfind" id="topFind" aria-label="내용 찾기">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+        <span>내용 찾기</span>
+      </button>
       <button type="button" class="btn ghost sm" id="tourBtn" title="화면 기능 소개 다시 보기">사용법</button>
       <button type="button" class="btn own" id="ownBtn" hidden>내 타임라인 시작</button>
     </header>

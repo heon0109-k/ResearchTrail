@@ -46,7 +46,7 @@ function applyNotes(){var r=$('#reader');if(!r)return;r.classList.toggle('notes-
   $$('[data-tog]',r).forEach(function(b){b.setAttribute('aria-pressed',NOTES_OPEN);b.setAttribute('aria-expanded',NOTES_OPEN);
     b.innerHTML='<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg>';
     b.title=NOTES_OPEN?'메모 패널 접기':'메모 패널 펴기'})}
-function openReader(id){S.bubble=null;
+function openReader(id){S.bubble=null;if(typeof RBSEL!=='undefined')RBSEL=null;
   var p=paperBy(id);if(!p)return;
   if(p.state==='skim')p.state='reading';
   p.lastReadOrder=S.papers.reduce(function(order,item){return Number.isSafeInteger(item.lastReadOrder)&&item.lastReadOrder>order?item.lastReadOrder:order},0)+1;
@@ -161,7 +161,7 @@ function wireReadingRecords(p){
   box.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-record-candidate]');if(!b)return;chooseReadingRecord(p,b.dataset.recordCandidate);naStart(p);var panel=$('#naBox');if(panel&&!panel.hidden&&panel.scrollIntoView)panel.scrollIntoView({block:'nearest'})});
   $('#rAddNote').addEventListener('click',function(){
     var page=typeof PV!=='undefined'&&PV&&PV.pid===p.id?PV.cur:(+p.page>0?+p.page:null);
-    var h={id:nid('h'),type:'note',page:page,text:'',mine:'',rects:[]};p.hl=p.hl||[];p.hl.push(h);save();drawHlList();chooseReadingRecord(p,h.id);
+    var h={id:nid('h'),at:Date.now(),type:'note',page:page,text:'',mine:'',rects:[]};p.hl=p.hl||[];p.hl.push(h);save();drawHlList();chooseReadingRecord(p,h.id);
     var field=$('[data-hm="'+h.id+'"]',box);if(field)field.focus();
   });
   var copy=$('#rLegacyCopy');if(copy)copy.addEventListener('click',function(){copyText(highlightQuestion(p,{type:'note',page:null,text:'',mine:p.note||''}),function(ok){toast(ok?'질문을 복사했어요. 원하는 챗봇에 붙여넣어 주세요.':'복사하지 못했어요. 브라우저 권한을 확인해 주세요.')})});
@@ -182,21 +182,16 @@ function renderRNotes(){
    '<section class="reader-chat" id="rChat" aria-label="질문하기" hidden></section>'+
    (meta?'<div class="rmeta">'+meta+'</div>':'')+
    '<section class="reader-section reader-ai" id="rAi" aria-label="AI 정리"></section>'+
-   '<section class="reader-section reader-resume" aria-label="이어 읽기"><h3>이어 읽기</h3><label class="field"><span>읽은 정도</span><select id="rState">'+stateOpts(p.state)+'</select></label>'+
-   '<div class="two"><label class="field"><span>읽던 쪽 (자동 기록)</span><input type="number" min="1" id="rPage" value="'+esc(p.page)+'" placeholder="예: 7"></label><div class="field"><span>&nbsp;</span><button type="button" class="btn" id="rGo">이 쪽으로 이동</button></div></div>'+
-   '</section><section class="reader-section reader-records" aria-label="읽기 기록"><div class="records-heading"><h3>읽기 기록</h3><button type="button" class="record-add" id="rAddNote">+ 메모 추가</button></div><p class="reader-hint">문장이나 캡처에 짧게 메모를 남겨요. 메모 아래의 "다음 할 일 찾기"를 누르면 그 메모에서 후보를 찾아요.</p><div id="rRecords">'+legacyReadingRecordHtml(p)+'<div id="rHl"></div></div></section>'+
+   '<section class="reader-section reader-records" aria-label="읽기 기록"><div class="records-heading"><h3>읽기 기록</h3><button type="button" class="record-add" id="rAddNote">+ 메모 추가</button></div><p class="reader-hint">문장이나 캡처에 짧게 메모를 남겨요. 메모 아래의 "다음 할 일 찾기"를 누르면 그 메모에서 후보를 찾아요.</p><div id="rRecords">'+legacyReadingRecordHtml(p)+'<div id="rHl"></div></div></section>'+
    '<section class="reader-section reader-next" aria-label="다음에 할 일"><h3>다음에 할 일</h3><div id="rTodoSaved"><div class="field"><textarea id="rTodo" rows="2" aria-label="다음에 할 일" placeholder="다음에 할 일을 적어 보세요.">'+esc(p.todo||'')+'</textarea></div></div><div class="na" id="naBox" hidden></div></section><section id="rHistory" aria-label="기록 이력"></section>'+
    (typeof paperResourcesHtml==='function'&&(p.pdf||(p.resources||[]).length||(typeof samplePdfUrl==='function'&&samplePdfUrl(p)))?paperResourcesHtml('rResources'):'')+
-   '<details class="reader-extra"><summary>저장 이유</summary><label class="field"><span class="sr-only">저장 이유</span><textarea id="rMemo" rows="2">'+esc(p.memo)+'</textarea></label></details>'+
    (p.abs?'<details class="rabs"><summary>초록 보기</summary><p>'+esc(p.abs)+'</p></details>':'')+
    '<div class="rlinks"><div class="records-heading"><h4>이어진 논문</h4>'+(others.length?'<button type="button" class="record-add" id="rLkAdd" aria-expanded="false">+ 연결</button>':'')+'</div>'+((outs.length||ins.length)?'<ul class="lklist">'+outs.map(function(l){return li(l,'out')}).join('')+ins.map(function(l){return li(l,'in')}).join('')+'</ul>':'<p class="empty">아직 없어요. 읽다가 이어서 본 논문을 연결해 두세요.</p>')+
      (others.length?'<div class="rlk" id="rLkForm" hidden><select id="rLkTo" aria-label="이어진 논문"><option value="">이 논문에서 이어서 본 논문…</option>'+others.map(function(o){return '<option value="'+o.id+'">'+esc(short(o.title,46))+'</option>'}).join('')+'</select><input type="text" id="rLkWhy" placeholder="왜 이어서 봤나요?"><button type="button" class="btn" id="rLkOk">연결</button><p class="empty" id="rLkErr" hidden></p></div>':'')+'</div>'+
-   (typeof sampleSourceHtml==='function'?sampleSourceHtml(p):'')+
    '<button type="button" class="rd-mini-link" id="rHistToggle" aria-expanded="false">변경 기록 보기</button>'+
-   '<div class="rfoot"><button type="button" class="btn pri" id="rDone">다 읽었어요</button></div>';
-  $('#rState').addEventListener('change',function(e){p.state=e.target.value||null;save()});
-  $('#rPage').addEventListener('change',function(e){p.page=e.target.value;save()});
-  $('#rGo').addEventListener('click',function(){p.page=$('#rPage').value;save();if(PV)pvGo(+p.page,true);else readerSrc(p,p.page)});
+   '<details class="reader-extra"><summary>저장 이유</summary><label class="field"><span class="sr-only">저장 이유</span><textarea id="rMemo" rows="2">'+esc(p.memo)+'</textarea></label></details>'+
+   '<div class="rfoot"><button type="button" class="btn pri" id="rDone">다 읽었어요</button></div>'+
+   (typeof sampleSourceHtml==='function'?sampleSourceHtml(p):'');
   drawHlList();wireReadingRecords(p);if(typeof compactRecords==='function')compactRecords();
   $('#rMemo').addEventListener('input',function(e){p.memo=e.target.value;save()});
   resizeReaderTodo();

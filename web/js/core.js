@@ -1,6 +1,7 @@
 'use strict';
 var LABELW=120,AXISH=52,CW=184,CH=98,CMW=104,CMH=50,GAP=10;
-var PAL=['#7c6bf0','#2fa598','#ee7a58','#4a9be8','#d9638c','#d9a032','#eeafca'];
+/* 태그 색: 차가운 색 → 따뜻한 색 순서(보라·파랑·청록·머스터드·코랄·로즈핑크), 한 줄에 6개. */
+var PAL=['#7c6bf0','#4a9be8','#2fa598','#d9a032','#ee7a58','#d9638c'];
 var PX={B:'#2f9bee',D:'#1a6fb5',L:'#cfe9ff',K:'#0d2a40'};
 var CHARS=[
  {id:'page',name:'페이지',rows:["............","..BBBBBB....","..BBBBBBDD..","..BBBBBBBLD.","..BKBBBBKBB.","..BKBBBBKBB.","..BBBBBBBBB.","..BLLLLLLBB.","..BBBBBBBBB.","..BLLLLBBBB.","..BBBBBBBBB.","...BB..BB...","...BB..BB..."]},

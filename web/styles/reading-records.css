@@ -1166,3 +1166,312 @@
 #rLkErr {
   color: var(--c3);
 }
+
+/* 카드를 누르면 PDF 위치로 이동, ✏️로만 펼쳐서 편집 */
+.reading-card .rc-edit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--faint);
+  cursor: pointer;
+}
+
+.reading-card .rc-edit:hover,
+.reading-card.rc-open .rc-edit {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.reading-card .hl-top {
+  align-items: center;
+}
+
+/* 연필은 평소엔 숨기고, 마우스를 올린 카드·선택한 카드·펼친 카드에서만 보인다(카드가 많아도 어지럽지 않게). */
+.reading-card .rc-edit {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+
+.reading-card:hover .rc-edit,
+.reading-card:focus-within .rc-edit,
+.reading-card.is-selected .rc-edit,
+.reading-card.rc-open .rc-edit {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .reading-card:hover:not(.is-selected):not(.rc-open) .rc-edit {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* ---------- 기록 카드: 연한 회색 카드 + 날짜·쪽 줄 + 형광펜 색 인용문 + 글자 버튼 ---------- */
+#rRecords .reading-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  background: #f7f7f8 !important;
+  border: 1px solid #efeff1 !important;
+  border-radius: 10px !important;
+  padding: 11px 12px !important;
+  box-shadow: none !important;
+}
+
+#rRecords .reading-card.is-selected {
+  border-color: #9ccdf3 !important;
+  background: #f5f9fd !important;
+}
+
+#rRecords .reading-card .hl-top,
+#rRecords .reading-card .hl-ask,
+#rRecords .reading-card .record-selected,
+#rRecords .reading-card .hl-img {
+  display: none !important;
+}
+
+.rv-meta {
+  font-size: 11px;
+  color: #8a909b;
+  margin-bottom: 7px;
+}
+
+.rv-quote {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: #2b2b2b;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.rv-quote mark {
+  background: #fff1b8;
+  color: inherit;
+  padding: 1px 2px;
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.rv-quote mark.stk {
+  background: #ffdcd6;
+}
+
+.rv-img {
+  display: block;
+  width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #e6e8ec;
+  border-radius: 6px;
+}
+
+#rRecords .reading-card .rc-preview {
+  margin: 7px 0 0 !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  color: #4a515c !important;
+}
+
+#rRecords .reading-card .rc-preview.is-empty {
+  display: none !important;
+}
+
+.rv-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.rv-actions button {
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid #e3e6ea;
+  border-radius: 7px;
+  background: #fff;
+  font: inherit;
+  font-size: 11.5px;
+  color: #3b414b;
+  cursor: pointer;
+}
+
+.rv-actions button:hover {
+  background: #f2f3f5;
+}
+
+.rv-actions button.dng {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: #b33a3a;
+  padding: 0 4px;
+}
+
+.rv-actions button.dng:hover {
+  background: #fdeeee;
+}
+
+#rRecords .reading-card.rc-open .hl-meta {
+  margin-top: 10px;
+}
+
+/* 선택된 카드: 메모 글씨를 누르면 수정. 메모가 없으면 '눌러서 메모 남기기'를 흐리게 보여 준다. */
+#rRecords .reading-card.is-selected:not(.rc-open) .rc-preview {
+  cursor: text;
+  border-radius: 6px;
+  margin-left: -4px !important;
+  margin-right: -4px !important;
+  padding: 3px 4px;
+}
+
+#rRecords .reading-card.is-selected:not(.rc-open) .rc-preview:hover {
+  background: #eaf2fb;
+}
+
+#rRecords .reading-card.is-selected:not(.rc-open) .rc-preview.is-empty {
+  display: block !important;
+  color: #a0a6af !important;
+}
+
+.rv-actions:empty {
+  display: none;
+}
+
+/* 바로 메모 입력칸 */
+
+.reader-records #rAddNote,
+.reader-records > .reader-hint {
+  display: none;
+}
+
+.rq {
+  margin: 8px 0 10px;
+  border: 1px solid #e3e3df;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 12px 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rq:focus-within {
+  border-color: #9cc6ea;
+  box-shadow: 0 0 0 3px rgba(47, 155, 238, 0.12);
+}
+
+.rq textarea {
+  display: block;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #222;
+  padding: 0;
+  min-height: 44px;
+  overflow: hidden;
+}
+
+.rq textarea::placeholder {
+  color: #a3a3a0;
+}
+
+.rq-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.rq-page {
+  font-size: 12px;
+  color: #888;
+  background: #f3f3f1;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.rq-save {
+  border: 0;
+  border-radius: 8px;
+  background: #2f7fc8;
+  color: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.rq-save:disabled {
+  background: #b8c6d4;
+  cursor: default;
+}
+
+#rRecords .reading-card.rq-new {
+  box-shadow: 0 0 0 2px #f0a35a;
+  transition: box-shadow 0.3s;
+}
+
+/* 읽기 기록 카드: 메모 글씨를 진하게 (회색 → 검은색), 카드 머리 쪽 번호·종류도 조금 진하게 */
+#rRecords .reading-card .rc-preview {
+  color: var(--ink) !important;
+  font-weight: 500;
+}
+
+#rRecords .reading-card .rv-meta {
+  color: #6b7280;
+}
+
+/* 예시 논문 출처: [다 읽었어요] 아래 작은 회색 글씨 (라이선스 표시는 유지, 눈에는 덜 띄게) */
+.rdnotes .sample-source {
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.rdnotes .sample-source > summary {
+  display: inline-block;
+  padding: 2px 0;
+  color: var(--faint);
+  font-size: 11.5px;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rdnotes .sample-source > summary::before {
+  content: none;
+}
+
+.rdnotes .sample-source > summary:hover {
+  color: var(--mute);
+  text-decoration: underline;
+}
+
+.rdnotes .sample-source[open] > summary {
+  margin-bottom: 4px;
+}
+
+.rdnotes .sample-source p {
+  font-size: 11.5px;
+  color: var(--mute);
+}

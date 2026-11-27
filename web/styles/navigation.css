@@ -230,9 +230,19 @@
   flex: 1;
 }
 
+/* 예시 타임라인 표시: 프로젝트 메뉴의 '예시' 칩과 같은 모양으로 제목 바로 옆에 */
 .tagex {
+  flex: none;
   font-size: 12px;
-  color: var(--faint);
+  font-weight: 500;
+  color: #6d7580;
+  background: #f0f2f5;
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+
+.tagex[hidden] {
+  display: none;
 }
 @media (max-width: 860px) {
   .app {
@@ -811,4 +821,247 @@
   .side.m-open .chpick.mini .chp svg {
     height: 28px;
   }
+}
+
+/* 위쪽 '내 타임라인 시작 / 돌아가기' 버튼은 숨긴다.
+   예시에서 나가기는 제목 옆 프로젝트 메뉴(⌄), 휴대폰은 메뉴 시트의 같은 항목으로 한다. */
+.bar #ownBtn {
+  display: none !important;
+}
+
+/* 사이드바 '읽는 중' 목록 (넓은 화면). 좁은 화면(860px 이하)은 사이드바가 위 줄이 되므로 숨기고 위쪽 이어 읽기 줄을 쓴다. */
+.side-reading {
+  gap: 2px;
+}
+
+.side-reading[hidden] {
+  display: none;
+}
+
+.sr-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sr-item:hover {
+  background: #e9ebef;
+}
+
+.sr-item.on {
+  background: #fff;
+  box-shadow: 0 0 0 1px #dfe3e8;
+}
+
+.sr-item b {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.sr-bar {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: #dde3ea;
+  overflow: hidden;
+}
+
+.sr-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--bl);
+}
+
+.sr-item small {
+  color: var(--mute);
+  font-size: 11px;
+}
+
+.sr-more {
+  align-self: flex-start;
+  margin: 2px 0 0 4px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--mute);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sr-more:hover {
+  background: #e9ebef;
+  color: var(--ink);
+}
+
+@media (min-width: 861px) {
+  .rbar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .side-reading {
+    display: none !important;
+  }
+}
+
+/* 사이드바 칸 제목(읽는 중·보기·태그)은 검은색 */
+.side .sl {
+  color: var(--ink);
+}
+
+/* 내용 찾기: 사이드바 대신 오른쪽 위 검색칸 (테두리 없는 회색 칸, 단축키는 글씨만) */
+.side #vFind {
+  display: none;
+}
+
+.topfind {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 220px;
+  height: 32px;
+  margin-right: 8px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #f1f2f5;
+  color: #8a8f99;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.topfind:hover {
+  background: #e8eaee;
+  color: var(--mute);
+}
+
+.topfind svg {
+  flex: none;
+}
+
+.topfind span {
+  flex: 1;
+  text-align: left;
+}
+
+.topfind kbd {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #a5a9b1;
+  font: inherit;
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 860px) {
+  .topfind {
+    width: auto;
+  }
+
+  .topfind kbd {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .topfind {
+    display: none;
+  }
+}
+
+/* 5편이 들어가도 사이드바가 스크롤되지 않게 조금 촘촘하게 */
+.sr-item {
+  gap: 4px;
+  padding: 6px 10px;
+}
+
+/* 넓은 화면 사이드바: 화면 높이에 딱 맞추고, 넘치는 건 태그 칸 안에서만 스크롤 */
+@media (min-width: 861px) {
+  .side {
+    overflow: hidden;
+  }
+
+  .side .tag-menu {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .side .tag-menu .tag-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-wrap: nowrap;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+/* '읽는 중' 목록을 눈에 띄게: 흰 카드 + 굵은 진행 막대 + 오른쪽 퍼센트 */
+.side-reading {
+  gap: 6px;
+}
+
+.sr-item {
+  gap: 6px;
+  padding: 9px 11px 8px;
+  border: 1px solid #e3e6eb;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 20, 30, 0.04);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sr-item:hover {
+  background: #fff;
+  border-color: #c9d6e4;
+  box-shadow: 0 2px 8px rgba(20, 20, 30, 0.07);
+}
+
+.sr-item.on {
+  border-color: var(--bl);
+  box-shadow: 0 0 0 1px var(--bl);
+}
+
+.sr-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: #e6edf5;
+}
+
+.sr-bar i {
+  border-radius: 3px;
+}
+
+.sr-item small {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.sr-item small em {
+  font-style: normal;
+  font-weight: 600;
+  color: #1d73b7;
 }

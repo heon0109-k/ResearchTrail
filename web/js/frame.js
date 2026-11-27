@@ -29,6 +29,16 @@ function showMain(){
   $('#vList').addEventListener('click',function(){setView('list')});
   $('#vDot').addEventListener('click',function(){setView('dot')});
   $('#vFind').addEventListener('click',openFind);
+  /* 내용 찾기는 오른쪽 위 검색칸에서 연다 (⌘K / Ctrl+K). 사이드바의 '내용 찾기'는 숨겨 두고 휴대폰 탭바가 계속 쓴다. */
+  var tf=$('#topFind');
+  if(tf){
+    tf.addEventListener('click',openFind);
+    if(!window.__rtFindKey){window.__rtFindKey=true;
+      document.addEventListener('keydown',function(e){
+        if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&(e.key==='k'||e.key==='K')&&$('#topFind')&&!S.reader&&!document.documentElement.classList.contains('demo')){e.preventDefault();openFind()}
+      });
+    }
+  }
   $('#tourBtn').addEventListener('click',function(){tourStart()});
   /* 제목을 누르면 프로젝트 메뉴(고르기·새로 만들기·이름 바꾸기·삭제). 예시를 볼 때는 열리지 않는다. */
   var tn=$('#tName'),tch=$('#tChev');
@@ -65,7 +75,7 @@ function showMain(){
   var _st=0;sc.addEventListener('scroll',function(){clearTimeout(_st);_st=setTimeout(function(){if(sc.isConnected&&S.view==='card'&&!S.reader){S.scroll=timelineScrollState(sc);save()}},250)});
 }
 function setView(v){S.reader=null;if(v==='list'){S.bubble=null;S.panel='none';S.sel=null}S.view=v;renderAll();if(v==='dot'){D.alpha=Math.max(D.alpha,.6);kick()}}
-function openAdd(draft){S.reader=null;S.draft=Object.assign({},S.filterTag!=null?{tag:S.filterTag}:{},draft,{date:todayStr()});S.panel='add';S.sel=null;S.linking=null;renderAll();var t=$('#aTitle');if(t)t.focus()}
+function openAdd(draft){S.reader=null;S.draft=Object.assign({},S.filterTag!=null?{tag:S.filterTag}:{},draft,{date:todayStr()});S.panel='add';S.sel=null;S.linking=null;var pin0=$('#pin');if(pin0)pin0.innerHTML='';renderAll();var t=$('#aTitle');if(t)t.focus()}
 
 function select(id){
   if(!id){closeDetailPanel();return}
@@ -73,6 +83,8 @@ function select(id){
     S.detailScroll=timelineScrollState($('#scroller'));
     if(S.zoom==='all')S.detailScroll.fitViewport=L.fitViewport;
   }
+  /* 읽는 중인 논문 카드를 누르면 캐릭터도 그 카드로 따라간다 */
+  if(typeof rbarPapers==='function'&&rbarPapers().some(function(p){return p.id===id}))RBSEL=id;
   S.reader=null;S.sel=id;S.panel='detail';S.linking=null;
   renderAll();ensureVisible(id);
 }
@@ -190,11 +202,11 @@ function renderTagbar(){
     }
     h+='</div>';
   });
-  var u=S.papers.filter(function(p){return !p.tag}).length;
-  if((u||S.filterTag==='')&&S.tags.length)h+=chip('','태그 없음',u,NOTAG.color);
+  var untaggedCount=S.papers.filter(function(p){return !p.tag}).length;
+  if(untaggedCount||S.filterTag==='')h+=chip('',NOTAG.name,untaggedCount,NOTAG.color);
   if(TAGEDIT){if(!NEWCOLOR)NEWCOLOR=PAL[S.tags.length%PAL.length];h+='<div class="tag-add-form"><input class="tag-name-input" id="tagNew" maxlength="20" placeholder="새 태그 이름" aria-label="새 태그 이름">'+colorSwatches(NEWCOLOR,'data-new-color')+'</div>'}
-  h+='<button type="button" class="tag-add-bottom" id="tagAdd" aria-label="태그 추가">+ 태그 추가</button>';
   $('#chips').innerHTML=h;
+  var add=$('#tagAdd');if(add)add.setAttribute('aria-expanded',String(TAGEDIT));
   function showPalette(button){
     var old=$('#chips .tag-palette');
     if(old)old.remove();

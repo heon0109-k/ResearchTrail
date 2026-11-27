@@ -101,7 +101,21 @@
 }
 
 .textLayer ::selection {
-  background: rgba(47, 155, 238, 0.35);
+  background: transparent;
+}
+
+/* 선택 미리보기: 줄마다 하나로 합친 띠(형광펜과 같은 모양). js/pdf-viewer.js pvDrawSelPreview */
+.sellayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.sellayer i {
+  position: absolute;
+  background: rgba(47, 155, 238, 0.3);
+  border-radius: 2px;
 }
 
 .textLayer br::selection {
@@ -290,4 +304,14 @@
 .clipboard-copy-field {
   position: fixed;
   opacity: 0;
+}
+
+/* 기록 카드에서 이동했을 때 위치를 알려 주는 깜빡임 */
+.hlayer i.flash {
+  animation: hlflash 0.6s ease-in-out 3;
+}
+
+@keyframes hlflash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 170, 0, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 170, 0, 0.55); background: rgba(255, 190, 40, 0.75); }
 }

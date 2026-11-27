@@ -11,8 +11,12 @@
 .tag-menu .tag-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 2px;
   padding-right: 4px;
+}
+
+.tag-heading > span {
+  margin-right: auto;
 }
 
 .tag-row {
@@ -78,14 +82,13 @@
 }
 
 .tag-filter:focus-visible,
-.tag-edit:focus-visible,
-.tag-add-bottom:focus-visible {
+.tag-heading button:focus-visible {
   outline: 2px solid #2f9bee;
   outline-offset: 2px;
 }
 
 /* 태그 이름과 색 편집 */
-.tag-edit {
+.tag-heading button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,8 +101,9 @@
   cursor: pointer;
 }
 
-.tag-edit:hover,
-.tag-edit[aria-pressed=true] {
+.tag-heading button:hover,
+.tag-heading button[aria-pressed=true],
+.tag-heading button[aria-expanded=true] {
   background: #e4e7ec;
   color: #515b68;
 }
@@ -176,25 +180,6 @@
 }
 
 /* 태그 추가 */
-.tag-add-bottom {
-  display: block;
-  margin-top: 10px;
-  padding: 6px 9px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: #8b919b;
-  font: inherit;
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.tag-add-bottom:hover {
-  color: #4e5968;
-  background: #eceef2;
-}
-
 .tag-add-form {
   display: flex;
   flex-direction: column;
@@ -216,7 +201,7 @@
 /* 태그 색상 팔레트. 버튼은 28px 터치 영역, 안쪽 점은 12px로 표시한다. */
 .tag-color-palette {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 2px;
   padding: 2px 5px 4px;
 }

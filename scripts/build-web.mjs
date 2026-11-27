@@ -22,7 +22,7 @@ const config = { SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: key };
 
 // Reviewed website inputs. The build also generates browser-config.js and copies the pinned SDK.
 const website = {
-  '.': ['index.html', 'style.css', 'tag-menu.css'],
+  '.': ['index.html', 'style.css'],
   'assets/papers': [
     'almanac-v2.pdf', 'bert-naacl2019.pdf', 'biobert-published.pdf', 'chain-of-thought-v6.pdf',
     'clinical-knowledge-v1.pdf', 'credits.html', 'graphrag-v1.pdf', 'manifest.json', 'self-rag-v1.pdf',
@@ -33,15 +33,15 @@ const website = {
   'js': [
     'account-actions.js', 'account-memos.js', 'account-pdfs.js', 'account-projects.js',
     'account-save-status.js', 'account.js', 'ai-stub.js', 'ai-summary.js', 'capture.js',
-    'chat-query-expansion.js', 'chat-retrieval.js', 'chat.js', 'core.js', 'find.js', 'frame.js',
+    'chat-query-expansion.js', 'chat-retrieval.js', 'chat.js', 'core.js', 'date-picker.js', 'find.js', 'frame.js',
     'graph.js', 'helpers.js', 'import.js', 'landing.js', 'main.js', 'next-action.js', 'onboarding.js',
     'panel.js', 'paper-list.js', 'pdf-viewer.js', 'projects.js', 'reader.js', 'records-compact.js',
-    'sample-papers.js', 'screens.js', 'timeline-mobile.js', 'timeline.js', 'tour.js',
+    'sample-papers.js', 'screens.js', 'timeline-mobile.js', 'timeline.js', 'tooltip.js', 'tour.js',
   ],
   'styles': [
-    'account.css', 'ai-summary.css', 'chat.css', 'graph.css', 'landing.css', 'navigation.css',
+    'account.css', 'ai-summary.css', 'chat.css', 'date-picker.css', 'graph.css', 'landing.css', 'navigation.css',
     'onboarding.css', 'paper-credits.css', 'paper-list.css', 'paper-panel.css', 'pdf-viewer.css',
-    'projects.css', 'reader.css', 'reading-records.css', 'resume.css', 'search.css', 'timeline.css',
+    'projects.css', 'reader.css', 'reading-records.css', 'resume.css', 'search.css', 'tag-menu.css', 'timeline.css', 'tooltip.css',
   ],
   'vendor/pdfjs-3.11.174': ['LICENSE', 'pdf.min.js', 'pdf.worker.min.js'],
   'views': [

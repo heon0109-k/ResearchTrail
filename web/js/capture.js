@@ -29,7 +29,7 @@ function pvCapInit(p){
     out.getContext('2d').drawImage(cv,x*r,y*r,w*r,h*r,0,0,out.width,out.height);
     var img=out.toDataURL('image/png');if(img.length>260000)img=out.toDataURL('image/jpeg',.85);
     var page=+s.box.dataset.n;
-    p.hl=p.hl||[];p.hl.push({id:nid('h'),page:page,text:'',img:img,kind:'그래프·표',mine:'',rects:[[x/s.bb.width,y/s.bb.height,w/s.bb.width,h/s.bb.height]]});
+    p.hl=p.hl||[];p.hl.push({id:nid('h'),at:Date.now(),page:page,text:'',img:img,kind:'그래프·표',mine:'',rects:[[x/s.bb.width,y/s.bb.height,w/s.bb.width,h/s.bb.height]]});
     save();drawHl(p,page);drawHlList();mode(false);
     if(!S.example&&S.saved===false)toast('저장 공간이 부족해 캡처가 새로고침 후 사라질 수 있어요');
   });
