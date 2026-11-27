@@ -66,6 +66,9 @@ create policy fixture_permissive on storage.objects for all to public using(true
 
     execute((ROOT / "tests/sql/account_reader.sql").read_text())
     print("PASS: exact-edition reader state, normalized anchors, memo links, retries and isolation without file bytes")
+    # Draft cases, not yet approved by the team.
+    execute((ROOT / "tests/sql/account_paper_links.sql").read_text())
+    print("PASS (draft cases): paper links within one task, retries, link rules, ordering and account isolation")
 
     if options.concurrent:
         pkglib = subprocess.check_output(["pg_config", "--pkglibdir"], text=True).strip()

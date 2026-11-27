@@ -59,7 +59,7 @@ export async function handleResearchTrail(request, backend) {
       return await paperPdf(request,{task:pdfRoute[1].toLowerCase(),kind:pdfRoute[2],id:pdfRoute[3].toLowerCase()},
         {backend,owner,headers,rpc:callRpc,cors,fail});
     }
-    const match = /^\/tasks\/([^/]+)\/(papers|records|resume|next-actions)$/.exec(path);
+    const match = /^\/tasks\/([^/]+)\/(papers|paper-links|records|resume|next-actions)$/.exec(path);
     const post = request.method === 'POST';
     let rpc;
     const args = {};
@@ -72,7 +72,8 @@ export async function handleResearchTrail(request, backend) {
       } else if (match[2] === 'records' || match[2] === 'next-actions') {
         if (!post) return fail(405, 'INVALID_INPUT');
         rpc = match[2] === 'records' ? 'rt_save_record' : 'rt_confirm_action';
-      } else rpc = post ? 'rt_register_paper' : 'rt_papers';
+      } else if (match[2] === 'paper-links') rpc = post ? 'rt_link_papers' : 'rt_paper_links';
+      else rpc = post ? 'rt_register_paper' : 'rt_papers';
       args.task_id = match[1];
     } else return fail(404, 'RESOURCE_UNAVAILABLE');
     if (!post && request.method !== 'GET') return fail(405, 'INVALID_INPUT');
@@ -83,6 +84,7 @@ export async function handleResearchTrail(request, backend) {
         rt_confirm_action: ['source_record_id', 'confirmed', 'reviewed_action', 'original_candidate', 'links', 'request_id'],
         rt_save_record: ['record', 'context', 'revises_record_id', 'request_id'],
         rt_register_paper: ['document', 'document_id', 'use', 'artifacts', 'date', 'request_id'],
+        rt_link_papers: ['from_document_use_id', 'to_document_use_id', 'reason_text', 'request_id'],
         rt_create_task: ['goal_text', 'scope_text', 'target_output_text', 'progress_text', 'request_id'],
       }[rpc];
       if (!body || typeof body !== 'object' || Array.isArray(body) ||
