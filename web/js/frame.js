@@ -137,6 +137,8 @@ function renderAll({keepTagInputs=false}={}){
   var rd=!!(S.reader&&paperBy(S.reader));if(!rd)S.reader=null;
   $('.work').hidden=rd;$('#reader').hidden=!rd;
   $('.app').classList.toggle('reading',rd);
+  /* 읽기 화면에서도 사이드바 '읽는 중' 목록은 그대로 보여 준다 (새로고침으로 바로 읽기 화면이 열릴 때 포함) */
+  if(rd&&typeof renderSideReading==='function'&&typeof rbarPapers==='function')renderSideReading(rbarPapers());
   if(rd){$('#overviewControls').hidden=true;$('#bandsw').hidden=true;renderReader();$('#fcard').hidden=true;$('#fdot').hidden=true;$('#vCard').setAttribute('aria-pressed',false);$('#vList').setAttribute('aria-pressed',false);$('#vDot').setAttribute('aria-pressed',false);save();return}
   RD.id=null;killPv();
   var card=S.view==='card',list=S.view==='list';
