@@ -1429,3 +1429,49 @@
   box-shadow: 0 0 0 2px #f0a35a;
   transition: box-shadow 0.3s;
 }
+
+/* 읽기 기록 카드: 메모 글씨를 진하게 (회색 → 검은색), 카드 머리 쪽 번호·종류도 조금 진하게 */
+#rRecords .reading-card .rc-preview {
+  color: var(--ink) !important;
+  font-weight: 500;
+}
+
+#rRecords .reading-card .rv-meta {
+  color: #6b7280;
+}
+
+/* 예시 논문 출처: [다 읽었어요] 아래 작은 회색 글씨 (라이선스 표시는 유지, 눈에는 덜 띄게) */
+.rdnotes .sample-source {
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.rdnotes .sample-source > summary {
+  display: inline-block;
+  padding: 2px 0;
+  color: var(--faint);
+  font-size: 11.5px;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rdnotes .sample-source > summary::before {
+  content: none;
+}
+
+.rdnotes .sample-source > summary:hover {
+  color: var(--mute);
+  text-decoration: underline;
+}
+
+.rdnotes .sample-source[open] > summary {
+  margin-bottom: 4px;
+}
+
+.rdnotes .sample-source p {
+  font-size: 11.5px;
+  color: var(--mute);
+}
