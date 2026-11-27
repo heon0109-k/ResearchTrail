@@ -31,7 +31,7 @@ const website = {
     'biobert-qa-results.png', 'cot-prompt-example.png', 'graphrag-pipeline.png', 'graphrag-results.png',
   ],
   'js': [
-    'account-actions.js', 'account-chat.js', 'account-graph.js', 'account-memos.js', 'account-pdfs.js', 'account-projects.js',
+    'workspace-store.js', 'workspace-recovery.js', 'product-reader.js', 'account-actions.js', 'account-chat.js', 'account-graph.js', 'account-memos.js', 'account-pdfs.js', 'account-projects.js',
     'account-save-status.js', 'account.js', 'ai-stub.js', 'ai-summary.js', 'capture.js',
     'chat-query-expansion.js', 'chat-retrieval.js', 'chat.js', 'core.js', 'date-picker.js', 'find.js', 'frame.js',
     'graph.js', 'helpers.js', 'import.js', 'landing.js', 'main.js', 'next-action.js', 'onboarding.js',
@@ -45,7 +45,7 @@ const website = {
   ],
   'vendor/pdfjs-3.11.174': ['LICENSE', 'pdf.min.js', 'pdf.worker.min.js'],
   'views': [
-    'account-projects.html', 'account.html', 'landing.html', 'main.html', 'onboarding.html',
+    'account-projects.html', 'account.html', 'project-records.html', 'landing.html', 'main.html', 'onboarding.html',
     'reader.html',
   ],
 };

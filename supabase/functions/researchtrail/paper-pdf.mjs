@@ -1,27 +1,8 @@
+import {boundedBytes} from './bytes.mjs';
 const bucket = 'researchtrail-pdfs';
 const limit = 10 * 1024 * 1024;
 const decoder = new TextDecoder();
 
-// Count the actual stream even when a client omits or understates Content-Length.
-async function boundedBytes(message) {
-  if (!message.body || Number(message.headers.get('content-length')) > limit) return null;
-  const reader = message.body.getReader();
-  const chunks = [];
-  let length = 0;
-  try {
-    for (;;) {
-      const {done,value} = await reader.read();
-      if (done) break;
-      length += value.byteLength;
-      if (length > limit) { await reader.cancel(); return null; }
-      chunks.push(value);
-    }
-  } finally { reader.releaseLock(); }
-  const bytes = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk,offset); offset += chunk.byteLength; }
-  return bytes;
-}
 function pdfSignature(bytes) {
   return /^%PDF-(?:1\.[0-7]|2\.0)[\r\n]/.test(decoder.decode(bytes.subarray(0,10))) &&
     /%%EOF[\x00\t\n\f\r ]*$/.test(decoder.decode(bytes.subarray(-1024)));
@@ -44,7 +25,7 @@ export async function paperPdf(request, {task,kind,id}, {backend,owner,headers,r
     catch { return fail(400,'INVALID_INPUT'); }
     if (!/\.pdf$/i.test(name) || name.length<5 || name.length>255 || /[\\/\x00-\x1f\x7f]/.test(name) ||
         request.headers.get('content-type')?.toLowerCase() !== 'application/pdf') return fail(415,'INVALID_INPUT');
-    bytes = await boundedBytes(request);
+    bytes = await boundedBytes(request,limit);
     if (!bytes) return fail(413,'INVALID_INPUT');
     if (!pdfSignature(bytes)) return fail(415,'INVALID_INPUT');
     if (!backend.storageKey) return fail(503,'STORAGE_FAILURE');
@@ -77,7 +58,7 @@ export async function paperPdf(request, {task,kind,id}, {backend,owner,headers,r
   }
   const download = await backend.fetch(storage+'authenticated/'+key,{method:'GET',headers,redirect:'error'});
   if (!download.ok) return download.status>=500 ? fail(503,'STORAGE_FAILURE') : fail(404,'RESOURCE_UNAVAILABLE');
-  const stored = await boundedBytes(download);
+  const stored = await boundedBytes(download,limit);
   if (!stored || stored.length!==artifact.size_bytes || await digest(stored)!==artifact.sha256) return fail(503,'STORAGE_FAILURE');
   return upload ? ack() : new Response(stored,{headers:{...cors,'Content-Type':'application/pdf','X-Content-Type-Options':'nosniff'}});
 }

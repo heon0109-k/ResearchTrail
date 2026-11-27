@@ -5,7 +5,7 @@ function mtlOn(){return !!(MTL_MQ&&MTL_MQ.matches)}
 function mtlDate(d){var p=String(d||'').split('-');return p.length===3?(+p[1])+'월 '+(+p[2])+'일':''}
 function mtlCard(p,cur){
   var stateText=p.use?.reading_state_text||readingState(p.state).t,tg=tagBy(p.tag||''),go=cur&&cur.id===p.id;
-  var tagLabel=S.source==='account'?'':'<span class="mobile-timeline-tag" style="--c:'+esc(tg.color)+'"><i></i>'+esc(tg.name)+'</span>';
+  var tagLabel='<span class="mobile-timeline-tag" style="--c:'+esc(tg.color)+'"><i></i>'+esc(tg.name)+'</span>';
   var nx=S.links.filter(function(l){return l.from===p.id}).map(function(l){return paperBy(l.to)}).filter(Boolean);
   return '<button type="button" class="mobile-timeline-card st-'+readingStateKey(p.state)+(go?' go':'')+(S.sel===p.id?' sel':'')+(matches(p)?'':' dim')+'" data-mtl-paper="'+esc(p.id)+'">'+
     '<span class="mobile-timeline-top">'+tagLabel+'<span class="mobile-timeline-date">'+mtlDate(p.date)+'</span><span class="mobile-timeline-state">'+esc(stateText)+'</span></span>'+

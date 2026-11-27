@@ -85,6 +85,10 @@
     let restoreDevice = false;
     try { restoreDevice = reload && !callback && id && window.sessionStorage.getItem(deviceTabKey) === id; } catch {}
     if (!restoreDevice) rememberDeviceView(false);
+    if (accountId && id!==accountId) {
+      const projectKey='researchtrail.account.'+window.RESEARCHTRAIL_CONFIG.SUPABASE_URL+'.'+accountId+'.task';
+      try {window.sessionStorage.removeItem(projectKey);} catch {}
+    }
     ready = true;
     generation++;
     accountId = id;
@@ -144,6 +148,7 @@
         if (!result.ok) {
           const error = new Error(data.error?.message || '계정 자료에 접근하지 못했어요.');
           error.code = data.error?.code;
+          error.status = result.status;
           throw error;
         }
         return data;

@@ -210,3 +210,20 @@ test('function entry reads server settings, keeps the template blank and embeds 
     assert.equal(backend.sent('responses'),undefined);
   }
 });
+
+// Draft SPEC §4.2. A capture is an explicit question attachment to the current PDF.
+test('an attached capture targets its source page and keeps its note distinct from verified passages',async () => {
+  const backend=fixture({dirty:true});
+  const result=await backend.ask({scope:'open_pdf',capture:{page:1,note:'내가 확인할 비교 기준'},selection:{page:1,text:'fourteen observations'}});
+  assert.equal(result.status,200);
+  assert.deepEqual(backend.sent('rt_rag_search').payload.artifact_ids,[artifact(1)]);
+  const prompt=backend.sent('responses').input;
+  assert.match(prompt,/첨부한 캡처.*p\.1/);
+  assert.match(prompt,/내가 확인할 비교 기준/);
+  assert.doesNotMatch(prompt.split('<본문>\n').at(-1).split('</본문>')[0],/내가 확인할 비교 기준/);
+  for(const capture of [{page:0,note:''},{page:1,note:'x'.repeat(401)},{page:1,note:'',image:'data:'}]) {
+    const bad=fixture();
+    assert.equal((await bad.ask({scope:'open_pdf',capture})).status,400);
+    assert.equal(bad.sent('responses'),undefined);
+  }
+});

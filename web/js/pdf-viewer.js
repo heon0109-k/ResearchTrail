@@ -26,7 +26,7 @@ function paperResourcePdfUrl(p){
   return samplePdfUrl(p)||pdfUrlOf(p.link)||(link&&/\.pdf$/i.test(new URL(link).pathname)?link:'');
 }
 async function findPaperResources(p,isCurrent,uploadedFile){
-  var file=uploadedFile||(p.pdf?await idbGet(p.id):null);
+  var file=uploadedFile||(p.pdf?(typeof accountReaderEnabled==='function'&&accountReaderEnabled()?await accountReaderPdf(p,p.artifactId):await idbGet(p.id)):null);
   var url=file?'':paperResourcePdfUrl(p);
   if(!file&&!url)return null;
   await loadPdfJs();
@@ -56,20 +56,31 @@ async function findPaperResources(p,isCurrent,uploadedFile){
 var PV=null;
 function killPv(){if(PV){try{PV.io&&PV.io.disconnect();PV.doc&&PV.doc.destroy()}catch(e){}PV=null}var b=$('#hlbar');if(b)b.remove()}
 function toast(t){var el=$('#rdtoast');if(!el){el=document.createElement('div');el.id='rdtoast';el.className='rdtoast';document.body.appendChild(el)}el.textContent=t;el.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){el.classList.remove('on')},4200)}
-function openPv(p,src,page){
+function openPv(p,src,page,current){
   return loadPdfJs().then(function(){return pdfjsLib.getDocument({...src,isEvalSupported:false}).promise}).then(function(doc){
-    if(RD.id!==p.id){doc.destroy();return}
+    if(RD.id!==p.id || (current && !current())){doc.destroy();return}
     var box=$('#rdsrc');
     box.innerHTML='<div class="pvwrap"><div class="pvbar"><button type="button" class="btn sm" id="pvPrev" aria-label="이전 쪽">◀</button><span class="pvpg"><input type="number" min="1" id="pvNum" value="1"> / <b id="pvTot">'+doc.numPages+'</b></span><button type="button" class="btn sm" id="pvNext" aria-label="다음 쪽">▶</button><span class="sp"></span><button type="button" class="btn sm" id="pvMinus" aria-label="축소">−</button><span id="pvZ" class="pvz">100%</span><button type="button" class="btn sm" id="pvPlus" aria-label="확대">＋</button><button type="button" class="btn sm" id="pvCap" aria-pressed="false" title="깨지는 수식이나 그래프를 이미지로 저장">영역 캡처</button>'+togHtml()+'</div><div class="pvscroll" id="pvs"></div></div>';if(typeof placePdfDownload==='function')placePdfDownload();
     PV={doc:doc,zoom:1,pages:[],io:null,pid:p.id,cur:1};
-    if(String(p.total)!==String(doc.numPages)){p.total=String(doc.numPages);save()}
+    var viewer=PV;
+    if(String(p.total)!==String(doc.numPages)){
+      p.total=String(doc.numPages);
+      if(current){if(!RD.guide)accountReaderBackground(accountReaderExtra(p,{totalPages:doc.numPages}));}else save();
+    }
+    if(current){
+      var scope=accountReaderScope(p), zoom=scope.w.extra(scope.target,scope.id)?.zoom;
+      if(Number.isFinite(zoom)&&zoom>=.5&&zoom<=2.4)PV.zoom=zoom;
+    }
     $('#reader').classList.add('has-pv');applyNotes();
     return doc.getPage(1).then(function(p1){
+      if(PV!==viewer || (current && !current()))return;
       PV.w1=p1.getViewport({scale:1}).width;
       buildPages(p);
       var sc=$('#pvs');
-      var tm=0;sc.addEventListener('scroll',function(){clearTimeout(tm);tm=setTimeout(function(){trackPage(p)},120)});
-      sc.addEventListener('mouseup',function(e){pvFixSelection(e);setTimeout(function(){onSel(p,e)},10)});
+      var tm=0;
+      for (const event of ['wheel','touchmove','pointerdown','keydown']) sc.addEventListener(event,()=>{viewer.userScroll=true;});
+      sc.addEventListener('scroll',function(){clearTimeout(tm);tm=setTimeout(function(){if(PV===viewer && (!current || current()))trackPage(p)},120)});
+      sc.addEventListener('mouseup',function(e){pvFixSelection(e);setTimeout(function(){if(PV===viewer && (!current||current()))onSel(p,e)},10)});
       sc.addEventListener('mousedown',function(e){var b=$('#hlbar');if(b)b.remove();pvDragStart(e,sc)});
       sc.addEventListener('mousemove',pvDragMove);
       $('#pvPrev').addEventListener('click',function(){pvGo(PV.cur-1)});
@@ -79,7 +90,7 @@ function openPv(p,src,page){
       $('#pvPlus').addEventListener('click',function(){pvZoom(p,.15)});
       pvCapInit(p);pvHitInit(p);
       var start=Math.max(1,Math.min(doc.numPages,+(page||p.page)||1));
-      setTimeout(function(){pvGo(start,true)},0);
+      pvGo(start,true);
     });
   });
 }
@@ -255,17 +266,26 @@ function pdfHighlightMarkup(highlights,n){
 function pvGo(n,quiet){
   if(!PV)return;n=Math.max(1,Math.min(PV.doc.numPages,Math.round(n)||1));
   var pg=PV.pages[n];if(!pg)return;
-  $('#pvs').scrollTop=pg.el.offsetTop-12;PV.cur=n;$('#pvNum').value=n;if(typeof rcComposePageSync==='function')rcComposePageSync();
-  if(!quiet){var p=paperBy(PV.pid);if(p){p.page=String(n);var r=$('#rPage');if(r)r.value=n;save()}}
+  PV.userScroll=false;$('#pvs').scrollTop=pg.el.offsetTop-12;PV.cur=n;$('#pvNum').value=n;if(typeof rcComposePageSync==='function')rcComposePageSync();
+  if(!quiet){var p=paperBy(PV.pid);if(p){p.page=String(n);var r=$('#rPage');if(r)r.value=n;
+    if(typeof accountReaderEnabled==='function' && accountReaderEnabled())accountReaderSavePage(p,n);else save()}}
 }
 function trackPage(p){
-  if(!PV)return;var sc=$('#pvs');if(!sc)return;var mid=sc.scrollTop+sc.clientHeight*.35,cur=1;
+  if(!PV)return;
+  var account=typeof accountReaderEnabled==='function' && accountReaderEnabled();
+  if(account && !PV.userScroll)return;
+  var sc=$('#pvs');if(!sc)return;var mid=sc.scrollTop+sc.clientHeight*.35,cur=1;
   for(var n=1;n<PV.pages.length;n++){var e=PV.pages[n].el;if(e.offsetTop<=mid)cur=n;else break}
   if(cur!==PV.cur){PV.cur=cur;$('#pvNum').value=cur;if(typeof rcComposePageSync==='function')rcComposePageSync()}
-  if(String(cur)!==String(p.page)){p.page=String(cur);var r=$('#rPage');if(r)r.value=cur;save()}
+  if(String(cur)!==String(p.page)){
+    p.page=String(cur);var r=$('#rPage');if(r)r.value=cur;
+    if(account)accountReaderSavePage(p,cur);else save();
+  }
 }
 function pvZoom(p,d){
-  if(!PV)return;var cur=PV.cur;PV.zoom=Math.max(.5,Math.min(2.4,Math.round((PV.zoom+d)*100)/100));buildPages(p);pvGo(cur,true);
+  if(!PV)return;var cur=PV.cur;PV.zoom=Math.max(.5,Math.min(2.4,Math.round((PV.zoom+d)*100)/100));
+  if(typeof accountReaderEnabled==='function'&&accountReaderEnabled())accountReaderBackground(accountReaderExtra(p,{zoom:PV.zoom}));
+  buildPages(p);pvGo(cur,true);
 }
 function snapWords(sel){
   try{
@@ -275,7 +295,7 @@ function snapWords(sel){
     r.setStart(sc,so);r.setEnd(ec,eo);sel.removeAllRanges();sel.addRange(r);
   }catch(e){}
 }
-var SNAP=true;try{SNAP=localStorage.getItem('researchtrail.snap')!=='0'}catch(e){}
+var SNAP=true;try{if(typeof S==='undefined'||S.source!=='account')SNAP=localStorage.getItem('researchtrail.snap')!=='0'}catch(e){}
 function snapSentences(sel){
   try{
     var r=sel.getRangeAt(0),sc=r.startContainer,ec=r.endContainer;
@@ -326,9 +346,9 @@ function onSel(p,e){
   bar.addEventListener('click',function(ev){
     var a=ev.target.getAttribute&&ev.target.getAttribute('data-a');
     function fin(extra){
-      p.hl=p.hl||[];var h={id:nid('h'),at:Date.now(),page:page,text:text,kind:guessKind(text),rects:rects};
+      p.hl=p.hl||[];var h={id:typeof accountReaderNewId==='function'?accountReaderNewId():nid('h'),at:Date.now(),page:page,text:text,kind:guessKind(text),rects:rects};
       if(extra)for(var k in extra)h[k]=extra[k];
-      p.hl.push(h);return h}
+      p.hl.push(h);if(typeof accountReaderNewCard==='function')accountReaderNewCard(p,h);return h}
     if(a==='stuck'){fin({blocked:true});save();drawHl(p,page);drawHlList();bar.remove();sel.removeAllRanges();toast('막힌 곳으로 표시했어요. 오른쪽에서 메모를 남기거나 질문을 복사하세요.');return}
     if(a!=='hl')return;
     fin();
@@ -391,7 +411,7 @@ function drawHlList(){
     fit();i.addEventListener('input',fit);
   });
   $$('[data-pg]',el).forEach(function(b){b.addEventListener('click',function(){var card=b.closest('[data-rid]'),h=card&&(p.hl||[]).filter(function(x){return x.id===card.dataset.rid})[0];if(h&&h.rects&&h.rects.length)pvReveal(h);else pvGo(+b.dataset.pg)})});
-  $$('[data-hk]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hk);if(!h)return;h.kind=b.dataset.kind;save();var menu=b.closest('.kind-picker');$('.kind-label',menu).textContent=h.kind;$('summary',menu).setAttribute('aria-label','기록 종류: '+h.kind);$$('[data-hk]',menu).forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});menu.open=false;$('summary',menu).focus()})});
+  $$('[data-hk]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hk);if(!h)return;h.kind=b.dataset.kind;if(S.source==='account')accountReaderBackground(accountReaderCardChanged(p,h));else save();var menu=b.closest('.kind-picker');$('.kind-label',menu).textContent=h.kind;$('summary',menu).setAttribute('aria-label','기록 종류: '+h.kind);$$('[data-hk]',menu).forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});menu.open=false;$('summary',menu).focus()})});
   $$('.kind-picker',el).forEach(function(menu){
     menu.addEventListener('toggle',function(){if(!menu.open)return;$$('.kind-picker',el).forEach(function(other){if(other!==menu)other.open=false});var panel=$('.kind-menu',menu),notes=$('#rdnotes'),r=menu.getBoundingClientRect(),nr=notes?notes.getBoundingClientRect():{top:0,bottom:window.innerHeight};menu.classList.toggle('opens-up',r.bottom+panel.offsetHeight+8>nr.bottom&&r.top-panel.offsetHeight-8>nr.top)});
     menu.addEventListener('keydown',function(e){var options=$$('[data-hk]',menu),index=options.indexOf(document.activeElement);if(e.key==='Escape'){e.preventDefault();e.stopPropagation();menu.open=false;$('summary',menu).focus()}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();menu.open=true;var n=e.key==='ArrowDown'?index+1:index<0?options.length-1:index-1;options[(n+options.length)%options.length].focus()}});
@@ -402,12 +422,14 @@ function drawHlList(){
   $$('[data-hq]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hq);if(!h)return;copyText(highlightQuestion(p,h),function(ok){toast(ok?(h.img?'질문을 복사했어요. 챗봇에 붙여넣고 캡처 이미지도 함께 첨부해 주세요.':'질문을 복사했어요. 원하는 챗봇에 붙여넣어 주세요.'):'복사하지 못했어요. 브라우저 권한을 확인해 주세요.')})})});
   $$('[data-hm]',el).forEach(function(i){
     wireMemoEditor(i,function(text,first){var h=hb(i.dataset.hm);if(!h)return;
-      if(first&&typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');
-      h.mine=text;save();if(typeof NA!=='undefined'&&NA.pid===p.id&&NA.sourceId===h.id&&NA.st==='cand')naRender(p,true);
-    },function(){var h=hb(i.dataset.hm);if(!h)return;if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');save();if(typeof renderHistory==='function')renderHistory(p)});
+      if(S.source!=='account'&&first&&typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');
+      h.mine=text;if(S.source==='account')accountReaderDraftMemo(p,h);else save();if(typeof NA!=='undefined'&&NA.pid===p.id&&NA.sourceId===h.id&&NA.st==='cand')naRender(p,true);
+    },function(){var h=hb(i.dataset.hm);if(!h)return;
+      if(S.source==='account'){accountReaderBackground(accountReaderCompleteMemo(p,h).then(()=>{if(S.reader===p.id)renderHistory(p)}));return}
+      if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');save();if(typeof renderHistory==='function')renderHistory(p)});
   });
   $$('[data-hd]',el).forEach(function(b){b.addEventListener('click',function(){var h=hb(b.dataset.hd);if(!h)return;
-    function del(){if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});if(typeof RR!=='undefined'&&RR.pid===p.id&&RR.selected===h.id)clearReadingSelection(p);save();drawHl(p,h.page);drawHlList();if(typeof renderHistory==='function')renderHistory(p)}
+    function del(){if(S.source==='account'){accountReaderBackground(accountReaderRemoveCard(p,h));return}if(typeof rememberReadingMemo==='function')rememberReadingMemo(p,h.id,h.mine||'');p.hl=(p.hl||[]).filter(function(x){return x.id!==h.id});if(typeof RR!=='undefined'&&RR.pid===p.id&&RR.selected===h.id)clearReadingSelection(p);save();drawHl(p,h.page);drawHlList();if(typeof renderHistory==='function')renderHistory(p)}
     ask(h.img?'이 캡처를 삭제할까요?':h.type==='note'?'이 메모를 삭제할까요?':'이 하이라이트를 삭제할까요?',h.img?'저장한 이미지와 "내가 이해한 것"이 함께 사라져요.':'선택한 기록과 메모가 목록에서 삭제돼요. 저장된 다음 할 일은 유지돼요.','삭제',del,true)})});
   $$('.hl-img',el).forEach(function(im){im.addEventListener('click',function(){
     var ov=document.createElement('div');ov.className='ov';ov.innerHTML='<img class="bigimg" src="'+im.src+'" alt="캡처한 부분 크게 보기">';

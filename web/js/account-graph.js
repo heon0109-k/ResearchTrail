@@ -1,198 +1,188 @@
 'use strict';
 
-// Each instance belongs to one authenticated frame. All mutations start with an explicit user action.
-function createAccountGraphWorkspace(get, account, refresh, chooseCreated) {
-  const dialog = $('#accountPaperDetail'), notice = $('#workspaceActionStatus');
-  const cancelLink = $('#workspaceLinkCancel'), add = $('#addBtn');
-  const saves = createAccountSaveStatus(account.write, account.current, account);
-  let reader;
-  function openReader(paper,artifact,label) {
-    close();
-    reader ||= createAccountWorkspaceReader(account,saves);
-    return reader.open(S.taskId,paper,artifact,label);
-  }
-  $('#workspaceRecords').addEventListener('click',()=>openReader());
-  for (const id of ['vDot','vCard','vList']) $('#'+id).addEventListener('click',()=>reader?.close());
-  let generation = 0, formVersion = 0, opening, discard;
-  function endForm() {
-    ++formVersion;
-    opening = null;
-    if (typeof dpClose === 'function') dpClose();
-    discard?.();
-    discard = null;
-    S.draftFile = S.draftMeta = null;
-  }
-  function close() {
-    endForm();
-    dialog.close();
-  }
-  function formScope() {
-    endForm();
-    const version = formVersion, project = generation;
-    return {task:S.taskId, version, current:() => account.current() && generation === project && formVersion === version};
-  }
-  function show(label) {
-    dialog.setAttribute('aria-label',label);
-    if (!dialog.open) dialog.showModal();
-  }
-  function clearLink() {
-    S.linking = null;
-    cancelLink.hidden = true;
-    notice.textContent = '';
-  }
-  function reset(task) {
-    reader?.close();
-    ++generation;
-    endForm();
-    clearLink();
-    $('#workspaceRecords').disabled = add.disabled = true;
-    D.pos.clear();
-    D.els = {}; D.edges = {}; D.drag = null; D.inited = false; D.alpha = 0;
-    saves.focus(task);
-  }
-  function caption(p) {
-    if (!S.papers.some(other => other.id !== p.id && other.title === p.title)) return p.title;
-    const shortId = p.id.slice(-8);
-    const ambiguous = S.papers.some(other => other.id !== p.id && other.title === p.title && other.id.endsWith(shortId));
-    return p.title+' · '+(ambiguous ? p.id : shortId);
-  }
+// Adapt existing account documents and their editions to the original paper controls.
+function accountPaperFromRow(row, extras = {}) {
+  const artifacts = row.artifacts || [];
+  const editions = artifacts.filter(a => a.pdf || a.can_attach_pdf);
+  const selected = editions.find(a=>a.artifact_id===extras.selectedArtifactId) || (editions.length===1 ? editions[0] : null);
+  const originalLink = artifacts.find(a => a.access_locator_text);
+  const link = Object.hasOwn(row,'access_locator_text') ? row.access_locator_text : originalLink?.access_locator_text;
+  return {
+    ...row, artifacts, id:row.document_use_id, title:row.document.title,
+    date:row.date ?? null, memo:row.use?.purpose_text || '', link:link || '',
+    state:Object.keys(STATES).find(k => STATES[k].t === row.use?.reading_state_text) || null,
+    pdf:!!selected?.pdf?.available, artifactId:selected?.artifact_id || null, fname:selected?.label_text || '',
+    tag:extras.tag || '', resources:Array.isArray(extras.resources) ? extras.resources : [],
+    dismissedResourceUrls:Array.isArray(extras.dismissedResourceUrls) ? extras.dismissedResourceUrls : [],
+    abs:extras.abs || '', authors:extras.authors || '', year:extras.year || '',
+    lastReadOrder:Number.isSafeInteger(extras.lastReadOrder) ? extras.lastReadOrder : 0,
+  };
+}
 
-  // Retain the operation's key until its acknowledgement. Repeating a form submission
-  // with different content is a different operation. Layout and view changes never call this.
-  function wireMutation(form, label, scope, makeRequest, saved) {
-    let busy = false, signature, key;
-    const error = $('#workspaceFormError');
-    form.addEventListener('submit',async event => {
-      event.preventDefault();
-      if (busy || !scope.current()) return;
-      const operation = makeRequest();
-      if (!operation) return;
-      const next = JSON.stringify(operation);
-      if (next !== signature) { signature = next; key = crypto.randomUUID(); }
-      busy = true; form.inert = true; form.setAttribute('aria-busy','true'); error.textContent = '';
-      try {
-        const result = await account.write(operation.path,{...operation.body,request_id:key},{method:operation.method});
-        if (scope.current()) await saved(result);
-      } catch (failure) {
-        if (scope.current()) error.textContent = failure.code === 'INVALID_LINK'
-          ? '연결할 수 없는 경로예요. 다시 불러온 뒤 이동 경로를 확인해 주세요.'
-          : '저장을 확인하지 못했어요. 입력 내용을 확인하고 다시 시도해 주세요.';
-      } finally { busy = false; form.inert = false; form.setAttribute('aria-busy','false'); }
+function createAccountPaperOperations(workspace) {
+  const scope = () => {
+    const task = S.taskId;
+    if (!task || !workspace.current()) throw Error('먼저 계정 프로젝트를 선택해 주세요.');
+    return {task, path:'/tasks/'+encodeURIComponent(task), current:() => workspace.current() && S.taskId===task};
+  };
+  function paperLabel(id) {
+    const paper=paperBy(id);
+    if (!paper?.title) return String(id).slice(-8);
+    const brief=paper.title.length>45 ? paper.title.slice(0,45)+'…' : paper.title;
+    return S.papers.some(other=>other.id!==id && other.title===paper.title) ? brief+' · '+id.slice(-8) : brief;
+  }
+  const retries=new Map();
+  function request(label,path,body,method) {
+    const signature=JSON.stringify([path,method,body]);
+    const id=retries.get(signature) || crypto.randomUUID();
+    retries.set(signature,id);
+    const acknowledged=()=>{if(retries.get(signature)===id)retries.delete(signature);};
+    return workspace.mutate(label,path,{...body,request_id:id},{method,onAck:acknowledged})
+      .then(result=>{acknowledged();return result;});
+  }
+  async function attach(paper,file,artifactId) {
+    return upload(scope(),paper,file,artifactId);
+  }
+  async function upload(project,paper,file,artifactId,registration) {
+    const prior=paper.artifacts?.find(a=>a.artifact_id===artifactId);
+    const sha256=registration?.uploadJob?.sha256 || await validateAccountPdf(file,prior?.pdf?.sha256);
+    if (!workspace.current()) throw Error('계정이 변경되었어요.');
+    const job=registration?.uploadJob || workspace.saves.prepare(project.task,paper.id+'/'+(artifactId || ''),file);
+    job.sha256=sha256;
+    let edition;
+    const ok=await workspace.saves.upload(job,file,paper.id,artifactId,async ack=>{
+      edition={...prior,artifact_id:ack.artifact_id,label_text:prior?.label_text || file.name,
+        pdf:{available:true,document_use_id:paper.id,sha256,size_bytes:file.size}};
+      if(registration)registration.uploaded=edition;
+      if (!project.current()) return;
+      if (!paperBy(paper.id) && registration) {
+        try { await workspace.refresh(); } catch { /* The upload receipt is already confirmed. */ }
+      }
+      if (!project.current()) return;
+      const currentPaper=paperBy(paper.id) || paper;
+      const artifacts=(currentPaper.artifacts || []).filter(a=>a.artifact_id!==edition.artifact_id);
+      Object.assign(currentPaper,{artifacts:[...artifacts,edition],artifactId:edition.artifact_id,pdf:true,fname:edition.label_text});
+      if (currentPaper!==paper) Object.assign(paper,{artifacts:currentPaper.artifacts,artifactId:edition.artifact_id,pdf:true,fname:edition.label_text});
+      if (currentPaper.artifacts.filter(a=>a.pdf||a.can_attach_pdf).length>1) {
+        workspace.patchExtra('paper',paper.id,{selectedArtifactId:edition.artifact_id},{task:project.task,label:'읽을 PDF 판본'}).catch(()=>{});
+      }
+      if (!S.reader) renderAll();
     });
-    $('#workspaceDismiss').addEventListener('click',close);
-    show(label);
+    if (!ok) throw Error('PDF 업로드를 확인하지 못했어요. 같은 파일로 다시 시도해 주세요.');
+    return edition;
   }
-  function buttons(label) {
-    return '<p id="workspaceFormError" role="alert"></p><div class="paper-form-actions">'+
-      '<button type="submit" class="btn pri sm">'+label+'</button> '+
-      '<button type="button" class="btn sm" id="workspaceDismiss">취소</button></div>';
-  }
-  $('#workspaceNew').addEventListener('click',() => {
-    clearLink();
-    const scope = formScope();
-    dialog.innerHTML = '<h2>새 프로젝트</h2><form id="workspaceCreateForm"><label class="field">프로젝트 이름'+
-      '<input id="workspaceName" required maxlength="60" autofocus></label>'+buttons('프로젝트 만들기')+'</form>';
-    wireMutation($('#workspaceCreateForm'),'새 프로젝트',scope,() => {
-      const name = projCleanName($('#workspaceName').value);
-      if (name) return {path:'/tasks',method:'POST',body:{goal_text:name}};
-      $('#workspaceFormError').textContent = '프로젝트 이름을 입력해 주세요.';
-    },async task => { close(); await chooseCreated(task); });
-  });
-  async function addPaper() {
-    if (opening || add.disabled || !S.taskId) return;
-    clearLink();
-    const scope = formScope();
-    opening = scope;
+  // The registration receipt covers the selected task, paper and all of its metadata.
+  // Private PDF bytes go to the separate upload route only after registration succeeds.
+  async function register(p,file,job) {
+    const project=scope();
+    if (job.task && job.task!==project.task) throw Error('프로젝트가 변경되었어요.');
+    job.task=project.task;
+    if (!job.requestId) {
+      const sha256=file ? await validateAccountPdf(file) : null;
+      if (!project.current()) throw Error('프로젝트가 변경되었어요.');
+      const data={};
+      for (const key of ['tag','abs','authors','year']) if (p[key]) data[key]=p[key];
+      job.requestId=crypto.randomUUID();
+      job.body={request_id:job.requestId,
+        ...(p.document_id ? {document_id:p.document_id} : {document:{title:p.title,material_kind_text:'논문'}}),
+        use:{purpose_text:p.memo || null,reading_state_text:STATES[p.state]?.t || null}, date:p.date || null,
+        artifacts:p.link ? [{access_locator_text:p.link}] : [], ...(Object.keys(data).length ? {workspace_data:data} : {})};
+      job.paper={...p,artifacts:[]};
+      if (file) {
+        job.file=file;
+        job.uploadJob=workspace.saves.prepare(project.task,job.requestId,file,'selected');
+        workspace.saves.expectRegistrationPdf(job.uploadJob,job.requestId,sha256,p.title);
+      }
+    }
+    const finish=async receipt=>{
+      if (!receipt?.document_use_id) throw Error('논문 등록을 확인하지 못했어요.');
+      job.receipt=receipt;
+      Object.assign(job.paper,{...receipt,id:receipt.document_use_id});
+      if (job.file && !job.uploaded) {
+        workspace.saves.registrationSaved(project.task,job.requestId,receipt);
+        await upload(project,job.paper,job.file,undefined,job);
+      }
+      return receipt.document_use_id;
+    };
+    if (job.receipt) return finish(job.receipt);
     try {
-      const {documents} = await get('/documents');
-      if (!scope.current()) return;
-      discard = renderAccountRegistration(dialog,{documents,request:account.write,selected:scope.task,
-        version:scope.version,current:scope.current,saves,uploadPdf:true,closeForm:close,refresh,registered:refresh});
-      show('새 논문');
-      $('#aTitle').focus();
-    } catch {
-      if (scope.current()) notice.textContent = '논문 등록 양식을 열지 못했어요. 논문 추가를 다시 눌러 주세요.';
-    } finally { if (opening === scope) opening = null; }
+      job.failed=false;
+      const receipt=await workspace.mutate(p.title.slice(0,45)+' · 논문 등록',project.path+'/papers',job.body,
+        {onAck:ack=>{if(job.failed)return finish(ack);}});
+      return await finish(receipt);
+    } catch (error) {
+      job.failed=true;
+      if(job.uploadJob && !job.receipt)workspace.saves.block(job.uploadJob);
+      throw error;
+    }
   }
-  add.addEventListener('click',addPaper);
-  cancelLink.addEventListener('click',() => { clearLink(); renderAll(); });
-  dialog.addEventListener('cancel',event => {
-    if (dialog.querySelector('form[aria-busy="true"]')) event.preventDefault();
-    else endForm();
-  });
-
-  function linkForm(from, to, existing, remove = false) {
-    clearLink();
-    const scope = formScope(), path = '/tasks/'+scope.task+'/paper-links';
-    const heading = remove ? '이 연결을 삭제할까요?' : existing ? '연결 이유 수정' : '이동 경로 추가';
-    dialog.innerHTML = '<h2>'+heading+'</h2><p>'+esc(caption(from))+' → '+esc(caption(to))+'</p>'+
-      '<form id="workspaceLinkForm">'+(remove ? '<p>연결 이유도 함께 삭제돼요.</p>' :
-        '<label class="field">왜 이 논문으로 넘어갔나요?<input id="lkWhy" value="'+esc(existing?.reason || '')+'"></label>')+
-      buttons(remove ? '연결 삭제' : '연결 저장')+'</form>';
-    wireMutation($('#workspaceLinkForm'),heading,scope,() => {
-      const reason = remove ? null : $('#lkWhy').value.trim() || null;
-      if (existing) return {path:path+'/'+existing.id,method:remove?'DELETE':'PATCH',body:remove?{}:{reason_text:reason}};
-      return {path,method:'POST',body:{from_document_use_id:from.id,to_document_use_id:to.id,reason_text:reason}};
-    },async () => { close(); await refresh(scope.task); });
-  }
-  function pickTarget(paper) {
-    if (!S.linking) return false;
-    const from = paperBy(S.linking.from);
-    if (!from) { clearLink(); return false; }
-    const error = linkError(from.id,paper.id);
-    if (error) { notice.textContent = error; return true; }
-    linkForm(from,paper,S.links.find(l => l.from === from.id && l.to === paper.id));
-    return true;
-  }
-  function paperControls(box, paper) {
-    const scope = formScope();
-    box.setAttribute('aria-label','논문 상세');
-    const links = S.links.filter(l => l.from === paper.id || l.to === paper.id);
-    const related = links.map(l => {
-      const other = paperBy(l.from === paper.id ? l.to : l.from);
-      return other ? '<li>'+ (l.from === paper.id ? '다음에 읽은 논문' : '먼저 읽은 논문')+' · '+esc(caption(other))+
-        '<p>'+esc(l.reason || '연결 이유 미기록')+'</p><button type="button" class="btn sm" data-edit-link="'+esc(l.id)+'">이유 수정</button> '+
-        '<button type="button" class="btn sm" data-remove-link="'+esc(l.id)+'">연결 삭제</button></li>' : '';
-    }).join('');
-    const attach = paper.artifacts.map(a => a.can_attach_pdf
-      ? '<p>'+esc(a.label_text || 'PDF')+' '+accountPdfAttachHtml(paper.id,a.pdf?.sha256,a.artifact_id)+'</p>' : '').join('');
-    $('#workspacePaperActions').innerHTML = '<h3>이동 경로</h3>'+
-      (related?'<ul>'+related+'</ul>':'')+
-      (S.papers.length>1?'<button type="button" class="btn sm" id="lkStart">이동 경로 추가</button>':'')+
-      '<h3>PDF 첨부</h3>'+attach+accountPdfAttachHtml(paper.id)+'<p id="workspacePdfError" role="alert"></p>';
-    $$('[data-open-pdf]',box).forEach(button=>button.addEventListener('click',()=>{
-      const edition=paper.artifacts.find(a=>a.artifact_id===button.dataset.openPdf);
-      if (scope.current() && edition) return openReader(paper,edition,button.dataset.label);
+  async function update(p,changes) {
+    const project=scope(), fields={}, extra={};
+    const names={title:'title',memo:'purpose_text',date:'date',link:'access_locator_text',state:'reading_state_text'};
+    for (const [key,value] of Object.entries(changes)) {
+      if (Object.hasOwn(names,key)) fields[names[key]]=key==='state' ? STATES[value]?.t || null : value || null;
+      else if (key==='tag' || key==='resources' || key==='dismissedResourceUrls') extra[key]=value;
+    }
+    const requests=[];
+    if (Object.keys(fields).length) requests.push(request(paperLabel(p.id)+' · 논문 정보',project.path+'/papers/'+p.id,fields,'PATCH').then(()=>{
+      if (!project.current()) return;
+      const restored=paperBy(p.id) || p;
+      for (const key of Object.keys(changes)) if (Object.hasOwn(names,key)) restored[key]=changes[key];
+      if ('state' in changes) restored.use={...restored.use,reading_state_text:fields.reading_state_text};
     }));
-    $('#lkStart')?.addEventListener('click',() => {
-      close(); S.linking = {from:paper.id};
-      notice.textContent = '이 논문에서 이어서 읽은 논문을 선택해 주세요.';
-      cancelLink.hidden = false; renderAll();
-    });
-    $$('[data-edit-link],[data-remove-link]',box).forEach(button => button.addEventListener('click',() => {
-      const l = links.find(l => l.id === (button.dataset.editLink || button.dataset.removeLink));
-      linkForm(paperBy(l.from),paperBy(l.to),l,!!button.dataset.removeLink);
-    }));
-    $$('[data-attach-pdf]',box).forEach(input => input.addEventListener('change',async () => {
-      const file = input.files?.[0];
-      if (!file || input.disabled || !scope.current()) return;
-      const {artifactId,expectedSha} = input.dataset;
-      input.disabled = true;
-      const job=saves.prepare(scope.task,paper.id+'/'+(artifactId || ''),file);
-      try {
-        job.sha256 = await validateAccountPdf(file,expectedSha);
-        if (!scope.current()) { saves.discard(job); return; }
-        const saved = await saves.upload(job,file,paper.id,artifactId,async () => {
-          await refresh(scope.task);
-          if (scope.current() && dialog.open && paperBy(paper.id)) showAccountPaper(paper.id);
-        });
-        if (!saved && scope.current()) $('#workspacePdfError').textContent =
-          'PDF 업로드를 확인하지 못했어요. 창을 닫고 PDF 업로드 다시 시도를 눌러 주세요.';
-      } catch (error) {
-        if (job.phase==='preparing') saves.discard(job);
-        if (scope.current()) $('#workspacePdfError').textContent = error.message;
-      } finally { input.value = ''; input.disabled = false; }
-    }));
+    if (Object.keys(extra).length) {
+      const signature=JSON.stringify([project.path,p.id,extra]);
+      const requestId=retries.get(signature) || crypto.randomUUID();
+      retries.set(signature,requestId);
+      const clear=()=>{if(retries.get(signature)===requestId)retries.delete(signature);};
+      requests.push(workspace.patchExtra('paper',p.id,extra,{task:project.task,requestId,onAck:clear,label:paperLabel(p.id)+' · 논문 정보'}).then(()=>{
+        clear();
+        if (project.current()) Object.assign(paperBy(p.id) || p,extra);
+      }));
+    }
+    const results=await Promise.allSettled(requests);
+    const failed=results.find(r=>r.status==='rejected');
+    if (failed) throw failed.reason;
   }
-  return {reset,addPaper,pickTarget,paperControls,caption,projects:saves.projects};
+  async function link(from,to,reason,existing) {
+    const project=scope(), path=project.path+'/paper-links', reason_text=reason || null;
+    const label=paperLabel(from)+' → '+paperLabel(to)+' · ';
+    if (existing) {
+      await request(label+'연결 이유',path+'/'+existing.id,{reason_text},'PATCH');
+      if (project.current()) {
+        const target=S.links.find(l=>l.id===existing.id);
+        if (target) target.reason=reason;
+      }
+    } else {
+      const ack=await request(label+'논문 연결',path,{from_document_use_id:from,to_document_use_id:to,reason_text},'POST');
+      if (!ack?.link_id) throw Error('논문 연결을 확인하지 못했어요.');
+      if (project.current() && !S.links.some(l=>l.id===ack.link_id)) S.links.push({id:ack.link_id,from,to,reason});
+    }
+  }
+  async function removeLink(id) {
+    const project=scope();
+    const link=S.links.find(l=>l.id===id);
+    const label=link ? paperLabel(link.from)+' → '+paperLabel(link.to)+' · 연결 삭제' : '연결 삭제';
+    await request(label,project.path+'/paper-links/'+id,{},'DELETE');
+    if (project.current()) S.links=S.links.filter(l=>l.id!==id);
+  }
+  async function remove(p) {
+    const project=scope();
+    await request(paperLabel(p.id)+' · 논문 삭제',project.path+'/papers/'+p.id,{},'DELETE');
+    if (!project.current()) return;
+    S.links=S.links.filter(l=>l.from!==p.id && l.to!==p.id);
+    S.papers=S.papers.filter(item=>item.id!==p.id);
+  }
+  const selections=new Map();
+  function selectEdition(p,id) {
+    if (!p.artifacts.some(a=>a.artifact_id===id && (a.pdf || a.can_attach_pdf))) throw Error('PDF 판본을 확인해 주세요.');
+    const key=S.taskId+'/'+p.id, pending=selections.get(key);
+    if (pending?.id===id) return pending.promise;
+    if (!pending && workspace.extra('paper',p.id)?.selectedArtifactId===id) return Promise.resolve();
+    const promise=workspace.patchExtra('paper',p.id,{selectedArtifactId:id},{label:paperLabel(p.id)+' · 읽을 PDF 판본'})
+      .finally(()=>{if(selections.get(key)?.promise===promise)selections.delete(key);});
+    selections.set(key,{id,promise});
+    return promise;
+  }
+  return {register,update,link,removeLink,remove,attach,selectEdition,documents:()=>workspace.write('/documents')};
 }

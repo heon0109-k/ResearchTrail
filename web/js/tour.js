@@ -1,8 +1,17 @@
 'use strict';
 /* ---------- 처음 접속 안내: 화면을 어둡게 하고 기능마다 네모 칸으로 짚어 설명 ---------- */
 var TOUR=null;
-function tourSeen(){try{return localStorage.getItem('researchtrail.tour')==='1'}catch(e){return false}}
-function tourMark(){try{localStorage.setItem('researchtrail.tour','1')}catch(e){}}
+function tourSeen(){
+  if(S.source==='account')return !!(S.taskId&&accountWorkspace.extra('project',S.taskId).tourSeen);
+  try{return localStorage.getItem('researchtrail.tour')==='1'}catch(e){return false}
+}
+function tourMark(){
+  if(S.source==='account'){
+    if(S.taskId)accountWorkspace.patchExtra('project',S.taskId,{tourSeen:true}).catch(()=>{});
+    return;
+  }
+  try{localStorage.setItem('researchtrail.tour','1')}catch(e){}
+}
 /* st: 이 단계를 보여 줄 때 앱이 있어야 할 화면 (timeline / detail=카드 옆 패널 / reader=읽기 화면) */
 var TOUR_STEPS=[
   {core:1,st:'timeline',sel:'#addBtn',t:'논문 추가',d:'링크나 DOI를 붙이거나 PDF를 올려서 논문을 추가해요. 타임라인의 빈 곳을 더블클릭해도 돼요.'},
@@ -20,7 +29,7 @@ var TOUR_STEPS=[
 function tutPaper(){return S.papers.filter(function(p){return p.tut})[0]||S.papers.slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date))})[0]||null}
 /* 처음 시작할 때 오늘 날짜로 연습용 빈 카드를 하나 만든다 (안내용, 지워도 됨) */
 function addTutCard(){
-  if(S.papers.length)return null;
+  if(S.papers.length||S.source==='account')return null;
   var p={id:nid('p'),tag:'',date:todayStr(),title:'연습용 카드 · 눌러서 열어 보세요',memo:'사용법을 익히는 빈 카드예요. 다 써 봤으면 지워도 돼요.',link:'',state:'skim',tut:true};
   S.papers.push(p);
   renderAll();
@@ -33,7 +42,7 @@ function tourEnsure(st){
   var p=tutPaper();
   if(st==='timeline'){if(S.reader||S.panel!=='none'){S.reader=null;S.sel=null;S.panel='none';S.linking=null;renderAll()}}
   else if(st==='detail'&&p){if(S.reader||S.panel!=='detail'||S.sel!==p.id)select(p.id)}
-  else if(st==='reader'&&p){if(S.reader!==p.id)openReader(p.id)}
+  else if(st==='reader'&&p){if(S.reader!==p.id)openReader(p.id,null,{guide:true})}
 }
 function tourStart(mode){
   var short=(mode==='short');

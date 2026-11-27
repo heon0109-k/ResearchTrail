@@ -38,8 +38,8 @@ function actionLinksForm(snapshot, selected={}) {
   return choices ? '<details><summary>관련 항목 연결 (선택)</summary>'+choices+'</details>' : '';
 }
 
-function createAccountActionReview(request, {current,refresh,read,store,saves}) {
-  const box=$('#naBox'), status=$('#accountActionStatus');
+function createAccountActionReview(request, {current,refresh,read,store,saves,lookup=$}) {
+  const box=lookup('#naBox'), status=lookup('#accountActionStatus');
   const pending=new Map();
   let review=null;
 
@@ -70,17 +70,17 @@ function createAccountActionReview(request, {current,refresh,read,store,saves}) 
       (candidate?'<div><span class="k">최초 후보 · 규칙 기반</span><p class="na-q">'+esc(candidate)+'</p></div>':'')+
       naReviewControls(value.action_text,r.record.record.content_text,true,op?'같은 요청 다시 확인':'확인하고 저장',
         inputs+actionLinksForm(r.view.snapshot,draft?.links))+'<p id="reviewStatus" role="status"></p>';
-    $('#reviewStatus').textContent=message;
-    const field=$('#naCand');
+    lookup('#reviewStatus').textContent=message;
+    const field=lookup('#naCand');
     field.value=value.action_text;
     field.readOnly=!!op;
     for(const [key,,id] of actionDetails) {
-      const input=$('#'+id);
+      const input=lookup('#'+id);
       input.value=value[key] ?? '';
       input.readOnly=!!op;
     }
     for(const link of $$('input[data-link-kind]',box)) link.disabled=!!op;
-    if (op) $('#naCancel').textContent='닫기';
+    if (op) lookup('#naCancel').textContent='닫기';
     wireActionConfirmation(text=>confirm(r,text),()=>{
       if (!active(r) || r.sending) return;
       if (r.rejected) { remember(r,null); phase(r,'idle'); }
@@ -99,7 +99,7 @@ function createAccountActionReview(request, {current,refresh,read,store,saves}) 
     if(operation) { show(r,'이전에 확인한 저장 요청의 결과를 다시 확인해 주세요.');return; }
     if(mode==='manual') { show(r);return; }
     box.innerHTML='<span role="status">메모에서 다음 할 일을 찾는 중…</span><button type="button" class="btn" id="naCancel">취소</button>';
-    $('#naCancel').addEventListener('click',()=>{if(active(r))clear();});
+    lookup('#naCancel').addEventListener('click',()=>{if(active(r))clear();});
     let suggestion;
     try { suggestion=await aiSuggest(record.record.content_text); } catch { /* Offer manual entry below. */ }
     if(!active(r))return;
@@ -111,7 +111,7 @@ function createAccountActionReview(request, {current,refresh,read,store,saves}) 
     if(!r.operation){
       const reviewed_action={action_text:text}, links={};
       for(const [key,,id] of actionDetails) {
-        const value=$('#'+id).value;
+        const value=lookup('#'+id).value;
         if(value.trim())reviewed_action[key]=value;
       }
       for(const link of $$('input[data-link-kind]:checked',box))
@@ -124,7 +124,7 @@ function createAccountActionReview(request, {current,refresh,read,store,saves}) 
     r.sending=true;
     phase(r,'saving');
     show(r,'계정에 저장 중…');
-    $('#naOk').disabled=$('#naCancel').disabled=true;
+    lookup('#naOk').disabled=lookup('#naCancel').disabled=true;
     try {
       const ack=await request('/tasks/'+r.view.id+'/next-actions',r.operation);
       if(!active(r))return;

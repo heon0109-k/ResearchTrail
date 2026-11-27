@@ -7,7 +7,10 @@ function idb(){return new Promise(function(res,rej){
     r.onupgradeneeded=function(){r.result.createObjectStore('f')};
     r.onsuccess=function(){_db=r.result;res(_db)};r.onerror=function(){rej(r.error)}}catch(e){rej(e)}})}
 function idbPut(k,blob){return idb().then(function(db){return new Promise(function(res,rej){var t=db.transaction('f','readwrite');t.objectStore('f').put(blob,k);t.oncomplete=res;t.onerror=t.onabort=function(){rej(t.error||new Error('PDF storage failed'))}})})}
-function attachPaperPdf(p,file){return idbPut(p.id,file).then(function(){p.pdf=true;p.fname=file.name})}
+function attachPaperPdf(p,file,artifactId){
+  if(S.source==='account')return accountWorkspace.papers.attach(p,file,artifactId);
+  return idbPut(p.id,file).then(function(){p.pdf=true;p.fname=file.name});
+}
 function idbGet(k){return idb().then(function(db){return new Promise(function(res,rej){var q=db.transaction('f').objectStore('f').get(k);q.onsuccess=function(){res(q.result||null)};q.onerror=rej})}).catch(function(){return null})}
 function idbDel(k){return idb().then(function(db){db.transaction('f','readwrite').objectStore('f').delete(k)}).catch(function(){})}
 

@@ -4,6 +4,7 @@ function landingSeen(){try{return localStorage.getItem('researchtrail.landing')=
 function landingMark(){try{localStorage.setItem('researchtrail.landing','1')}catch(e){}}
 var RET=false; /* 내 기록이 있는 채로 예시를 열었는지 */
 function hasMine(){
+  if(S.source==='account')return !!S.taskId;
   if(S.papers.length&&!S.example)return true;
   try{var o=JSON.parse(localStorage.getItem(KEY)||'null');return !!(o&&Array.isArray(o.papers)&&!o.example)}catch(e){return false}
 }
@@ -30,21 +31,27 @@ function landingSwitch(){
   (window.top||window).location.assign(u.href);
 }
 function showLanding(){
-  try{sessionStorage.setItem('researchtrail.screen','landing')}catch(e){}
+  const signed=typeof S!=='undefined'&&S.source==='account';
+  if(!signed)try{sessionStorage.setItem('researchtrail.screen','landing')}catch(e){}
   if(typeof S!=='undefined'&&S)S.bubble=null;
   var ch=curChar(),has=hasMine(),configured=!!window.RESEARCHTRAIL_CONFIG?.SUPABASE_URL;
   app.innerHTML = screens.landing;
   $$('[data-lp="start"]').forEach(function(button){
-    button.textContent=has?'이 브라우저에 저장한 작업 열기':'이 브라우저에서 시작하기';
+    button.textContent=signed?'계정 작업공간으로 돌아가기':has?'이 브라우저에 저장한 작업 열기':'이 브라우저에서 시작하기';
     if(!configured)button.classList.add('pri');
   });
-  $$('[data-lp="google"]').forEach(function(button){button.hidden=!configured});
+  $$('[data-lp="google"]').forEach(function(button){button.hidden=!configured||signed});
   var canReturn=landingAccountButton()?.id==='authBack';
   if(canReturn)$$('.landing-gt').forEach(function(label){label.textContent='계정 타임라인으로'});
-  $$('[data-lp="switch"]').forEach(function(button){button.hidden=!canReturn});
+  $$('[data-lp="switch"]').forEach(function(button){button.hidden=!canReturn&&!signed});
   $('.landing-mascot').innerHTML=spr(ch.rows,3,'bob');
   $('#lpWalk').innerHTML=spr(ch.rows,2,'bob');
   $$('[data-lp]').forEach(function(b){b.addEventListener('click',function(){
+    if(signed){
+      if(b.dataset.lp==='sample'){projAccountMenu.sample();return}
+      if(b.dataset.lp==='switch'){landingSwitch();return}
+      showMain();return;
+    }
     landingMark();
     if(b.dataset.lp==='google'){landingGoogle();return}
     if(b.dataset.lp==='switch'){landingSwitch();return}

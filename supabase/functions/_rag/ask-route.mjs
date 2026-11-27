@@ -16,9 +16,12 @@ const text = (value, max) => typeof value === 'string' && /\S/.test(value) && va
 const page = value => value == null || (Number.isInteger(value) && value >= 1);
 
 function validQuestion(body) {
-  return hasOnly(body, ['question', 'current_page', 'selection', 'history', 'consent', 'scope', 'answer_depth']) &&
+  return hasOnly(body, ['question', 'current_page', 'selection', 'history', 'consent', 'scope', 'answer_depth', 'capture']) &&
     body.consent === true && (body.scope === undefined || ['open_pdf', 'linked_papers'].includes(body.scope)) &&
     (body.answer_depth === undefined || ANSWER_DEPTHS.includes(body.answer_depth)) &&
+    (body.capture === undefined || (body.scope === 'open_pdf' && hasOnly(body.capture,['page','note']) &&
+      Number.isSafeInteger(body.capture.page) && body.capture.page > 0 &&
+      typeof body.capture.note === 'string' && body.capture.note.length <= 400)) &&
     text(body.question, MAX_QUESTION) && page(body.current_page) &&
     (body.selection == null || (hasOnly(body.selection, ['text', 'page']) && text(body.selection.text, MAX_SELECTION) && page(body.selection.page))) &&
     (body.history == null || (Array.isArray(body.history) && body.history.length <= MAX_HISTORY && body.history.every(turn =>
@@ -75,7 +78,7 @@ export async function ragAsk(request, { task, artifact }, { backend, rpc, cors, 
   const opened = current.filter(row => row.artifact_id === open.artifact_id && row.document_use_id === open.document_use_id)
     .map(row => chunk(row, false));
   keywordScores(body.question, opened).forEach((score, i) => { opened[i].keyword = score; });
-  const priority = [...pagePriority(body.question, opened, { currentPage: body.current_page, selection: body.selection }),
+  const priority = [...pagePriority(body.question, opened, { currentPage: body.current_page, selection: body.capture ? {page:body.capture.page,text:body.selection?.text || ''} : body.selection }),
     ...figureChunks(body.question, opened, open.document_use_id)];
   const { passages } = selectPassages(rankChunks([...chunks.values()]), { priority });
   const reply = (kind, answer, evidence) => Response.json({ kind, text: answer, evidence, searched, excluded }, { headers: cors });
@@ -84,7 +87,7 @@ export async function ragAsk(request, { task, artifact }, { backend, rpc, cors, 
   const sent = passages.map(p => ({ label: labels.get(p.paper), page: p.page, text: p.text }));
   const prompt = buildPrompt({
     papers: searched.map(item => ({ label: item.label, title: item.title })), passages: sent, question: body.question,
-    currentPage: body.current_page ?? undefined, history: body.history ?? [], excludedCount: excluded.length, openPdfOnly,
+    currentPage: body.current_page ?? undefined, capture:body.capture, history: body.history ?? [], excludedCount: excluded.length, openPdfOnly,
     selection: body.selection ? { label: labels.get(open.document_use_id), page: body.selection.page ?? null, text: body.selection.text } : undefined,
   });
   const effort = resolveAnswerEffort(body.answer_depth, body.question);

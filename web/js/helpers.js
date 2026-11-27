@@ -9,8 +9,6 @@ function linkError(a,b){
   return '';
 }
 function curPaper(){
-  // A paper catalog alone cannot establish which paper the account last read.
-  if(S.source==='account')return null;
   function priority(p){return p.state==='reading'?0:p.state==='skim'?1:2}
   return S.papers.filter(function(p){return p.state!=='done'&&(typeof visible!=='function'||visible(p))}).sort(function(a,b){
     var ao=Number.isSafeInteger(a.lastReadOrder)&&a.lastReadOrder>0?a.lastReadOrder:0;
@@ -66,12 +64,18 @@ function renderResume(){
   var g=$('.rs-go',el);if(g)g.addEventListener('click',function(){select(g.dataset.go)});
   var j=$('#rsJudge'),n=$('#rsNext');
   if(j)j.addEventListener('input',function(){S.judge=j.value;save()});
-  if(n){n.addEventListener('input',function(){p.todo=n.value;p.todoSrc='manual';save();renderRbar()});n.addEventListener('change',function(){rememberManualTodo(p);save()})}
+  if(n && S.source==='account'){
+    n.addEventListener('input',()=>accountReaderBackground(accountWorkspace.patchExtra('paper',p.id,{manualTodoDraft:n.value})));
+    n.addEventListener('change',()=>accountReaderManualTodo(p,n.value));
+  } else if(n){
+    n.addEventListener('input',function(){p.todo=n.value;p.todoSrc='manual';save();renderRbar()});
+    n.addEventListener('change',function(){rememberManualTodo(p);save()});
+  }
 }
 var KEY='researchtrail.v5';
 var STORE_REVISION=null;
 function save(){
-  if(S.source==='account')return false;
+  if(S.source==='account')return typeof accountWorkspace!=='undefined' && !!accountWorkspace?.saveChanges();
   rememberTabView();
   if(S.example){S.saved=false;var se=$('#saved');if(se)se.hidden=true;return false}
   var conflict=false;
@@ -182,6 +186,11 @@ function renderHistory(p) {
     ask('이 메모 버전을 이력에서 지울까요?','현재 메모와 저장한 다음 할 일에는 영향을 주지 않아요.','이력에서 지우기',function(){
       var previous=p.noteHistory,entry=previous.find(function(note){return note.id===id});
       if(!entry)return;
+      if(S.source==='account'){
+        accountWorkspace.patchExtra('paper',p.id,{hiddenHistory:{[id]:true}},{label:'기록 이력 숨기기'}).then(()=>{
+          entry.hidden_in_history=true;if(S.reader===p.id)renderHistory(p);
+        }).catch(()=>{});return;
+      }
       var source=readingSource(p,entry.source_highlight_id||'legacy-note');
       var linked=(p.actionHistory||[]).some(function(action){return action.source_record_id===id});
       var keep=linked||(source&&source.text===entry.content_text);

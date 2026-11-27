@@ -75,7 +75,7 @@ function showMain(){
   var _st=0;sc.addEventListener('scroll',function(){clearTimeout(_st);_st=setTimeout(function(){if(sc.isConnected&&S.view==='card'&&!S.reader){S.scroll=timelineScrollState(sc);save()}},250)});
 }
 function setView(v){S.reader=null;if(v==='list'){S.bubble=null;S.panel='none';S.sel=null}S.view=v;renderAll();if(v==='dot'){D.alpha=Math.max(D.alpha,.6);kick()}}
-function openAdd(draft){if(S.source==='account')return accountTimelineActions?.addPaper();S.reader=null;S.draft=Object.assign({},S.filterTag!=null?{tag:S.filterTag}:{},draft,{date:todayStr()});S.panel='add';S.sel=null;S.linking=null;var pin0=$('#pin');if(pin0)pin0.innerHTML='';renderAll();var t=$('#aTitle');if(t)t.focus()}
+function openAdd(draft){if(S.source==='account'&&!S.taskId){projNewFromWorkspace();return}S.reader=null;S.draft=Object.assign({},S.filterTag!=null?{tag:S.filterTag}:{},draft,{date:todayStr()});S.panel='add';S.sel=null;S.linking=null;var pin0=$('#pin');if(pin0)pin0.innerHTML='';renderAll();var t=$('#aTitle');if(t)t.focus()}
 
 function select(id){
   if(!id){closeDetailPanel();return}
@@ -103,7 +103,6 @@ function closeDetailPanel(){
   save();
 }
 function onPick(id){
-  if(S.source==='account'){showAccountPaper(id);return}
   if(S.linking){if(id!==S.linking.from){var er=linkError(S.linking.from,id);if(er){S.linking.to=null;S.linking.err=er}else{S.linking.to=id;S.linking.err=null}renderAll()}return}
   select(id);
 }
@@ -130,7 +129,6 @@ function matches(p){return true}
 function renderMe(){}
 function wireMe(){}
 function renderAll({keepTagInputs=false}={}){
-  if(S.source==='account'){renderAccountWorkspace();return}
   if(S.panel!=='detail'||S.view!=='card'||(S.detailScroll&&S.detailScroll.z!==S.zoom))S.detailScroll=null;
   var ex=$('#exTag');if(ex)ex.hidden=!S.example;var ob=$('#ownBtn');if(ob){ob.hidden=!S.example;ob.textContent=RET?'내 타임라인으로 돌아가기':'내 타임라인 시작'}
   renderMe();
@@ -152,10 +150,21 @@ function renderAll({keepTagInputs=false}={}){
   $('#mm').setAttribute('role','slider');$('#mm').setAttribute('tabindex','0');$('#mm').setAttribute('aria-label','타임라인 날짜 이동');
   $$('#zoomSeg button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.z===S.zoom)});
   renderRbar();
-  var em=!list&&!S.papers.some(visible)&&(!card||!S.tags.length);$('#emptyBox').hidden=!em;
+  var needsProject=S.source==='account'&&!S.taskId;
+  var em=needsProject||(!list&&!S.papers.some(visible)&&(!card||!S.tags.length));$('#emptyBox').hidden=!em;
   $('#emptyBox').innerHTML='<p class="eb-hint">'+(S.papers.length?'이 태그에 등록된 논문이 없어요.':'<span class="hint-dir">왼쪽 위 </span><b>+ 논문 추가</b>로 시작하세요.')+'</p>';
+  if(needsProject){
+    var hasProjects=!!projAccountMenu?.catalog().list.length;
+    $('#emptyBox').innerHTML='<p class="eb-hint">'+(hasProjects?'열 프로젝트를 선택해 주세요.':'아직 계정 프로젝트가 없어요.')+'</p><button type="button" class="btn pri" id="workspaceNew">'+(hasProjects?'프로젝트 선택':'새 프로젝트')+'</button>';
+    $('#workspaceNew').addEventListener('click',projNewFromWorkspace);
+  }
+  var onlyUndated=renderUndatedPapers(card);
+  $('#canvas').hidden=onlyUndated;
   if(em){$('#timelineMonth').hidden=true;$('#fcard').hidden=true;$('#fdot').hidden=true;$('#canvas').innerHTML='';$('#dotsvg').innerHTML='';D.els={};D.edges={};$('#bandsw').hidden=true}
-  else if(card){renderCards();renderMinimap()}else if(list){renderPaperList()}else{renderDots()}
+  else if(onlyUndated){
+    $('#timelineMonth').hidden=$('#overviewControls').hidden=$('#bandsw').hidden=$('#fcard').hidden=true;
+    $('#canvas').innerHTML='';L.pos={};
+  }else if(card){renderCards();renderMinimap()}else if(list){renderPaperList()}else{renderDots()}
   save();
 }
 var TAGEDIT=false,TAGMANAGE=false,NEWCOLOR=null,COLOREDIT=null;
@@ -174,6 +183,7 @@ document.addEventListener('click',function(e){
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&TAGMANAGE&&!document.querySelector('.ov')){TAGMANAGE=false;renderTagbar();var b=$('#tagEdit');if(b)b.focus()}});
 document.addEventListener('click',function(e){
   if(!e.target.closest||!e.target.closest('#tagAdd'))return;
+  if(S.source==='account'&&!S.taskId){projNewFromWorkspace();return}
   if(TAGEDIT){commitTag();return}
   TAGMANAGE=false;
   COLOREDIT=null;
@@ -277,6 +287,10 @@ function deleteTag(id){
   var count=S.papers.filter(function(p){return p.tag===id}).length;
   var ov=document.createElement('div');ov.className='ov';
   ov.innerHTML='<div class="dlg tag-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="tagDeleteTitle"><button type="button" class="tag-dialog-close" aria-label="닫기">×</button><h3 id="tagDeleteTitle">태그 삭제</h3><p>'+esc(tag.name)+' 태그를 어떻게 삭제할까요?</p><fieldset class="tag-delete-options"><legend class="sr-only">삭제 범위</legend><label><input type="radio" name="tagDeleteScope" value="tag" checked><span><b>태그만 삭제</b><small>논문 '+count+'편은 ‘태그 없음’으로 이동해요.</small></span></label><label><input type="radio" name="tagDeleteScope" value="papers"><span><b>태그와 논문 모두 삭제</b><small>논문 '+count+'편과 메모·하이라이트도 함께 삭제해요.</small></span></label></fieldset><div class="dact"><button type="button" class="btn" id="tagDeleteCancel">취소</button><button type="button" class="btn pri" id="tagDeleteContinue">태그 삭제</button></div></div>';
+  if(S.source==='account'){
+    $('input[value="papers"]',ov).parentElement.querySelector('small').textContent='이 프로젝트의 목록에서 해당 논문 '+count+'편을 함께 삭제해요.';
+  }
+  var project=S.taskId;
   var previous=document.activeElement,ok=$('#tagDeleteContinue',ov);
   $('.tag-dialog-close',ov).setAttribute('aria-label','닫기');
   function close(){document.removeEventListener('keydown',key,true);ov.remove();if(previous&&document.contains(previous))previous.focus()}
@@ -294,13 +308,21 @@ function deleteTag(id){
   ov.addEventListener('mousedown',function(e){if(e.target===ov)close()});
   ok.addEventListener('click',function(){
     var all=ov.querySelector('input[value="papers"]').checked;close();
-    if(all&&count)ask('논문 '+count+'편을 모두 삭제할까요?','“'+tag.name+'” 태그와 논문 '+count+'편의 메모·하이라이트·기록 이력·첨부 PDF 및 관련 연결이 삭제됩니다. 되돌릴 수 없어요.','논문 '+count+'편 삭제',function(){applyTagDeletion(id,true)},true);
-    else applyTagDeletion(id,all);
+    function remove(){
+      if(S.source==='account'&&S.taskId!==project)return;
+      applyTagDeletion(id,all);
+    }
+    if(all&&count){
+      const effect=S.source==='account'?'이 프로젝트의 목록에서 “'+tag.name+'” 태그와 논문 '+count+'편을 함께 삭제해요.':
+        '“'+tag.name+'” 태그와 논문 '+count+'편의 메모·하이라이트·기록 이력·첨부 PDF 및 관련 연결이 삭제됩니다. 되돌릴 수 없어요.';
+      ask('논문 '+count+'편을 모두 삭제할까요?',effect,'논문 '+count+'편 삭제',remove,true);
+    }else remove();
   });
   document.body.appendChild(ov);document.addEventListener('keydown',key,true);$('#tagDeleteCancel',ov).focus();
 }
 function applyTagDeletion(id,withPapers){
   if(!S.tags.some(function(t){return t.id===id}))return false;
+  if(S.source==='account')return removeAccountTag(id,withPapers);
   var removed=S.papers.filter(function(p){return p.tag===id}),ids=new Set(removed.map(function(p){return p.id}));
   var oldPapers=S.papers,oldTags=S.tags,oldLinks=S.links,oldFilter=S.filterTag;
   S.papers=withPapers?S.papers.filter(function(p){return !ids.has(p.id)}):S.papers.map(function(p){return p.tag===id?Object.assign({},p,{tag:''}):p});
@@ -319,4 +341,19 @@ function applyTagDeletion(id,withPapers){
     removed.forEach(function(p){D.pos.delete(p.id);if(!S.example)idbDel(p.id)});
   }
   S.hidden.delete(id);D.inited=false;renderAll();return true;
+}
+
+async function removeAccountTag(tagId,archivePapers){
+  const task=S.taskId,workspace=accountWorkspace;
+  try{
+    await workspace.flush();
+    if(!workspace.current()||S.taskId!==task)return false;
+    const body={tag_id:tagId,archive_papers:archivePapers,version:workspace.extraVersion('project')};
+    await workspace.mutate('태그 삭제','/tasks/'+encodeURIComponent(task)+'/tag-removal',body);
+    if(workspace.current()&&S.taskId===task)await workspace.select(task);
+    return true;
+  }catch{
+    if(workspace.current()&&S.taskId===task)toast('태그 삭제를 확인하지 못했어요. 저장 상태를 확인해 주세요.');
+    return false;
+  }
 }
